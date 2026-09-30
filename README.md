@@ -75,7 +75,7 @@ Nix does not run on Windows.
 
 ```bash
 nix develop .#pack                                   # packaging shell
-python3.12 openxc7-pack.py                           # -> apio-openxc7-<platform>-<date>.tgz
+python3.12 openxc7-pack.py                           # -> openxc7-toolchain-<platform>-<date>.tgz
 python3.12 openxc7-pack.py --no-chipdb               # local tools-only tree, no bins
 ```
 
@@ -142,8 +142,8 @@ cp /path/to/chipdb-bins/*.bin /path/to/chipdb-bins/chipdb-id.txt package-win/chi
 cp /path/to/XILINX-PARTS-INDEX.json package-win/XILINX-PARTS-INDEX.json
 CHIPDB_SOURCE=restored-from-cache CHIPDB_ID="$(cat package-win/chipdb/chipdb-id.txt)" \
   bash scripts/build-info.sh windows-amd64 YYYY-MM-DD \
-  apio-openxc7-windows-amd64-YYYYMMDD.tgz package-win/BUILD-INFO.json
-tar czhf apio-openxc7-windows-amd64-YYYYMMDD.tgz --mode=u+w -C package-win .
+  openxc7-toolchain-windows-amd64-YYYYMMDD.tgz package-win/BUILD-INFO.json
+tar czhf openxc7-toolchain-windows-amd64-YYYYMMDD.tgz --mode=u+w -C package-win .
 ```
 
 `nextpnr-xilinx.exe` is the same himbaechel uarch as the Linux and macOS

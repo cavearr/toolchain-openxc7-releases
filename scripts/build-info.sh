@@ -2,9 +2,9 @@
 #
 # build-info.sh -- compose the ecosystem-convention BUILD-INFO.json.
 #
-# Every apio package carries a BUILD-INFO.json at its root describing the
-# package and the build that produced it (FPGAwars convention, see
-# tools-oss-cad-suite). Usage:
+# Every package carries a BUILD-INFO.json at its root describing the
+# package and the build that produced it (the FPGAwars convention, see
+# tools-oss-cad-suite, which apio's repackaging reads). Usage:
 #
 #   scripts/build-info.sh <target-platform> <date YYYY-MM-DD> <file-name> <out-file>
 #
@@ -91,15 +91,15 @@ fi
 
 COMMIT=${GITHUB_SHA:-$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)}
 
-# Normalize repo to lower case as we do with the other Apio packages. Not
+# Normalize repo to lower case, as the FPGAwars packages do. Not
 # with bash's ${var,,}: the macOS runner's /bin/bash is 3.2, which has no
 # case conversion ("bad substitution", darwin job, 2026-09-18).
 repo=$(printf '%s' "${GITHUB_REPOSITORY:-}" | tr '[:upper:]' '[:lower:]')
 
 cat > "$OUT" <<EOF
 {
-  "package-name"                   : "openxc7",
-  "description"                    : "openXC7 toolchain for Xilinx 7-series FPGAs",
+  "package-name"                   : "openxc7-toolchain",
+  "description"                    : "openXC7 toolchain for Xilinx 7-series FPGAs: nextpnr-xilinx, prjxray, fasm and the chipdb",
   "release-tag"                    : "$DATE",
   "yosys-release-tag"              : "$YOSYS_TAG",
   "nextpnr-xilinx-revision"        : "${NEXTPNR_REV:-unknown}",

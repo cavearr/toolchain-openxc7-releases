@@ -28,7 +28,7 @@ The three packages ship **no chipdb**: their `chipdb/` directory
 holds a README.txt.
 
 ### Build info
-**`apio-openxc7-linux-x86-64-20260830.tgz`**
+**`openxc7-toolchain-linux-x86-64-20260830.tgz`**
 ```json
 {
   "package-version": "0.9.3",

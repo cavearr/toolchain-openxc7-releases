@@ -99,7 +99,7 @@ LEGACY_INDEX_ASSET = "apio-xilinx-parts-index-{date}.json"
 
 
 def release_tag(date: str) -> str:
-    """The release tag a YYYYMMDD package date comes from (apio's rule)."""
+    """The release tag a YYYYMMDD package date comes from (the naming rule)."""
     if len(date) != 8 or not date.isdigit():
         raise ValueError(f"package date must be YYYYMMDD: {date!r}")
     return f"{date[:4]}-{date[4:6]}-{date[6:]}"
@@ -227,7 +227,7 @@ def validate_document(info: dict, expect_tag: str | None = None) -> dict:
     if info.get("release-tag") != expected_tag:
         raise ValueError(
             f"XILINX-PARTS-INDEX release-tag {info.get('release-tag')!r} does not "
-            f"match date {date} (apio derives the date from the tag)")
+            f"match date {date} (the asset date derives from the tag)")
     if expect_tag is not None and info["release-tag"] != expect_tag:
         raise ValueError(
             f"XILINX-PARTS-INDEX release-tag {info['release-tag']!r} is not the "

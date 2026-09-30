@@ -188,7 +188,7 @@ let
     printf '@echo off\r\nset "PKG=%%~dp0.."\r\nset "PYTHONPATH=%%PKG%%\\lib\\python3.12\\site-packages;%%PYTHONPATH%%"\r\npython "%%PKG%%\\libexec\\${name}" %%*\r\n' > $out/bin/${name}.cmd
   '';
 
-in pkgs.runCommand "apio-openxc7-windows-amd64-tools" {
+in pkgs.runCommand "openxc7-toolchain-windows-amd64-tools" {
   # The cross-compiled binaries are exposed separately so the per-commit test
   # workflow can isolate nextpnr and prjxray compilation failures.
   # test.yaml builds .nextpnr and .prjxray; those names stay.

@@ -63,8 +63,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The date is resolved ONCE here and passed down: apio derives the asset
-  # date from the release TAG, so tag and every asset name must match.
+  # The date is resolved ONCE here and passed down: a consumer derives the
+  # asset date from the release TAG (the naming rule, scripts/asset-check.sh),
+  # so tag and every asset name must match.
   prepare:
     runs-on: ubuntu-22.04            # ecosystem runner version (apio hit issues on 24.04; see apio build-linux-x86-64.yaml)
     outputs:
@@ -165,7 +166,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          pattern: apio-openxc7-*     # the 3 package artifacts (not chipdb-bins)
+          pattern: openxc7-toolchain-*     # the 3 package artifacts (not chipdb-bins)
           merge-multiple: true
 
       # The same document each package embedded. Published as its own
@@ -198,10 +199,10 @@ jobs:
           DATE: ${{ needs.prepare.outputs.date }}
         run: |
           export LC_ALL=C          # one collation for every listing below
-          ls -la apio-openxc7-*.tgz XILINX-PARTS-INDEX.json
-          # every package apio resolves by name must carry the tag's date, or
-          # it 404s at install time
-          for f in apio-openxc7-*.tgz; do
+          ls -la openxc7-toolchain-*.tgz XILINX-PARTS-INDEX.json
+          # every package a consumer resolves by name must carry the tag's
+          # date, or it 404s at install time
+          for f in openxc7-toolchain-*.tgz; do
             case "$f" in
               *"-${DATE//-/}.tgz") ;;
               *) echo "::error::asset $f is not dated ${DATE//-/}"; exit 1 ;;
@@ -232,7 +233,7 @@ jobs:
           tag = sys.argv[1]
           published = Path(PACKAGE_FILE)
           raw = published.read_bytes()
-          tarballs = sorted(Path(".").glob("apio-openxc7-*.tgz"))
+          tarballs = sorted(Path(".").glob("openxc7-toolchain-*.tgz"))
           if len(tarballs) != 3:
               sys.exit(f"::error::expected 3 platform tarballs, found {[p.name for p in tarballs]}")
           for tarball in tarballs:
@@ -274,7 +275,7 @@ jobs:
           # showed '{ "missing": true }' for two of the three packages).
           mkdir -p build-infos
           : > BUILD-INFOS.md
-          for f in apio-openxc7-*.tgz; do
+          for f in openxc7-toolchain-*.tgz; do
             M=$(tar tzf "$f" | grep -Ex '(\./)?BUILD-INFO\.json' | head -1 || true)
             [ -n "$M" ] \
               || { echo "::error::$f carries no BUILD-INFO.json"; exit 1; }
@@ -299,7 +300,7 @@ jobs:
           # HERE, in the job that uploads them, from the very bytes that
           # the upload below sends — the manifest and the release cannot
           # describe different bytes.
-          sha256sum apio-openxc7-*.tgz XILINX-PARTS-INDEX.json BUILD-INFO.json > SHA256SUMS
+          sha256sum openxc7-toolchain-*.tgz XILINX-PARTS-INDEX.json BUILD-INFO.json > SHA256SUMS
           cat SHA256SUMS
           # The release is six assets; SHA256SUMS lists the other five and not
           # itself. A sixth line would be a chipdb asset or a stray file,
@@ -357,16 +358,16 @@ jobs:
           release_tag: ${{ needs.prepare.outputs.date }}
           body_path: RELEASE-BODY.md
           files: |
-            apio-openxc7-*.tgz
+            openxc7-toolchain-*.tgz
             SHA256SUMS
             BUILD-INFO.json
             XILINX-PARTS-INDEX.json
 
-      # Close the loop: re-resolve every asset by apio's tag->date->name rule
+      # Close the loop: re-resolve every asset by the tag->date->name rule
       # against what GitHub actually serves, and require the published
       # SHA256SUMS to match the tarballs validated above (the 2026-07-24
-      # class of failure -- a tag apio resolves to nothing -- dies here).
-      - name: Verify the published assets the way apio will fetch them
+      # class of failure -- a tag a consumer resolves to nothing -- dies here).
+      - name: Verify the published assets the way a consumer will fetch them
         env:
           GH_TOKEN: ${{ github.token }}
           ASSET_CHECK_REPO: ${{ github.repository }}

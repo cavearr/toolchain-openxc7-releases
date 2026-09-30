@@ -108,8 +108,8 @@ def write_env():
 def get_date() -> str:
 
     # -- Allow fixing the date from outside (CI) so that the package name
-    # -- matches the release tag on every runner (apio derives the date it
-    # -- downloads from the TAG). Accepts YYYYMMDD or YYYY-MM-DD. Without
+    # -- matches the release tag on every runner (a consumer derives the
+    # -- date it downloads from the TAG). Accepts YYYYMMDD or YYYY-MM-DD. Without
     # -- the variable -> today's date.
     override = os.environ.get("OPENXC7_PACK_DATE")
     if override:
@@ -140,9 +140,9 @@ def build_tarball(version: str):
     print(ansi.DEFAULT, end='', flush=True)
     print()
 
-    # -- Package name (per OS/arch; on Linux x86_64 -> identical to the
-    # -- historic 'apio-openxc7-linux-x86-64-<date>.tgz')
-    tarball_name = Path(f"apio-openxc7-{plat_token()}-{version}.tgz")
+    # -- Package name: openxc7-toolchain-<platform>-<YYYYMMDD>.tgz (the
+    # -- naming rule scripts/asset-check.sh checks on a release)
+    tarball_name = Path(f"openxc7-toolchain-{plat_token()}-{version}.tgz")
 
     # -- Before compressing we give write permissions to ALL the
     # -- files and directories

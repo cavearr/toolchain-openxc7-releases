@@ -37,8 +37,8 @@ DATE = "20260907"
 def package(platform, **overrides):
     """One package's BUILD-INFO.json, as scripts/build-info.sh writes it."""
     info = {
-        "package-name": "openxc7",
-        "description": "openXC7 toolchain for Xilinx 7-series FPGAs",
+        "package-name": "openxc7-toolchain",
+        "description": "openXC7 toolchain for Xilinx 7-series FPGAs: nextpnr-xilinx, prjxray, fasm and the chipdb",
         "release-tag": "2026-09-07",
         "yosys-release-tag": "2026-03-24",
         "nextpnr-xilinx-revision": "68aeeb39f92e39bfb239c7e4a44dd93451fc1889",
@@ -47,14 +47,14 @@ def package(platform, **overrides):
         "chipdb-source": "restored-from-cache",
         "use-cached-chipdb": True,
         "chipdb-id": "2e00b07a2226c0ad",
-        "build-repo": "FPGAwars/tools-openxc7",
+        "build-repo": "cavearr/toolchain-openxc7-releases",
         "build-workflow": "build-pre-release",
         "workflow-run-id": "34127602283",
         "workflow-run-number": "65",
         "build-time": "2026-09-07 13:42:17 UTC",
         "commit": "3931811fdb26d2eaf484f2eb63d7db976e43316f",
         "target-platform": platform,
-        "file-name": f"apio-openxc7-{platform}-{DATE}.tgz",
+        "file-name": f"openxc7-toolchain-{platform}-{DATE}.tgz",
     }
     info.update(overrides)
     return info
@@ -84,13 +84,13 @@ class ComposeTests(unittest.TestCase):
 
     def test_shared_fields_are_kept_and_a_row_per_package_added(self):
         document = release_build_info.compose(release())
-        self.assertEqual(document["package-name"], "openxc7")
+        self.assertEqual(document["package-name"], "openxc7-toolchain")
         self.assertEqual(document["release-tag"], "2026-09-07")
         self.assertEqual(document["chipdb-id"], "2e00b07a2226c0ad")
         self.assertEqual(sorted(document["packages"]), sorted(PLATFORMS))
         self.assertEqual(
             document["packages"]["windows-amd64"]["file-name"],
-            f"apio-openxc7-windows-amd64-{DATE}.tgz")
+            f"openxc7-toolchain-windows-amd64-{DATE}.tgz")
 
     def test_the_per_package_fields_are_not_left_at_the_top_level(self):
         """A top-level target-platform would describe the whole release as

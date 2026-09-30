@@ -143,14 +143,14 @@ note "package platform: $PLAT"
 if [ -n "$TARBALL" ]; then
     base=$(basename "$TARBALL")
     case "$base" in
-        apio-openxc7-"$PLAT"-*.tgz) : ;;
-        apio-openxc7-*) fail "tarball name ($base) does not match detected platform ($PLAT)" ;;
+        openxc7-toolchain-"$PLAT"-*.tgz) : ;;
+        openxc7-toolchain-*) fail "tarball name ($base) does not match detected platform ($PLAT)" ;;
         *) note "non-canonical tarball name: $base" ;;
     esac
     if [ -n "$EXPECT_DATE" ]; then
         case "$base" in
             *"-$EXPECT_DATE.tgz") ok "tarball dated $EXPECT_DATE" ;;
-            *) fail "tarball $base is not dated $EXPECT_DATE (apio derives the date from the release TAG)" ;;
+            *) fail "tarball $base is not dated $EXPECT_DATE (the asset date derives from the release TAG)" ;;
         esac
     fi
 fi

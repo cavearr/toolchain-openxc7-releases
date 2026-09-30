@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Multi-part E2E smoke over an extracted apio-openxc7 package tree.
+# Multi-part E2E smoke over an extracted openxc7-toolchain package tree.
 #
 #   e2e/run-parts.sh <package-dir> <workdir> [wine]
 #

@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 #
 # asset-check.sh -- verify the published release assets EXACTLY the way
-# apio will look for them, without installing apio.
+# a consumer will look for them, by this repository's naming rule.
 #
-# apio derives everything from the release TAG: tag 2026-06-13 -> date
-# 20260613 -> asset apio-openxc7-<platform>-20260613.tgz at that release's
-# download URL. A mistagged release, a misdated asset name or a missing
-# platform is a 404 at `apio packages install` time on that platform (the
-# 2026-07-24 class of failure: remote-config pointed at a tag whose release
-# was never published). This script chases exactly that: it recomputes the
-# URL by apio's rule and checks what is actually there.
+# The naming rule: everything derives from the release TAG. Tag 2026-06-13
+# -> date 20260613 -> asset openxc7-toolchain-<platform>-20260613.tgz at
+# that release's download URL, for platform linux-x86-64, darwin-arm64 and
+# windows-amd64. A consumer that knows the tag (a manual install, or a
+# repackager such as apio's tools-openxc7) needs nothing else. A mistagged
+# release, a misdated asset name or a missing platform is a 404 for it on
+# that platform (the 2026-07-24 class of failure: a consumer pointed at a
+# tag whose release was never published). This script chases exactly that:
+# it recomputes each URL by the rule and checks what is actually there.
 #
 # Schema 8 (apio#1070) publishes six assets: the three platform tarballs,
 # SHA256SUMS, XILINX-PARTS-INDEX.json and BUILD-INFO.json. The chipdb files
@@ -17,10 +19,9 @@
 # the file each part uses. There is no apio-xilinx-chipdb-*.bin.tgz asset.
 # --full downloads each platform package and checks that the bins inside
 # it are exactly the files the index names, with the index's chipdb-id.
-# A release whose index is not the one apio reads today -- absent under
-# every name it has been published with, or an older schema -- predates
-# this contract and is reported as legacy, not failed: it is not what
-# apio installs from.
+# A release whose index is not the current schema -- absent under every
+# name it has been published with, or an older schema -- predates this
+# contract and is reported as legacy, not failed.
 #
 # SHA256SUMS covers every asset since apio#990 (it used to list only the
 # three packages). A schema 8 release's manifest lists the six assets
@@ -42,7 +43,8 @@
 #                                                    # chipdb files inside it
 #   scripts/asset-check.sh <tag> --platform linux-x86-64   # repeatable filter
 #
-# Env: ASSET_CHECK_REPO to point at a fork (default FPGAwars/tools-openxc7);
+# Env: ASSET_CHECK_REPO to point at a fork (default
+#      cavearr/toolchain-openxc7-releases);
 #      GH_TOKEN / GITHUB_TOKEN are used if set (API rate limits).
 
 set -euo pipefail
@@ -76,8 +78,16 @@ sys.path.insert(0, repo_root)
 from pack.parts_index import (INDEX_ASSET, SCHEMA, STAMP_FILE,  # noqa: E402
                               previous_index_asset_names, validate_document)
 
-repo = os.environ.get("ASSET_CHECK_REPO", "FPGAwars/tools-openxc7")
+repo = os.environ.get("ASSET_CHECK_REPO", "cavearr/toolchain-openxc7-releases")
 date = tag.replace("-", "")
+# The naming rule of this repository's packages (see the header).
+PACKAGE = "openxc7-toolchain"
+
+
+def package_asset(platform):
+    return f"{PACKAGE}-{platform}-{date}.tgz"
+
+
 base = f"https://github.com/{repo}/releases/download/{tag}"
 failed = []
 
@@ -143,7 +153,7 @@ except urllib.error.HTTPError:
 # Does this manifest cover the whole release or only the packages? Until
 # apio#990 it listed the three tarballs alone. Anything that is not a
 # platform package marks the wider manifest.
-covers_everything = any(not name.startswith("apio-openxc7-") for name in sums)
+covers_everything = any(not name.startswith(f"{PACKAGE}-") for name in sums)
 if sums and not covers_everything:
     print("   the platform packages only: published before SHA256SUMS "
           "covered the rest of the release")
@@ -167,13 +177,13 @@ def read_hashed(source):
 accounted = set()
 
 for platform in platforms:
-    asset = f"apio-openxc7-{platform}-{date}.tgz"
+    asset = package_asset(platform)
     accounted.add(asset)
     url = f"{base}/{asset}"
     status, size = head(url)
     if status != 200:
         print(f"❌ {asset}: HTTP {status} at {url}")
-        print(f"   apio WILL 404 on {platform}: the asset for tag {tag} must be")
+        print(f"   a consumer WILL 404 on {platform}: the asset for tag {tag} must be")
         print(f"   named with the tag's date ({date}) and live at that release.")
         failed.append(asset)
         continue
@@ -275,12 +285,12 @@ def check_build_info():
         failed.append(BUILD_INFO)
         return False
 
-    # Each package it names must be the one apio resolves for that platform
+    # Each package it names must be the one the rule resolves for that platform
     # from this tag: the same date rule the tarballs above go through,
     # applied to the document that claims to describe them.
     packages = info.get("packages") or {}
     for platform, entry in sorted(packages.items()):
-        expected = f"apio-openxc7-{platform}-{date}.tgz"
+        expected = package_asset(platform)
         if entry.get("file-name") != expected:
             print(f"❌ {BUILD_INFO}: for {platform} it names "
                   f"{entry.get('file-name')!r}, this release ships "
@@ -455,7 +465,7 @@ def check_chipdb_release():
     if full:
         described = {entry["chipdb"] for entry in generated.values()}
         for platform in platforms:
-            asset = f"apio-openxc7-{platform}-{date}.tgz"
+            asset = package_asset(platform)
             blob = package_blobs.get(asset)
             if blob is None:
                 continue
@@ -486,5 +496,5 @@ if has_build_info:
     tail += "; its BUILD-INFO.json names this very tag"
 if index_checked and covers_everything:
     tail += f"; SHA256SUMS ({len(sums)} entries) agrees with the index"
-print(f"\nasset-check: OK — apio's URL rule resolves for every platform{tail}")
+print(f"\nasset-check: OK — the naming rule resolves for every platform{tail}")
 PYEOF

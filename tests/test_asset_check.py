@@ -20,7 +20,7 @@ from unittest import mock
 
 REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / "scripts" / "asset-check.sh"
-REPO_SLUG = "fixture/tools-openxc7"
+REPO_SLUG = "fixture/toolchain-openxc7-releases"
 TAG = "2026-08-28"
 DATE = "20260828"
 BASE_PART = "xc7a35tcpg236"
@@ -111,7 +111,7 @@ def release(**overrides) -> dict:
     travels inside each platform package.
     """
     tarballs = {
-        f"apio-openxc7-{platform}-{DATE}.tgz": _package()
+        f"openxc7-toolchain-{platform}-{DATE}.tgz": _package()
         for platform in ("linux-x86-64", "darwin-arm64", "windows-amd64")
     }
     built = {"generated": True, "chipdb": CHIPDB}
@@ -132,14 +132,14 @@ def release(**overrides) -> dict:
         },
     }
     build_info = {
-        "package-name": "openxc7",
+        "package-name": "openxc7-toolchain",
         "release-tag": TAG,
         "yosys-release-tag": "2026-03-24",
         "nextpnr-xilinx-revision": "68aeeb39f92e39bfb239c7e4a44dd93451fc1889",
         "chipdb-id": "fixture-id",
         "commit": "3931811fdb26d2eaf484f2eb63d7db976e43316f",
         "packages": {
-            platform: {"file-name": f"apio-openxc7-{platform}-{DATE}.tgz",
+            platform: {"file-name": f"openxc7-toolchain-{platform}-{DATE}.tgz",
                        "build-time": "2026-08-28 09:00:00 UTC"}
             for platform in ("linux-x86-64", "darwin-arm64",
                              "windows-amd64")},
@@ -218,7 +218,7 @@ class AssetCheckTests(unittest.TestCase):
     def test_full_names_a_missing_bin(self):
         """--full opens each package. A bin the index names and the
         package lacks is the failure, and it is named."""
-        linux = f"apio-openxc7-linux-x86-64-{DATE}.tgz"
+        linux = f"openxc7-toolchain-linux-x86-64-{DATE}.tgz"
         files = release(**{f"{BASE}/{linux}": _package(payload=None)})
         code, output = run(resum(files))
         self.assertEqual(code, 0, output)
@@ -228,7 +228,7 @@ class AssetCheckTests(unittest.TestCase):
         self.assertIn(linux, output)
 
     def test_full_names_an_extra_bin(self):
-        linux = f"apio-openxc7-linux-x86-64-{DATE}.tgz"
+        linux = f"openxc7-toolchain-linux-x86-64-{DATE}.tgz"
         files = release(**{f"{BASE}/{linux}": _package(
             extra=[("chipdb/extra.bin", b"no such part")])})
         code, output = run(resum(files), "", "1")
@@ -355,7 +355,7 @@ class AssetCheckTests(unittest.TestCase):
     def test_full_checks_the_downloaded_package_against_sha256sums(self):
         """The published bytes differ from the manifest. HEAD cannot see
         it; --full can."""
-        linux = f"apio-openxc7-linux-x86-64-{DATE}.tgz"
+        linux = f"openxc7-toolchain-linux-x86-64-{DATE}.tgz"
         files = release()
         original = files[f"{BASE}/{linux}"]
         files[f"{BASE}/{linux}"] = _package(payload=b"other bytes!")
@@ -367,7 +367,7 @@ class AssetCheckTests(unittest.TestCase):
         self.assertIn("!= SHA256SUMS", output)
 
     def test_full_rejects_a_stamp_that_is_not_the_index(self):
-        linux = f"apio-openxc7-linux-x86-64-{DATE}.tgz"
+        linux = f"openxc7-toolchain-linux-x86-64-{DATE}.tgz"
         files = release(**{f"{BASE}/{linux}": _package(stamp="other-toolchain")})
         code, output = run(resum(files), "", "1")
         self.assertEqual(code, 1)
@@ -435,7 +435,7 @@ class AssetCheckTests(unittest.TestCase):
         files = release()
         lines = files[f"{BASE}/SHA256SUMS"].decode().splitlines(True)
         files[f"{BASE}/SHA256SUMS"] = "".join(
-            line for line in lines if "apio-openxc7-" in line).encode()
+            line for line in lines if "openxc7-toolchain-" in line).encode()
         code, output = run(files)
         self.assertEqual(code, 0, output)
         self.assertIn("the platform packages only", output)
@@ -490,12 +490,12 @@ class AssetCheckTests(unittest.TestCase):
         files = release()
         info = json.loads(files[f"{BASE}/{BUILD_INFO}"])
         info["packages"]["darwin-arm64"]["file-name"] = (
-            "apio-openxc7-darwin-arm64-20260827.tgz")
+            "openxc7-toolchain-darwin-arm64-20260827.tgz")
         files[f"{BASE}/{BUILD_INFO}"] = json.dumps(info).encode()
         code, output = run(resum(files))
         self.assertEqual(code, 1)
         self.assertIn("for darwin-arm64 it names", output)
-        self.assertIn(f"this release ships apio-openxc7-darwin-arm64-{DATE}",
+        self.assertIn(f"this release ships openxc7-toolchain-darwin-arm64-{DATE}",
                       output)
 
     def test_a_tampered_build_info_line_fails(self):
@@ -515,10 +515,10 @@ class AssetCheckTests(unittest.TestCase):
         self.assertIn(f"❌ {BUILD_INFO}: not readable as JSON", output)
 
     def test_missing_platform_tarball_still_fails(self):
-        gone = f"apio-openxc7-darwin-arm64-{DATE}.tgz"
+        gone = f"openxc7-toolchain-darwin-arm64-{DATE}.tgz"
         code, output = run(release(**{f"{BASE}/{gone}": None}))
         self.assertEqual(code, 1)
-        self.assertIn("apio WILL 404 on darwin-arm64", output)
+        self.assertIn("a consumer WILL 404 on darwin-arm64", output)
 
 
 if __name__ == "__main__":

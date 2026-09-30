@@ -1,4 +1,4 @@
-# Assemble the native-binary part of the apio-openxc7-windows-amd64 package:
+# Assemble the native-binary part of the openxc7-toolchain-windows-amd64 package:
 # the cross-built Windows .exe + their runtime DLLs (next to the exes; Windows
 # searches the application directory first -> no rpath/codesign needed),
 # the chipdb, prjxray-db and nextpnr python. The pure-python tools (fasm,

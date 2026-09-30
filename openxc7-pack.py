@@ -89,7 +89,7 @@ if CHIPDB_ONLY:
 # -- Final configuration
 write_env()
 
-# -- Generate the tarball. The date is the package's only version: apio
-# -- derives it from the release TAG and reads everything else about the
-# -- package from BUILD-INFO.json (apio#947).
+# -- Generate the tarball. The date is the package's only version: a
+# -- consumer derives it from the release TAG and reads everything else
+# -- about the package from BUILD-INFO.json (apio#947).
 build_tarball(get_date())

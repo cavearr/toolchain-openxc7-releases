@@ -11,7 +11,7 @@ on:
   workflow_call:
     inputs:
       date:
-        description: "Package date YYYY-MM-DD (the release tag; apio derives the asset date from it)"
+        description: "Package date YYYY-MM-DD (the release tag; the asset name carries its date)"
         required: true
         type: string
       yosys_release_tag:
@@ -140,9 +140,9 @@ jobs:
         id: tar
         run: |
           # same convention as linux-package/darwin-package: YYYY-MM-DD in,
-          # YYYYMMDD in the asset name (what apio derives from the tag)
+          # YYYYMMDD in the asset name (what a consumer derives from the tag)
           DATE="${{ inputs.date }}"
-          NAME="apio-openxc7-windows-amd64-${DATE//-/}.tgz"
+          NAME="openxc7-toolchain-windows-amd64-${DATE//-/}.tgz"
           # provenance comes from the chipdb job of the calling run
           CHIPDB_SOURCE_IN="${{ inputs.chipdb_source }}"
           # the identity is the stamp that ships next to the bins
@@ -286,6 +286,6 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: apio-openxc7-windows-amd64
+          name: openxc7-toolchain-windows-amd64
           path: ${{ steps.tar.outputs.name }}
           if-no-files-found: error
