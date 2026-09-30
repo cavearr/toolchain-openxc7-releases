@@ -109,6 +109,75 @@ class WorkflowCheckerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
+ACTION = """\
+name: local
+inputs:
+  release-tag:
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo "${{ inputs.release-tag }}"
+"""
+
+ACTION_CALLER = """\
+name: caller
+on:
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/local
+        with:
+          release-tag: "2026-09-30"
+"""
+
+
+@unittest.skipUnless(HAVE_YAML, "PyYAML not installed (the CI job installs it)")
+class LocalActionCheckerTests(unittest.TestCase):
+    """The release actions are local copies: a step that runs one gets the
+    same input rule as a reusable-workflow call, and needs a checkout."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        write(self.root, ".github/actions/local/action.yaml", ACTION)
+        write(self.root, ".github/workflows/caller.yml", ACTION_CALLER)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_healthy_step_passes(self):
+        result = run("check-workflows.py", str(self.root))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("1 local action steps", result.stdout)
+
+    def test_input_the_action_does_not_declare(self):
+        write(self.root, ".github/workflows/caller.yml",
+              ACTION_CALLER.replace("release-tag:", "keep-count:"))
+        result = run("check-workflows.py", str(self.root))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("rejects inputs ['keep-count']", result.stdout)
+        self.assertIn("misses required inputs ['release-tag']", result.stdout)
+
+    def test_action_before_checkout(self):
+        write(self.root, ".github/workflows/caller.yml",
+              ACTION_CALLER.replace("      - uses: actions/checkout@v7\n", ""))
+        result = run("check-workflows.py", str(self.root))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("runs before any actions/checkout", result.stdout)
+
+    def test_action_that_is_not_in_the_tree(self):
+        write(self.root, ".github/workflows/caller.yml",
+              ACTION_CALLER.replace("actions/local", "actions/gone"))
+        result = run("check-workflows.py", str(self.root))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("has no action.yaml", result.stdout)
+
+
 @unittest.skipUnless(HAVE_YAML, "PyYAML not installed (the CI job installs it)")
 class ArtifactCheckerTests(unittest.TestCase):
     PRODUCER = """\

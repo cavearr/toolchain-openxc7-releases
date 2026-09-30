@@ -21,7 +21,8 @@
 # green — publishes.
 #
 # The release is created at the END, as a dated PRERELEASE (never latest),
-# following the FPGAwars ecosystem convention (fpgawars/apio-workflows):
+# following the FPGAwars ecosystem convention (the release actions in
+# .github/actions/, copied from that ecosystem — see their README):
 # daily cron, the tag resolved at the very beginning, an existing same-tag
 # pre-release is replaced, a same-tag STABLE release fails the run, and only
 # the newest N pre-releases are kept. Any red aborts with no release; the
@@ -70,8 +71,13 @@ jobs:
       date: ${{ steps.d.outputs.date }}
       yosys_release_tag: ${{ steps.d.outputs.yosys_release_tag }}
     steps:
+      # The release actions are local composite actions (.github/actions/,
+      # copied from the FPGAwars ecosystem): they are files of this tree,
+      # so the job checks it out before the first of them.
+      - uses: actions/checkout@v7
+
       - name: Get release and package tags (ecosystem convention)
-        uses: fpgawars/apio-workflows/.github/actions/get-release-and-package-tags@main
+        uses: ./.github/actions/get-release-and-package-tags
         with:
           release-tag-var: RELEASE_TAG
           package-tag-var: PACKAGE_TAG
@@ -102,16 +108,11 @@ jobs:
       # in the pre-release job, after every platform is green (~50 s window).
       # To rebuild a stable tag: mark it pre-release first, never delete it
       # — see README, Rebuilding today's tag. The existence messages come
-      # from fpgawars/apio-workflows (ensure-no-conflicting-release).
+      # from the ensure-no-conflicting-release action.
       - name: Ensure no conflicting release (early, just-check)
-        uses: fpgawars/apio-workflows/.github/actions/ensure-no-conflicting-release@main
+        uses: ./.github/actions/ensure-no-conflicting-release
         env:
           GH_TOKEN: ${{ github.token }}   # the action drives `gh`, which requires it in Actions
-          # prepare has NO checkout (it is deliberately light), and gh needs
-          # a repo context: without a git dir it dies on its first command.
-          # The ecosystem repos run this action after checkout; GH_REPO is
-          # the checkout-free way to give gh its target.
-          GH_REPO: ${{ github.repository }}
         with:
           release-tag: ${{ steps.d.outputs.date }}
           just-check: "true"
@@ -174,19 +175,19 @@ jobs:
           name: parts-index
           path: .
 
-      # Ecosystem convention (fpgawars/apio-workflows): keep only the newest
-      # pre-releases, then replace today's pre-release if it exists — and FAIL
-      # if the tag was already promoted to a stable release (never clobber it).
+      # Ecosystem convention (the FPGAwars release actions): keep only the
+      # newest pre-releases, then replace today's pre-release if it exists —
+      # and FAIL if the tag was already promoted to a stable release (never
+      # clobber it). The count is a constant of the action (KEEP: 5): it
+      # declares no input for it.
       - name: Cleanup old pre-releases (keep the newest 5)
-        uses: fpgawars/apio-workflows/.github/actions/cleanup-old-prereleases@main
-        with:
-          pre-release-keep-count: "5"
+        uses: ./.github/actions/cleanup-old-prereleases
 
       # This delete is the start of the ~50 s publish window; do not delete
       # the release by hand before dispatching — see README, Rebuilding
       # today's tag.
       - name: Ensure no conflicting release (delete same-tag pre-release, fail on stable)
-        uses: fpgawars/apio-workflows/.github/actions/ensure-no-conflicting-release@main
+        uses: ./.github/actions/ensure-no-conflicting-release
         env:
           GH_TOKEN: ${{ github.token }}
         with:
@@ -349,9 +350,9 @@ jobs:
             remote-config by hand (apio#927).
           EOFBODY
 
-      # The same shared action the other Apio packages use.
+      # The same action the FPGAwars packages use (a local copy).
       - name: Create the dated prerelease (never latest) and upload assets
-        uses: fpgawars/apio-workflows/.github/actions/create-pre-release@main
+        uses: ./.github/actions/create-pre-release
         with:
           release_tag: ${{ needs.prepare.outputs.date }}
           body_path: RELEASE-BODY.md

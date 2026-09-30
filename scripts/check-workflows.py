@@ -2,7 +2,10 @@
 """Check the workflow graph without running it: every `uses:` of a local
 reusable workflow must supply the inputs that workflow declares (and no
 others), and every `needs.<job>.outputs.<name>` must name a job of the same
-file that actually declares that output.
+file that actually declares that output. The same input rule holds for a
+step that runs a local composite action (`uses: ./.github/actions/<a>`),
+and such a step needs an `actions/checkout` earlier in its job: the action
+is a file of the checked-out tree, so without one the step cannot start.
 
 Both are silent failures in Actions -- an unknown input is ignored and an
 undeclared output evaluates to the empty string -- so they surface as a
@@ -42,6 +45,49 @@ def call_interface(workflow):
     return event.get("inputs", {}) or {}, event.get("outputs", {}) or {}
 
 
+def action_inputs(target):
+    """The inputs a local composite action declares, or None if missing."""
+    for name in ("action.yaml", "action.yml"):
+        path = ROOT / target / name
+        if path.is_file():
+            with path.open(encoding="utf-8") as source:
+                action = yaml.load(source, Loader=yaml.BaseLoader)
+            return action.get("inputs", {}) or {}
+    return None
+
+
+def check_action_steps(name, job_name, steps):
+    """Local actions: declared inputs only, and a checkout before them."""
+    checked_out = False
+    count = 0
+    for step in steps or []:
+        uses = step.get("uses", "")
+        if uses.startswith("actions/checkout@"):
+            checked_out = True
+        if not uses.startswith("./.github/actions/"):
+            continue
+        count += 1
+        target = uses[2:].rstrip("/")
+        where = f"{name}:{job_name}: {target}"
+        if not checked_out:
+            errors.append(f"{where} runs before any actions/checkout")
+        accepted = action_inputs(target)
+        if accepted is None:
+            errors.append(f"{where} has no action.yaml")
+            continue
+        supplied = step.get("with", {}) or {}
+        unknown = sorted(set(supplied) - set(accepted))
+        if unknown:
+            errors.append(f"{where} rejects inputs {unknown}")
+        missing = sorted(
+            key for key, spec in accepted.items()
+            if spec.get("required") == "true" and key not in supplied
+        )
+        if missing:
+            errors.append(f"{where} misses required inputs {missing}")
+    return count
+
+
 def strings(value):
     if isinstance(value, str):
         yield value
@@ -56,6 +102,7 @@ def strings(value):
 workflows = {name: load(name) for name in FILES}
 errors = []
 calls = 0
+action_calls = 0
 references = 0
 for name, workflow in workflows.items():
     jobs = workflow.get("jobs", {})
@@ -86,6 +133,7 @@ for name, workflow in workflows.items():
             calls += 1
         else:
             job_outputs[job_name] = set((job.get("outputs", {}) or {}).keys())
+            action_calls += check_action_steps(name, job_name, job.get("steps"))
 
     for value in strings(workflow):
         for producer, output in OUTPUT_REF.findall(value):
@@ -103,4 +151,5 @@ if errors:
     print("interface errors:")
     print("\n".join(f"- {error}" for error in errors))
     raise SystemExit(1)
-print(f"cross-check: OK ({calls} local calls, {references} output references)")
+print(f"cross-check: OK ({calls} local calls, {action_calls} local action "
+      f"steps, {references} output references)")
