@@ -1,4 +1,6 @@
-"""Tests for the body rewrite make-pre-release-stable does on promotion.
+"""Tests for the release text: the body build-pre-release writes
+(scripts/release-body.py) and the rewrite make-pre-release-stable does on
+promotion.
 
 build-pre-release writes the body for a PRE-release, so it ends with a
 note saying the release will be deleted in a few days. Promotion drops
@@ -9,6 +11,7 @@ extracted from the file: a change to the workflow is a change to what is
 tested.
 """
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -18,6 +21,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 WORKFLOW = REPO / ".github/workflows/make-pre-release-stable.yaml"
+BODY_SCRIPT = REPO / "scripts/release-body.py"
 
 BODY = """\
 openXC7 toolchain — 2026-08-30. Validated by CI (package gate and
@@ -42,9 +46,8 @@ after a few days.
 * To KEEP it around for longer testing: uncheck `Set as a
   pre-release` (no side effects — it just survives the cleanup).
 * To PUBLISH it (after testing it for real): run the
-  `make-pre-release-stable` workflow with this tag (verifies the assets,
-  marks the release stable + latest), then update apio's
-  remote-config by hand (apio#927).
+  `make-pre-release-stable` workflow with this tag. It verifies the
+  assets and marks the release stable.
 """
 
 
@@ -111,6 +114,85 @@ class ReleaseBodyTests(unittest.TestCase):
         self.assertIn("### Build info\r\n", trimmed)
         # every newline is a CRLF: no bare LF survives the rewrite
         self.assertNotIn("\n", trimmed.replace("\r\n", ""))
+
+
+
+# A release-level BUILD-INFO.json as scripts/release-build-info.py writes it
+# (the fields the body reads; the rest are carried along untouched).
+RELEASE_INFO = {
+    "package-name": "openxc7-toolchain",
+    "release-tag": "2026-09-30",
+    "yosys-release-tag": "2026-03-24",
+    "nextpnr-xilinx-revision": "c68c13582e972292c86a5025140d52e713384cbc",
+    "prjxray-db-revision": "a90f27c1caefee5276f47440f4c730b50519a86f",
+    "eigen-version": "3.4.0",
+    "chipdb-source": "generated",
+    "chipdb-id": "66c7425d4ef246f9",
+    "build-repo": "cavearr/toolchain-openxc7-releases",
+    "workflow-run-id": "123",
+    "commit": "0123456789abcdef0123456789abcdef01234567",
+    "packages": {},
+}
+PER_PACKAGE = "**`openxc7-toolchain-linux-x86-64-20260930.tgz`**\n```json\n{}\n```\n"
+
+
+def compose(info=RELEASE_INFO):
+    """Run scripts/release-body.py over *info*: (returncode, stdout, stderr)."""
+    with tempfile.TemporaryDirectory() as scratch:
+        info_path = Path(scratch) / "BUILD-INFO.json"
+        md_path = Path(scratch) / "BUILD-INFOS.md"
+        info_path.write_text(json.dumps(info), encoding="utf-8")
+        md_path.write_text(PER_PACKAGE, encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(BODY_SCRIPT), str(info_path), str(md_path)],
+            capture_output=True, text=True, check=False)
+    return result.returncode, result.stdout, result.stderr
+
+
+class ComposedBodyTests(unittest.TestCase):
+    def test_it_names_the_yosys_it_requires(self):
+        code, body, error = compose()
+        self.assertEqual(code, 0, error)
+        self.assertIn("Requires yosys: YosysHQ oss-cad-suite [`2026-03-24`]", body)
+        self.assertIn("releases/tag/2026-03-24", body)
+
+    def test_it_lists_the_six_assets(self):
+        _, body, _ = compose()
+        for asset in ("openxc7-toolchain-linux-x86-64-20260930.tgz",
+                      "openxc7-toolchain-darwin-arm64-20260930.tgz",
+                      "openxc7-toolchain-windows-amd64-20260930.tgz",
+                      "XILINX-PARTS-INDEX.json", "BUILD-INFO.json",
+                      "SHA256SUMS"):
+            self.assertIn(f"| `{asset}` |", body)
+
+    def test_it_gives_every_revision_and_the_stamp(self):
+        _, body, _ = compose()
+        self.assertIn("openXC7/nextpnr@c68c13582e97", body)
+        self.assertIn("openXC7/prjxray-db@a90f27c1caef", body)
+        # not in BUILD-INFO.json: read from the nix file that records it
+        self.assertRegex(body, r"openXC7/prjxray@[0-9a-f]{12}")
+        self.assertRegex(body, r"openxc7/fasm@[0-9a-f]{12}")
+        self.assertIn("`66c7425d4ef246f9` (generated)", body)
+
+    def test_it_carries_the_package_documents(self):
+        _, body, _ = compose()
+        self.assertIn(PER_PACKAGE.rstrip("\n"), body)
+
+    def test_promotion_drops_only_its_pre_release_note(self):
+        _, body, _ = compose()
+        self.assertIn("### Pre-release note\n", body)
+        trimmed = trim(body)
+        self.assertNotIn("will be deleted", trimmed)
+        self.assertEqual(
+            trimmed,
+            body.split("\n### Pre-release note")[0].rstrip("\n") + "\n")
+
+    def test_an_unknown_yosys_stops_the_release(self):
+        """build-info.sh writes 'unknown' when no suite was found: a body
+        that says 'requires yosys unknown' must not be published."""
+        code, _, error = compose({**RELEASE_INFO, "yosys-release-tag": "unknown"})
+        self.assertEqual(code, 1)
+        self.assertIn("yosys-release-tag 'unknown'", error)
 
 
 if __name__ == "__main__":

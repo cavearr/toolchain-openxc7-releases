@@ -307,49 +307,11 @@ jobs:
           # and asset-check would fail the release on it.
           LINES=$(wc -l < SHA256SUMS)
           [ "$LINES" -eq 5 ] || { echo "::error::SHA256SUMS has $LINES lines, expected 5"; exit 1; }
-          cat > RELEASE-BODY.md <<EOFBODY
-          openXC7 toolchain — $DATE. Validated by CI (package gate and
-          regression suite on the three platforms).
-
-          ### Chipdb
-          The three packages ship the device databases in \`chipdb/\`: one
-          \`chipdb-<die>.bin\` per die, shared by every part (package, speed
-          grade) of that die. \`XILINX-PARTS-INDEX.json\`, at the root of every
-          package and published here under the same name, lists every part
-          the packaged prjxray database supports, which of them this release
-          built, and — for each built part — the chipdb file name in that
-          directory. An entry with \`generated: false\` is supported by the
-          database and not built. Its schema number is the contract: schema 8
-          is the himbaechel engine (installed as \`nextpnr-xilinx\`, run with
-          \`--device <part> --chipdb chipdb-<die>.bin -o xdc=… -o fasm=…
-          --report …\`), which apio reads from its 1.7 line on.
-          \`SHA256SUMS\` covers the six assets of this release.
-          The bins come from the chipdb job of this run
-          (identity \`${{ needs.chipdb.outputs.identity }}\`,
-          ${{ needs.chipdb.outputs.mode }}), and each platform's gates
-          validate its package with those bins inside it. A bin only works
-          with the package of the SAME tag.
-
-          ### Build info
-          The \`BUILD-INFO.json\` asset of this release carries what the three
-          packages agree on — toolchain revisions, oss-cad-suite tag, chipdb
-          identity, the commit and the run that built them — plus the file
-          name and build time of each one, so a crawler can read the identity
-          of this build without downloading a package (apio#1009). Each
-          package's own document, as it travels at its root:
-
-          $(cat BUILD-INFOS.md)
-
-          ### Pre-release note
-          This daily release was created as a pre-release and will be deleted
-          after a few days.
-          * To KEEP it around for longer testing: uncheck \`Set as a
-            pre-release\` (no side effects — it just survives the cleanup).
-          * To PUBLISH it (after testing it for real): run the
-            \`make-pre-release-stable\` workflow with this tag (verifies the assets,
-            marks the release stable + latest), then update apio's
-            remote-config by hand (apio#927).
-          EOFBODY
+          # The release text: what the packages are, the yosys they need,
+          # the six assets, the revisions and a manual install -- a release
+          # usable without apio. Composed from the document just checked.
+          python3 scripts/release-body.py BUILD-INFO.json BUILD-INFOS.md > RELEASE-BODY.md
+          cat RELEASE-BODY.md
 
       # The same action the FPGAwars packages use (a local copy).
       - name: Create the dated prerelease (never latest) and upload assets
@@ -383,9 +345,7 @@ jobs:
           done
           exit 1
 
-      # Promotion stays a human decision; these are the steps it involves,
-      # including the version bumps that keep apio aligned with
-      # what is actually published (scripts/check-versions.sh asserts it).
+      # Promotion stays a human decision; these are the steps it involves.
       - name: Promotion checklist
         env:
           DATE: ${{ needs.prepare.outputs.date }}
@@ -393,8 +353,7 @@ jobs:
           {
             echo "## Release candidate \`$DATE\` published (prerelease, not latest)"
             echo
-            echo "1. Try it for real (\`apio\` install from the tag, board test if it applies)."
+            echo "1. Try it for real (manual install from the release text, board test if it applies)."
             echo "2. (optional) Uncheck \`pre-release\` to keep it beyond the cleanup window while testing."
-            echo "3. To PUBLISH: run the \`make-pre-release-stable\` workflow with tag \`$DATE\` (verifies, marks stable+latest), then update apio's remote-config by hand (scripts/bump-remote-config.sh helps)."
-            echo "4. \`scripts/check-versions.sh\` must come back green afterwards."
+            echo "3. To PUBLISH: run the \`make-pre-release-stable\` workflow with tag \`$DATE\` (verifies, marks stable; \`latest\` input to make it the repository's latest release)."
           } >> "$GITHUB_STEP_SUMMARY"
