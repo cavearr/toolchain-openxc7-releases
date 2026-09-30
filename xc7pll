@@ -31,7 +31,7 @@ import sys
 VERSION = "1.1.0"
 CREDITS = (
     f"xc7pll {VERSION} — PLL parameter calculator for Xilinx 7-series\n"
-    "Part of tools-openxc7 (FPGAwars), the openXC7 toolchain package for apio.\n"
+    "Part of the openXC7 toolchain packages (toolchain-openxc7-releases).\n"
     "For the openXC7 project's toolchain. Electrical limits from Xilinx DS181.\n"
     "License: GPL-3.0."
 )

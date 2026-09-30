@@ -1,127 +1,180 @@
-# tools-openxc7
+# toolchain-openxc7-releases
 
-> **Note:** Please **do not** open issues in this repository.
-> For any questions, discussions, or bug reports, use the [main Apio repository](https://github.com/FPGAwars/apio).
+Ready-to-use packages of the [openXC7](https://github.com/openXC7) toolchain
+for **Xilinx 7-series FPGAs** (Artix-7, Spartan-7, Zynq-7000 PL): place and
+route, bitstream generation and the device databases, built reproducibly
+with [Nix](https://nixos.org), validated end to end on every platform, and
+published as dated GitHub releases.
 
-This Apio package contains the Xiling architecture support of Apio. It is based on selected binaries from the [openXC7 project](https://github.com/openxc7):
-an open source toolchain for **Xilinx 7-series FPGAs** (Artix-7 and friends) and is not intended for standalone
-operation but as part of [Apio](https://github.com/FPGAwars/apio).
-
-This repository does not develop the toolchain itself — it **builds and packages**
-using [Nix](https://nixos.org), and publish one Apio package tarball per Apio supported platform,
+This repository does not develop the toolchain: it **builds, validates and
+releases** it. Bugs in the tools themselves belong upstream (openXC7);
+issues about the packages, their contents or the releases belong here.
 
 ## What is inside a package
 
-| Component                                 | Upstream                                             | Role in the flow                                   |
-| ----------------------------------------- | ---------------------------------------------------- | -------------------------------------------------- |
-| `nextpnr-xilinx`, `bbasm`                 | [openXC7 nextpnr](https://github.com/openXC7/nextpnr) (the himbaechel xilinx uarch) | Place & route, and FASM output; `bbasm` assembles chipdb files |
-| `xc7frames2bit`, `bitread`, `xc7patch`    | [Project X-Ray](https://github.com/f4pga/prjxray)    | Frames → bitstream, and bitstream inspection       |
-| `fasm2frames` + the `fasm` Python library | [openXC7 fasm](https://github.com/openxc7/fasm)      | FASM → configuration frames                        |
-| `chipdb/`                                 | built here                                           | The device databases nextpnr needs: one file per die, `chipdb-<die>.bin`, plus `chipdb-id.txt` |
-| `XILINX-PARTS-INDEX.json`                 | built here                                           | Which chipdb file each part needs and which of them this release built; its schema number says which place-and-route engine it is built for |
-| `share/nextpnr/external/prjxray-db`       | [Project X-Ray database](https://github.com/openXC7/prjxray-db) | Pin/part data (`part.yaml`, `package_pins.csv`, …) and the segbits `fasm2frames` writes; every chipdb is generated from it |
+One tarball per platform, `openxc7-toolchain-<platform>-<YYYYMMDD>.tgz`:
 
-Synthesis is **not** part of this package: it comes from `yosys`. apio users
-get it in the `oss-cad-suite` package
-([tools-oss-cad-suite](https://github.com/FPGAwars/tools-oss-cad-suite)), which
-repackages a release of [YosysHQ's oss-cad-suite](https://github.com/YosysHQ/oss-cad-suite-build);
-the CI validates this package with that same yosys.
+| Component | Upstream | Role in the flow |
+|---|---|---|
+| `nextpnr-xilinx`, `bbasm` | [openXC7/nextpnr](https://github.com/openXC7/nextpnr) (the xilinx uarch) | Place & route and FASM output; `bbasm` assembles chipdb files |
+| `xc7frames2bit`, `bitread`, `xc7patch` | [openXC7/prjxray](https://github.com/openXC7/prjxray) | Frames → bitstream, and bitstream inspection |
+| `fasm2frames` + the `fasm` Python library | [openxc7/fasm](https://github.com/openxc7/fasm) | FASM → configuration frames |
+| `xc7pll` | this repository | PLL parameter calculator (PLLE2_BASE): a ready-to-instantiate Verilog module, or the table with `--report` |
+| `chipdb/` | built here | The device databases nextpnr reads: one `chipdb-<die>.bin` per die, plus the identity stamp `chipdb-id.txt` |
+| `share/nextpnr/external/prjxray-db` | [openXC7/prjxray-db](https://github.com/openXC7/prjxray-db) | Part data (`part.yaml`, `package_pins.csv`, …) and the segbits `fasm2frames` writes; every chipdb is generated from it |
+| `XILINX-PARTS-INDEX.json` | built here | Every part the database supports, which of them this release built, and the chipdb file of each |
+| `BUILD-INFO.json` | built here | What this package is and how it was built: revisions, the yosys it was validated with, chipdb identity, commit and run |
 
-The ten chipdb files travel inside the package. The linux-x86-64 package
-with them is 135 MB (135,265,549 bytes). Release `2026-09-25` (schema 7,
-chipdb downloaded per die) was 92 MB (linux), 77 MB (darwin) and 73 MB
-(windows).
+| Platform | Built on | Notes |
+|---|---|---|
+| `linux-x86-64` | Linux, natively | Carries its own Python for `fasm2frames` |
+| `darwin-arm64` | macOS on Apple Silicon, natively | Carries its own Python for `fasm2frames`; Mach-O libraries relocated and ad-hoc signed (`macpack.py`) |
+| `windows-amd64` | cross-compiled from Linux (mingw) | Validated under wine; `fasm2frames` runs with the oss-cad-suite Python |
 
-## Supported Boards and FPGAs
+The linux package is about 135 MB, most of it the ten chipdb files.
 
-For latest information see [Apio supported boards](https://fpgawars.github.io/apio/docs/supported-boards/) and
-[Apio supported FPGAs](https://fpgawars.github.io/apio/docs/supported-fpgas/). FPGAs that are supported by
-Openxc7 but not by Apio can easily be added in the [Apio Definition Package repo](https://github.com/fpgawars/apio-definitions).
+### Supported parts
 
-Every package ships the prjxray database of three 7-series families and one
-chipdb file per die below, in `chipdb/`. Every device and package of a die
-shares that file (an xc7a35t is an xc7a50t die):
+Every package ships the prjxray database of three families and one chipdb
+file per die below. Every device and package of a die shares that file (an
+xc7a35t is an xc7a50t die):
 
-| Family         | Die (chipdb) | Devices              | Footprints                                         | Boards (examples)                            |
-| -------------- | ------------ | -------------------- | -------------------------------------------------- | -------------------------------------------- |
-| Artix-7        | xc7a50t      | xc7a35t, xc7a50t     | `cpg236`, `csg324`, `csg325`, `fgg484`, `ftg256`   | Basys3, Arty A7-35, Cmod A7                  |
-| Artix-7        | xc7a100t     | xc7a100t             | `csg324`, `ftg256`, `fgg484`, `fgg676`             | Arty A7-100, Nexys                           |
-| Artix-7        | xc7a200t     | xc7a200t             | `fbg484`, `fbg676`, `fbv484`, `fbv676`, `ffg1156`, `ffv1156`, `sbg484`, `sbv484` |          |
-| Spartan-7      | xc7s25       | xc7s25               | `csga324`                                          | Arty S7-25                                   |
-| Spartan-7      | xc7s50       | xc7s50               | `csga324`, `fgga484`, `ftgb196`                    | Arty S7-50                                   |
-| Zynq-7000 (PL) | xc7z010      | xc7z010              | `clg225`, `clg400`                                 | Zybo Z7-10, EBAZ4205                         |
-| Zynq-7000 (PL) | xc7z020      | xc7z020              | `clg400`, `clg484`                                 | Pynq-Z1/Z2, Arty Z7-20, Zybo Z7-20, ZedBoard |
-| Zynq-7000 (PL) | xc7z030      | xc7z030              | `fbg676`                                           |                                              |
-| Zynq-7000 (PL) | xc7z045      | xc7z045              | `ffg900`, `ffv900`                                 |                                              |
-| Zynq-7000 (PL) | xc7z100      | xc7z100              | `ffg900`, `ffg1156`, `ffv900`, `ffv1156`           |                                              |
+| Family | Die (chipdb) | Devices | Footprints |
+|---|---|---|---|
+| Artix-7 | xc7a50t | xc7a35t, xc7a50t | `cpg236`, `csg324`, `csg325`, `fgg484`, `ftg256` |
+| Artix-7 | xc7a100t | xc7a100t | `csg324`, `ftg256`, `fgg484`, `fgg676` |
+| Artix-7 | xc7a200t | xc7a200t | `fbg484`, `fbg676`, `fbv484`, `fbv676`, `ffg1156`, `ffv1156`, `sbg484`, `sbv484` |
+| Spartan-7 | xc7s25 | xc7s25 | `csga324` |
+| Spartan-7 | xc7s50 | xc7s50 | `csga324`, `fgga484`, `ftgb196` |
+| Zynq-7000 (PL) | xc7z010 | xc7z010 | `clg225`, `clg400` |
+| Zynq-7000 (PL) | xc7z020 | xc7z020 | `clg400`, `clg484` |
+| Zynq-7000 (PL) | xc7z030 | xc7z030 | `fbg676` |
+| Zynq-7000 (PL) | xc7z045 | xc7z045 | `ffg900`, `ffv900` |
+| Zynq-7000 (PL) | xc7z100 | xc7z100 | `ffg900`, `ffg1156`, `ffv900`, `ffv1156` |
 
-Zynq support is **PL-only**: the toolchain produces the fabric bitstream
-(loaded over JTAG); the ARM PS boots on its own. Kintex-7 is work in progress
-(its differential-input bits are missing upstream).
+Zynq support is **PL only**: the toolchain produces the fabric bitstream
+(loaded over JTAG); the ARM PS boots on its own. Kintex-7 is work in
+progress upstream. `chipdb-parts.json` is the single source of truth for
+this list: the packer, the Windows build and the CI assertions all read it.
 
-`chipdb-parts.json` is the **single source of truth** for that list: it is read by
-the packer, by the Windows build (which database families to ship) and by the CI
-assertions. Adding a board whose footprint already exists in the prjxray database
-is a one-line change there.
+## The yosys these packages require
 
-## Building the packages from source (developers)
+Synthesis is **not** in the packages: it comes from
+[yosys](https://github.com/YosysHQ/yosys), through a release of
+[YosysHQ's oss-cad-suite](https://github.com/YosysHQ/oss-cad-suite-build).
+Every release is validated with exactly one such release, and says which:
 
-The build is reproducible with **Nix** (every flake input at a fixed revision). There is no
-cross-compilation between Linux and macOS — each is built natively on its own
-machine — while the Windows package **is** cross-compiled from Linux, because
-Nix does not run on Windows.
+- the release text starts with **"Requires yosys: YosysHQ oss-cad-suite
+  `<tag>`"**;
+- every package declares it as `yosys-release-tag` in its `BUILD-INFO.json`.
 
-### Linux / macOS (native)
+It is declared because the result of place and route depends on the
+netlist yosys hands it: another yosys may synthesise differently, and the
+regression baselines (below) were measured with this one. A consumer can
+check it: apio compares the tag with the one its own oss-cad-suite package
+names, at run time. The tag is written in exactly one place,
+`YOSYS_RELEASE_TAG` in `.github/workflows/build-pre-release.yaml`.
+
+## Manual install
+
+1. From a release, download the tarball of your platform and `SHA256SUMS`,
+   and check it: `sha256sum -c --ignore-missing SHA256SUMS` (macOS:
+   `shasum -a 256 -c --ignore-missing SHA256SUMS`).
+2. Extract it anywhere: `mkdir openxc7 && tar xzf openxc7-toolchain-<platform>-<date>.tgz -C openxc7`.
+3. Put `openxc7/bin` on your `PATH`.
+4. Install the YosysHQ oss-cad-suite release the release text names, and put
+   its `bin` on your `PATH` too (on Windows `fasm2frames` runs with its
+   Python).
+
+## Using it
+
+For a part such as `xc7a35tcsg324-1` (family `artix7`; the chipdb file of
+each part is in `XILINX-PARTS-INDEX.json`), with the package extracted in
+`openxc7/`:
 
 ```bash
-nix develop .#pack                                   # packaging shell
-python3.12 openxc7-pack.py                           # -> openxc7-toolchain-<platform>-<date>.tgz
-python3.12 openxc7-pack.py --no-chipdb               # local tools-only tree, no bins
+yosys -p 'synth_xilinx -arch xc7 -top top; write_json top.json' top.v
+
+nextpnr-xilinx --device xc7a35tcsg324-1 \
+  --chipdb openxc7/chipdb/chipdb-xc7a50t.bin \
+  -o xdc=top.xdc -o fasm=top.fasm --json top.json --report report.json
+
+DB=openxc7/share/nextpnr/external/prjxray-db/artix7
+fasm2frames --part xc7a35tcsg324-1 --db-root $DB top.fasm > top.frames
+xc7frames2bit --part_file $DB/xc7a35tcsg324-1/part.yaml \
+  --part_name xc7a35tcsg324-1 --frm_file top.frames --output_file top.bit
+```
+
+`--report` writes the timing (fmax) and utilisation as JSON. `xc7pll`
+computes PLL parameters: `xc7pll -i 100 -o 25` prints a Verilog module,
+`--report` the table.
+
+### The parts index
+
+`XILINX-PARTS-INDEX.json` sits at the root of every package and is
+published with each release under the same name. It is keyed by the full
+part (`xc7a200tfbg484-3`: device, package, speed grade); each entry gives
+its `family`, `base-part` and `speed`, whether this release built it
+(`generated`) and, for the parts it built, the `chipdb` file name in
+`chipdb/` (the parts of one die repeat that name). A part with
+`"generated": false` is supported by the packaged database but not built:
+"not built" rather than "unknown part". The top level carries the
+`chipdb-id` and the counts. Its `schema` number is the contract with a
+reader: schema 8 is today's (the xilinx uarch installed as `nextpnr-xilinx`,
+one chipdb file per die, shipped in the package), and any change to its
+keys is a new schema. `pack/parts_index.py` is the only code that writes
+it and the validator every reader here goes through.
+
+## Building from source
+
+The build is reproducible with **Nix**: every flake input at a fixed
+revision. Linux and macOS are built natively on their own machines; Windows
+is cross-compiled from Linux, because Nix does not run on Windows.
+
+### Linux / macOS
+
+```bash
+nix develop .#pack                        # packaging shell
+python3.12 openxc7-pack.py                # -> openxc7-toolchain-<platform>-<date>.tgz
+python3.12 openxc7-pack.py --no-chipdb    # local tools-only tree, no chipdb
 ```
 
 The default pack is the release pack: it generates the chipdb of every die
 of the manifest, or copies one already generated (`OPENXC7_CHIPDB_SEED`,
-which must carry this toolchain's `chipdb-id.txt`), and the tarball ships
-those files in `chipdb/`. `--no-chipdb` (or `OPENXC7_NO_CHIPDB=1`) leaves a
-`README.txt` there and no bins. Use it for local iteration. A release
-package is what the default pack produces, with the chipdb files already
-in `chipdb/`.
-
-The first `nix develop` builds the whole toolchain and takes a while (tens of
-minutes); later ones take seconds. `nix develop` (without `.#pack`) gives the
-full development shell; `.#pack` is the lighter profile the packer actually
-needs.
-
-Apple clang rejects one call in the xilinx FASM writer that GCC accepts: a
-`std::string` passed to variadic `log_error` (the diagnostic for a LUT-RAM
-whose clock inversion disagrees with its half-slice). The derivation adds
-`-Wno-non-pod-varargs` on Darwin only, so the sources stay as upstream wrote
-them. That call is not on the path that writes a bitstream.
+which must carry this toolchain's `chipdb-id.txt`), and ships those files in
+`chipdb/`. `--no-chipdb` (or `OPENXC7_NO_CHIPDB=1`) leaves a `README.txt`
+there and no bins, for local iteration. The first `nix develop` builds the
+whole toolchain (tens of minutes); later ones take seconds.
 
 Generating the chipdb is the slow part: one run of the uarch's generator
-(`himbaechel/uarch/xilinx/gen/xilinx_gen.py`, from the nextpnr source tree the
+(`himbaechel/uarch/xilinx/gen/xilinx_gen.py`, from the nextpnr source the
 package is built from; the packaging shell exports it as
-`NEXTPNR_XILINX_CHIPDB_GEN`) and one `bbasm` per die — about 14 minutes for
-the ten dies one at a time, 9 with `OPENXC7_CHIPDB_JOBS=10` under the default
-memory budget (a 20-core Linux server), and from 1 to 12.4 GB of memory each
-(`xc7z100` is the biggest). The `.bin` files are **platform independent and
-byte-identical**, so they can be generated once and reused:
+`NEXTPNR_XILINX_CHIPDB_GEN`) and one `bbasm` per die: about 14 minutes for
+the ten dies one at a time, 9 with `OPENXC7_CHIPDB_JOBS=10`, and from 1 to
+12.4 GB of memory each (`xc7z100` is the biggest). The `.bin` files are
+**platform independent and byte-identical**, so they are generated once and
+reused:
 
-| Variable                | Meaning                                                 |
-| ----------------------- | ------------------------------------------------------- |
-| `OPENXC7_PACK_DATE`     | Force the package date (`YYYY-MM-DD`), instead of today |
-| `OPENXC7_CHIPDB_SEED`   | Directory of prebuilt `.bin` files to reuse (with the `chipdb-id.txt` of this toolchain) |
-| `OPENXC7_CHIPDB_JOBS`   | Dies generated at once (default 1)                      |
+| Variable | Meaning |
+|---|---|
+| `OPENXC7_PACK_DATE` | Force the package date (`YYYY-MM-DD`), instead of today |
+| `OPENXC7_CHIPDB_SEED` | Directory of prebuilt `.bin` files to reuse (with the `chipdb-id.txt` of this toolchain) |
+| `OPENXC7_CHIPDB_JOBS` | Dies generated at once (default 1) |
 | `OPENXC7_CHIPDB_MEM_GB` | Memory budget of those jobs (default 14: `xc7z045` and `xc7z100` never run together) |
-| `OPENXC7_NO_CHIPDB`     | `1` packs a local tools-only tree (same as `--no-chipdb`) |
-| `OPENXC7_PARTS_INDEX`   | The document to embed as `XILINX-PARTS-INDEX.json`      |
-| `OPENXC7_BUILD_INFO`    | The `BUILD-INFO.json` to embed (`scripts/build-info.sh`) |
+| `OPENXC7_NO_CHIPDB` | `1` packs a local tools-only tree (same as `--no-chipdb`) |
+| `OPENXC7_PARTS_INDEX` | The document to embed as `XILINX-PARTS-INDEX.json` |
+| `OPENXC7_BUILD_INFO` | The `BUILD-INFO.json` to embed (`scripts/build-info.sh`) |
 
-> **Caveat:** when you change the toolchain revisions, remove `dist/`
-> before packing (`chmod -R u+w dist && rm -rf dist`). A chipdb file built
-> against a different revision of nextpnr or of the database is incompatible,
-> and nextpnr cannot always tell: the identity stamp (`chipdb-id.txt`) is what
-> keeps the packer from reusing one.
+> **Caveat:** when you change a toolchain revision, remove `dist/` before
+> packing (`chmod -R u+w dist && rm -rf dist`). A chipdb file built against
+> another revision of nextpnr or of the database is incompatible, and
+> nextpnr cannot always tell; the identity stamp is what keeps the packer
+> from reusing one.
+
+Apple clang rejects one call in the xilinx FASM writer that GCC accepts (a
+`std::string` passed to a variadic `log_error`); the derivation adds
+`-Wno-non-pod-varargs` on Darwin only, so the sources stay as upstream
+wrote them.
 
 ### Windows (cross-compiled from Linux)
 
@@ -129,11 +182,10 @@ byte-identical**, so they can be generated once and reused:
 nix build .#packages.x86_64-linux.openxc7-windows-amd64-tools
 ```
 
-The result is deliberately a **tools-only tree** without `chipdb/`. CI copies
-the bins and `chipdb-id.txt` from the single `chipdb.yml` job into `chipdb/`,
-embeds the `XILINX-PARTS-INDEX.json` that job wrote, then creates the tarball.
-Those are the same bins the Linux and macOS packs seed. To reproduce that
-assembly locally:
+The result is a **tools-only tree** without `chipdb/`. CI copies in the bins
+and `chipdb-id.txt` from the single `chipdb.yml` job, embeds the parts index
+that job wrote, writes `BUILD-INFO.json` and makes the tarball. To
+reproduce that assembly locally:
 
 ```bash
 cp -aL result package-win && chmod -R u+w package-win
@@ -146,17 +198,16 @@ CHIPDB_SOURCE=restored-from-cache CHIPDB_ID="$(cat package-win/chipdb/chipdb-id.
 tar czhf openxc7-toolchain-windows-amd64-YYYYMMDD.tgz --mode=u+w -C package-win .
 ```
 
-`nextpnr-xilinx.exe` is the same himbaechel uarch as the Linux and macOS
-binaries (`--device`, `-o xdc=`, `-o fasm=`, `--report`). It is built without
-an embedded Python interpreter: the tree has no `libpython3.11.dll` and no
-`lib/python3.11`. `apio report` reads the JSON that nextpnr writes with
-`--report`, the same on every platform. `fasm2frames` still runs under the
-Windows Python apio already provides.
+`nextpnr-xilinx.exe` is the same uarch as the Linux and macOS binaries,
+built without an embedded Python. The hard-won parts of the cross build
+are explained in `nix/windows/default.nix`.
 
-## Validating a package
+## How a package is validated
 
-Everything the CI gates on is a script you can run locally, which is the point:
-a release is only as trustworthy as the checks you can reproduce.
+Everything the CI gates on is a script you can run locally.
+
+**L1, the package gate** (`scripts/validate-package.sh`) checks a package
+**inside its tarball**, never the freshly built tree:
 
 ```bash
 scripts/validate-package.sh <package.tgz>
@@ -165,212 +216,175 @@ scripts/validate-package.sh <package.tgz> --parts "xc7a35tcpg236" --keep
 scripts/validate-package.sh <tools-only-tree-or-tarball> --chipdb-dir <bins>
 ```
 
-A release package already carries its chipdb. The gate checks that every
-file named by `XILINX-PARTS-INDEX.json` is in `chipdb/`, that no extra `.bin`
-is there, and that `chipdb/chipdb-id.txt` matches the index's `chipdb-id`.
-`--chipdb-dir` is only for a local `--no-chipdb` tree: the same check, then
-the bins are copied in so the end-to-end run has them. When the package
-already ships the files, the flag is ignored.
-
-It validates the package **inside its tarball** (never the freshly built tree)
-and exits non-zero on any failure:
-
-- the layout, and that every part of `chipdb-parts.json` is named by
-  `XILINX-PARTS-INDEX.json` and present in `chipdb/`;
+- the layout; every file the index names is in `chipdb/`, no extra `.bin`
+  is there, and `chipdb-id.txt` matches the index's `chipdb-id`;
 - `--version` of the *packaged* binary against the revision in
-  `nix/nextpnr-xilinx.nix`, so a stale binary cannot sneak into a release;
-- on macOS, the ad-hoc signature and that no Mach-O load command still points
-  into `/nix/store`;
-- an end-to-end run for **every** part: synthesis → `nextpnr-xilinx` with the
-  command line apio runs for the package's engine (for the himbaechel uarch:
-  `--device <part> --chipdb chipdb-<die>.bin -o xdc=… -o fasm=… --report …`),
-  whose `--report` JSON must carry `fmax` and `utilization` → `fasm2frames`,
-  which must not print a single warning → `xc7frames2bit` → a real, non-empty
-  bitstream.
+  `nix/nextpnr-xilinx.nix`, so a stale binary cannot reach a release;
+- on macOS, the ad-hoc signature, and that no Mach-O load command still
+  points into `/nix/store`;
+- an **end-to-end run for every part of the manifest**
+  (`e2e/run-parts.sh`): synthesis → `nextpnr-xilinx` with the command line
+  above, whose `--report` must carry fmax and utilisation → `fasm2frames`,
+  which must not print a single warning → `xc7frames2bit` → a real,
+  non-empty bitstream.
 
-That last step is also available on its own:
+`--chipdb-dir` only fills a `--no-chipdb` tree; a release package already
+carries its chipdb.
 
-```bash
-e2e/run-parts.sh <extracted-package-dir> <workdir> [wine]
-```
-
-The second layer is the **regression suite**: 23 declarative tests (one
-folder + `test.json` each) that run real designs through the whole flow on
+**L2, the regression suite** (`regress/`): 23 declarative tests (a folder
+and a `test.json` each) that run real designs through the whole flow on
 every packaged family — primitives, structural properties, a parametric
-congestion pair, and the untouched upstream demo projects — and compare
-fmax/utilisation/router-time against per-platform baselines. The harness
-reads the engine from the package's `XILINX-PARTS-INDEX.json` and speaks its
-command line; `regress/baselines/<platform>.json` belongs to the engine this
-repository packages:
+congestion pair, the untouched upstream demo projects — and compare fmax,
+utilisation and router time against per-platform baselines
+(`regress/baselines/<platform>.json`; each entry records the yosys it was
+measured with). A drift beyond tolerance fails the gate.
 
 ```bash
-scripts/fetch-demos.sh                              # locked third-party sources
-scripts/regress.sh <package.tgz>                        # the whole catalogue
+scripts/fetch-demos.sh                     # third-party sources at their locked revision
+scripts/regress.sh <package.tgz>           # the whole catalogue
 scripts/regress.sh <pkg> --test srl --json report.json
 scripts/regress.sh <tools-only-pkg> --chipdb-dir <bins>
 ```
 
-A third check keeps the installers honest about what is actually published:
+**Static gates** (per commit, `test.yaml`): the unit tests (`pytest
+tests/`), `bash -n` of every script, `scripts/check-workflows.py` (the
+inputs and outputs between workflows and local actions),
+`scripts/check-artifacts.py` (every artifact downloaded is uploaded) and
+`scripts/check-terminology.sh`.
 
-```bash
-scripts/check-versions.sh            # promoted release vs apio's remote-config
-```
+## Bumping a component
 
-## Releases and CI
+Each revision is written in exactly one file; the Windows build derives its
+sources from the native derivations.
 
-Each platform has its own reusable workflow, on its own native runner, carrying
-the same gate. They are `workflow_call`-only consumers of the chipdb artifacts:
-`build-pre-release.yaml` is the one entry point, and a validated package of any
-branch is a dispatch of it on that branch:
+| Component | File | What follows |
+|---|---|---|
+| nextpnr-xilinx | `nix/nextpnr-xilinx.nix` (`rev`, `hash`, `version`) | The chipdb identity changes (a new cache key: the chipdb job regenerates). A/B the regression suite's canonical FASM against the previous engine, then record the new baselines. |
+| prjxray-db | `nix/prjxray-db.nix` (`rev`, `hash`) | The chipdb identity changes; every die is regenerated. Run the full chain on any part whose data changed. |
+| prjxray | `nix/prjxray.nix` | Not part of the chipdb identity; L1 and L2 must stay unchanged. |
+| fasm | `nix/fasm/default.nix` | As prjxray. |
+| yosys | `YOSYS_RELEASE_TAG` in `.github/workflows/build-pre-release.yaml` | See below. |
+
+To bump yosys:
+
+1. Change `YOSYS_RELEASE_TAG` to the YosysHQ oss-cad-suite release to
+   validate against. `scripts/ci-install-oss-cad-suite.sh` installs it by
+   that tag (it has no default) and refuses a suite on disk that is not it;
+   `scripts/build-info.sh` derives the package's `yosys-release-tag` from the
+   installed suite.
+2. Dispatch `build-pre-release` on the branch.
+3. If the new yosys synthesises differently, L2 fails on metric drift. That
+   is the gate working: review the drift, then record the new numbers with
+   `scripts/regress-baseline-from-report.py` from the
+   `regress-report-<platform>` artifacts of that run.
+4. A consumer that checks the tag (apio) has to move its own yosys to the
+   same release: agree the bump with it.
+
+## Releases
 
 | Workflow | What it does |
 |---|---|
-| `test.yaml` | Per-commit compile test: linux, macos and windows-cross jobs (push/PR guard) |
-| `chipdb.yml` | Owns chipdb generation/cache, identity and `XILINX-PARTS-INDEX.json`: one `chipdb-<die>.bin` per die of the manifest, generated three at a time under a memory budget so the two biggest dies never run together on the 16 GB runner |
-| `linux-package.yml` | Consumes the chipdb artifacts, then builds + validates `linux-x86-64` |
-| `darwin-package.yml` | Consumes the chipdb artifacts, then builds + validates `darwin-arm64` |
-| `windows-package.yml` | Consumes the chipdb artifacts, then cross-builds + validates `windows-amd64` under wine (an inline E2E with the himbaechel command line and its `--report`, then L1 and L2) |
-| `build-pre-release.yaml` | Daily orchestrator (FPGAwars convention): prepares chipdb, builds the three platforms, then publishes |
-| `make-pre-release-stable.yaml` | Manual dispatch: re-verifies a candidate and marks it stable + latest (apio's remote-config is then updated by hand) |
+| `test.yaml` | Per commit: compile nextpnr-xilinx, prjxray and fasm on linux and macos, nextpnr-xilinx and prjxray on windows-cross, plus the static gates |
+| `build-pre-release.yaml` | Daily (and on dispatch): the chipdb once, the three platforms in parallel, then the release |
+| `chipdb.yml` | Generates or restores the chipdb, one file per die, three at a time under a memory budget; writes the identity stamp and the parts index |
+| `linux-package.yml`, `darwin-package.yml`, `windows-package.yml` | Build one platform's package with those bins inside, then L1 and L2 (windows under wine) |
+| `make-pre-release-stable.yaml` | By hand: re-verifies a release (`scripts/asset-check.sh --full`) and marks it stable; `latest` on request |
 
-`build-pre-release.yaml` creates the release **only after every platform is
-green**, as a dated **prerelease** (never "latest"), with six assets: the
-three tarballs (each carrying its chipdb), `XILINX-PARTS-INDEX.json`,
-`BUILD-INFO.json`, and a `SHA256SUMS` covering the other five
-(written in the publishing job from the bytes it uploads, so it cannot drift
-from the release). Before the upload, the index is checked against the bins
-inside every tarball. There is no `apio-xilinx-chipdb-*.bin.tgz` asset.
+The per-platform and chipdb workflows are `workflow_call` only:
+`build-pre-release.yaml` is the one entry point, and a validated package of
+any branch is a dispatch of it on that branch.
 
-`XILINX-PARTS-INDEX.json` is published under the same name every package carries it
-at its root: which release it belongs to is written inside it (`release-tag`),
-so the file name does not repeat the date. It is keyed by the full part number
-(`xc7a200tfbg484-3`: device, package, speed grade) and says, for each one,
-whether this release built it and — if it did — the chipdb file in `chipdb/`
-(`chipdb-<die>.bin`; the parts of one die repeat that name). Parts the
-packaged prjxray database supports but the release did not build are listed
-with `"generated": false`: supported, not built, so apio can tell that from
-"unknown part". A package carries one engine, and the schema number is the
-contract. Schema 8, which this package emits, is the himbaechel engine,
-installed as `nextpnr-xilinx`, one chipdb file per die, shipped in the
-package. The command line is `nextpnr-xilinx --device <part> --chipdb
-<file> -o xdc=… -o fasm=… --report …`. apio 1.6.x reads schema 5 only;
-schema 8 is for the apio 1.7 line. Each platform's L1 and L2 gates run on
-the tarball with those bins already inside it. Old prereleases are
-pruned automatically; promoting a candidate to a real release is a deliberate
-one-click human step, and everything after that click is automated.
+**Nightly.** Every day `build-pre-release` publishes a **pre-release** whose
+tag is the UTC date (`2026-09-30`), only after every platform is green. It
+carries six assets: the three tarballs, `XILINX-PARTS-INDEX.json`,
+`BUILD-INFO.json` (what the three packages agree on, plus each one's file
+name and build time) and `SHA256SUMS` over the other five. The naming rule
+is the whole contract with a consumer: tag `YYYY-MM-DD` → asset
+`openxc7-toolchain-<platform>-<YYYYMMDD>.tgz` at that release;
+`scripts/asset-check.sh <tag>` checks a published release against it. Only
+the newest five pre-releases are kept.
 
-Asset names must match the release tag: apio derives the package date from the
-**tag** (`2026-07-31` → `20260731`), not from the file name, so a mismatch turns
-into a 404 at install time.
+**Stable and latest.** A release is kept by marking it stable, which is what
+`make-pre-release-stable` does after verifying every asset again; it also
+drops the "Pre-release note" from the release text. `latest` is a separate,
+deliberate choice (its `latest` input, off by default): the repository's
+latest release is **the newest release a consumer can use**, so it moves
+only when a release is ready for that.
 
 ### Rebuilding today's tag
 
-`build-pre-release.yaml` replaces a same-tag **pre-release** only at the end of
-the run, after every platform is green. That delete-and-publish window is about
-50 seconds. Deleting the GitHub release by hand before dispatching opens a gap
-of hours while the three platforms rebuild, and every installer that follows
-that tag gets a 404.
+`build-pre-release` replaces a same-tag **pre-release** only at the end of
+the run, after every platform is green: a window of about 50 seconds. Do
+not delete the release by hand before dispatching: that opens a gap of
+hours in which the tag resolves to nothing.
 
-To rebuild an existing tag without leaving anyone without a package:
+1. If the release is stable, mark it as a pre-release first (a stable tag
+   makes the run fail on purpose). If it is a pre-release, leave it.
+2. Dispatch `build-pre-release.yaml` with that date (`regenerate_chipdb`
+   to generate every die from scratch).
+3. When the run is green, re-promote with `make-pre-release-stable.yaml` if
+   it was stable.
 
-1. **Do not delete the release.** If it is already a pre-release, leave it. If
-   it is stable, mark it as a pre-release first (GitHub moves `latest` back to
-   the previous stable). A still-stable tag makes the workflow fail on purpose.
-2. Dispatch `build-pre-release.yaml` with that date. Set `regenerate_chipdb` to
-   true to generate every chipdb die from scratch (no cache). The existing
-   pre-release stays up until the last minute.
-3. Wait for the run to finish green: the dated pre-release is then the newly
-   validated packages.
-4. Re-promote with `make-pre-release-stable.yaml` (and bump apio's remote-config
-   by hand if clients install this tag).
-
-Never delete `latest`, and never delete a release that apio's remote-config
-already points at: that is an immediate 404 for every installer on that
-channel.
-
-### Bumping yosys
-
-The CI validates every package with the yosys of a
-[YosysHQ oss-cad-suite-build](https://github.com/YosysHQ/oss-cad-suite-build)
-release, and each package declares that release as the `yosys-release-tag` of
-its `BUILD-INFO.json`. It is named in exactly one place: `YOSYS_RELEASE_TAG` in
-`.github/workflows/build-pre-release.yaml` (`YYYY-MM-DD`). The suite is
-downloaded from YosysHQ by that tag; the `yosys-release-tag` of the package is
-derived from the installed suite's `VERSION` file, so no yosys date is written
-anywhere else.
-
-apio checks at run time that this package and its own `oss-cad-suite` package
-name the same yosys tag, so a bump is coordinated with the apio maintainer:
-`tools-oss-cad-suite` has to repackage the same YosysHQ release.
-
-1. Change `YOSYS_RELEASE_TAG` to the YosysHQ release to validate against.
-2. Run `test.yaml` on the branch, or dispatch `build-pre-release`.
-3. If the new yosys synthesises differently, the L2 regression gate fails on
-   metric drift. That is the gate working, not a broken bump: review the drift,
-   then record the new numbers with `scripts/regress-baseline-from-report.py`
-   from the `regress-report-<platform>` artifacts of that run (every baseline
-   entry records the yosys it was measured with in `env.yosys`).
-4. Open the PR (workflow change + regrabbed baselines).
-
-`scripts/check-versions.sh` compares the literal with the yosys tag of the
-`oss-cad-suite` release apio's remote-config names. The yosys tag of any
-`tools-oss-cad-suite` release is the `YOSYS_RELEASE_TAG` of its workflow at
-that git tag (and the "Underlying Yosys release" link of its release notes).
-`scripts/ci-install-oss-cad-suite.sh` has no default version and refuses to
-continue if the suite on disk is not the requested release.
+Never delete `latest`, nor a release a consumer names.
 
 ### Running the workflows on a fork
 
 The workflows run on a fork as they do here and publish the dated
-pre-release on the fork itself, the way the other Apio packages do; that is
-the way to test a change end to end before opening a PR. Dispatch
-`build-pre-release.yaml` on the branch you want to test; it needs no
-configuration on the fork.
+pre-release on the fork itself. The release actions are local copies
+(`.github/actions/`, see its README), so a fork needs no other repository
+and no configuration beyond letting Actions write (Settings → Actions →
+Workflow permissions: read and write).
+
+## Consumers
+
+[apio](https://github.com/FPGAwars/apio) installs this toolchain as its
+`openxc7` package. Its packaging repository,
+[FPGAwars/tools-openxc7](https://github.com/FPGAwars/tools-openxc7), takes a
+release of this repository by its tag, checks it against `SHA256SUMS`, and
+republishes the packages under apio's names and conventions
+(`apio-openxc7-<platform>-<YYYYMMDD>.tgz`, its own `BUILD-INFO.json`, which
+copies the `yosys-release-tag` from ours); apio's remote-config names that
+repository's release. Nothing here depends on apio.
 
 ## Repository layout
 
 | Path | What it is |
 |---|---|
 | `flake.nix`, `nix/` | The reproducible build: every package, the dev shells and the Windows cross recipe |
-| `openxc7-pack.py`, `pack/`, `macpack.py` | The packer: a thin CLI over the `pack/` modules (unit-tested in `tests/`); the macOS backend relocates Mach-O libraries and re-signs them |
-| `chipdb-parts.json` | The part manifest (family → footprints) — one line here per new part |
-| `regress/` | The declarative regression suite (tests, baselines, locked third-party demos) |
-| `scripts/`, `e2e/` | Validation you can run locally, and the multi-part end-to-end |
-| — | End-user install scripts live on `archive/standalone-installers` (this is an apio package) |
-| `udev/` | USB rules needed to program boards on Linux (copy of openFPGALoader's) |
-| `example/`, `config/` | The Basys3 LED example and board constraint files |
-| `.github/workflows/` | CI: guards, per-platform packages, release |
+| `openxc7-pack.py`, `pack/`, `macpack.py` | The packer: a thin CLI over the `pack/` modules (unit-tested in `tests/`); the macOS backend relocates Mach-O libraries and signs them |
+| `chipdb-parts.json` | The part manifest (family → footprints) |
+| `xc7pll` | The PLL calculator |
+| `regress/` | The regression suite (tests, baselines, locked third-party demos) |
+| `scripts/`, `e2e/` | Validation you can run locally, the release tooling and the multi-part end-to-end |
+| `example/`, `config/` | The Basys3 LED design the Windows E2E synthesises |
+| `.github/workflows/`, `.github/actions/` | CI and the release actions |
+| `spike/` | Reference recipes of the Windows port and the Mach-O relocation experiment |
 
 ## Credits
 
-The openXC7 toolchain is developed by the [openXC7 project](https://github.com/openxc7)
+The openXC7 toolchain is developed by the [openXC7 project](https://github.com/openXC7)
 and builds on [Project X-Ray](https://github.com/f4pga/prjxray),
 [nextpnr](https://github.com/YosysHQ/nextpnr) and
-[Yosys](https://github.com/YosysHQ/yosys). All credit for the tools themselves
-belongs to them.
+[Yosys](https://github.com/YosysHQ/yosys). All credit for the tools
+themselves belongs to them.
 
-This repository was created by **Juan González-Gómez
-([Obijuan](https://github.com/Obijuan))** for [FPGAwars](https://github.com/FPGAwars),
-who set up the original Nix packaging, the installation scripts, the environment
-and the Basys3 example that this project still builds on. 
+This repository continues the history of
+[FPGAwars/tools-openxc7](https://github.com/FPGAwars/tools-openxc7), created
+by **Juan González-Gómez ([Obijuan](https://github.com/Obijuan))** for
+FPGAwars, who set up the original Nix packaging and the Basys3 example this
+project still builds on.
 
-
-**Carlos Venegas ([cavearr](https://github.com/cavearr))**
-contributed, on top of that foundation: multi-platform support (native macOS
-on Apple Silicon and Windows cross-compiled from Linux), fixes to the openXC7
-toolchain itself (routing, timing and packer bugs, all merged upstream,
-nextpnr-xilinx #102/#104/#105/#106 and prjxray #5, so the packages carry zero
-local patches), extended Artix-7 board coverage plus the Spartan-7 and
-Zynq-7000 (PL) families, a declarative regression suite that gates every
-package on all three platforms, and the automated build, validation and
+**Carlos Venegas ([cavearr](https://github.com/cavearr))** added
+multi-platform support (native macOS on Apple Silicon and Windows
+cross-compiled from Linux), fixes to the openXC7 toolchain itself (merged
+upstream, so the packages carry no local patches), the Spartan-7 and
+Zynq-7000 (PL) families, the regression suite and the build, validation and
 release workflows.
 
-**Fernando Mosquera ([Benitos](https://github.com/benitoss))**
-contributed with Icestudio and verilog designs, feedback, testing, and real-world physical board tests.
-
+**Fernando Mosquera ([Benitos](https://github.com/benitoss))** contributed
+designs, feedback, testing and real-world board tests.
 
 ## License
 
-The Apio project itself is licensed under the GNU General Public License version 3.0 (GPL-3.0).
-Pre-built packages may include third-party tools and components, which are subject to their
-respective license terms.
+GPL-3.0 (`LICENSE`). The packages include third-party tools and components,
+each under its own license.
