@@ -3,18 +3,12 @@
 # CI helper: install the oss-cad-suite this repo VALIDATES against.
 #
 # The L1/L2 gates run the packaged toolchain together with the yosys (and
-# the python for fasm2frames) of YosysHQ's oss-cad-suite.  apio users get the
-# same yosys through its `oss-cad-suite` package, which repackages that
-# YosysHQ release.  This script states NO version: the YosysHQ release to
-# install is passed in YOSYS_RELEASE_TAG, whose single literal lives in
-# build-pre-release.yaml.  scripts/check-versions.sh reads that literal and
-# compares it against the yosys tag of the package apio's remote-configs
-# serve, so a drift shows up in the daily monitor instead of silently
-# validating against the wrong tools.
-#
-# (The former end-user standalone installers live on the
-# archive/standalone-installers branch — this repo is an apio package;
-# non-apio users should use the upstream openXC7 project directly.)
+# the python for fasm2frames) of YosysHQ's oss-cad-suite.  That release is
+# the one every package declares as its yosys-release-tag and the release
+# text names as required; apio users get the same yosys through its
+# `oss-cad-suite` package, which repackages that YosysHQ release.  This
+# script states NO version: the YosysHQ release to install is passed in
+# YOSYS_RELEASE_TAG, whose single literal lives in build-pre-release.yaml.
 
 set -euo pipefail
 

@@ -13,8 +13,8 @@
 # DI/WE discussions in the test READMEs -- so it is NOT matched: a check
 # that cried wolf on real pads would be turned off within a week.
 #
-# Excluded by name: README-archived.md and doc/, the original toolchain
-# documentation by Obijuan, preserved untouched.
+# Excluded by name: doc/, the screenshots of the original toolchain
+# documentation by Obijuan (the document itself is in the history).
 #
 #   scripts/check-terminology.sh [repo-root]
 
@@ -38,7 +38,7 @@ PATTERN="${ROOT}ned|${ROOT}ning|re${ROOT}|re${ROOT}ned|un${ROOT}ned"
 # server keeps one). An `if` treats both as false, so this check used to
 # report OK on a tree it had not read a single line of.
 STATUS=0
-git grep -n -i -w -E "$PATTERN" -- . ':!README-archived.md' ':!doc' || STATUS=$?
+git grep -n -i -w -E "$PATTERN" -- . ':!doc' || STATUS=$?
 case $STATUS in
     0)
         echo
