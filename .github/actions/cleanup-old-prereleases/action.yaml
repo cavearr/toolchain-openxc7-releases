@@ -2,6 +2,17 @@ name: "Cleanup Old Pre-Releases"
 description: >-
   Cleanup old pre-releases while preserving all stable releases, drafts,
   and the KEEP most recent pre-releases. The value KEEP is a constant.
+  Only the pre-releases of one release line are counted and deleted: the
+  tags <tag-prefix>YYYY-MM-DD (LOCAL CHANGE, see .github/actions/README.md).
+
+inputs:
+  tag-prefix:
+    description: >-
+      The release line: "" for the dated tags (YYYY-MM-DD), "upstream-"
+      for the upstream nightly (upstream-YYYY-MM-DD). A pre-release of
+      another line is neither counted nor deleted.
+    required: false
+    default: ""
 
 # inputs:
 #   pre-release-keep-count:
@@ -31,16 +42,20 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
         KEEP: 5
+        TAG_PREFIX: ${{ inputs.tag-prefix }}
       shell: bash
       run: |
         set -euo pipefail
 
+        # One line at a time: its own tags, by the exact shape.
         mapfile -t tags < <(
           gh release list --limit 1000 \
             --json tagName,isPrerelease,isDraft,publishedAt \
             --jq '[.[] | select(.isPrerelease == true and .isDraft == false)]
-                  | sort_by(.publishedAt) | reverse | .[].tagName'
+                  | sort_by(.publishedAt) | reverse | .[].tagName' \
+          | grep -E "^${TAG_PREFIX}[0-9]{4}-[0-9]{2}-[0-9]{2}\$" || true
         )
+        echo "*** Line '${TAG_PREFIX}YYYY-MM-DD': ${#tags[@]} pre-releases"
 
         for ((i = 0; i < ${#tags[@]}; i++)); do
           if (( i < KEEP )); then

@@ -195,5 +195,96 @@ class ComposedBodyTests(unittest.TestCase):
         self.assertIn("yosys-release-tag 'unknown'", error)
 
 
+UPSTREAM_INFO = {
+    **RELEASE_INFO,
+    "release-tag": "upstream-2026-10-01",
+    "prjxray-db-revision": "517d66a383676cb971177ea92b0ff3b6ea6e8690",
+    "prjxray-revision": "9553f1ad53c18ba5d5246a7dd10a718da9a9b20c",
+    "fasm-revision": "2f57ccb1727a120e8cacbb95c578f3c71bdcc95a",
+}
+REPORT = {
+    "platform": "linux-x86-64", "mode": "report", "summary": "DRIFT",
+    "results": [
+        {"test": "bram", "part": "xc7a35tcpg236", "status": "DRIFT",
+         "findings": [], "notes": ["fmax_mhz: 470 -> 400 (-14.9%, worse)"]},
+        {"test": "carry64", "part": "xc7a35tcpg236", "status": "OK",
+         "findings": [], "notes": []},
+    ],
+}
+
+
+def compose_upstream(info=UPSTREAM_INFO, reports=(REPORT,), main=True):
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch)
+        (root / "BUILD-INFO.json").write_text(json.dumps(info), encoding="utf-8")
+        (root / "BUILD-INFOS.md").write_text(PER_PACKAGE, encoding="utf-8")
+        args = [sys.executable, str(BODY_SCRIPT), str(root / "BUILD-INFO.json"),
+                str(root / "BUILD-INFOS.md")]
+        if main:
+            args += ["--main-revisions", str(REPO / "nix/revisions.json")]
+        paths = []
+        for number, report in enumerate(reports):
+            path = root / f"report-{number}.json"
+            path.write_text(json.dumps(report), encoding="utf-8")
+            paths.append(str(path))
+        if paths:
+            args += ["--drift", *paths]
+        result = subprocess.run(args, capture_output=True, text=True, check=False)
+    return result.returncode, result.stdout, result.stderr
+
+
+class UpstreamBodyTests(unittest.TestCase):
+    def test_it_says_what_it_is_first(self):
+        code, body, error = compose_upstream()
+        self.assertEqual(code, 0, error)
+        self.assertTrue(body.startswith(
+            "**UPSTREAM nightly: built from openXC7 HEAD (nextpnr-xilinx `c68c1358`, "
+            "prjxray-db `517d66a3`, prjxray `9553f1ad`, fasm `2f57ccb1`); "
+            "not a stable release.**"), body[:300])
+
+    def test_the_assets_carry_the_date_of_the_tag(self):
+        _, body, _ = compose_upstream()
+        self.assertIn("| `openxc7-toolchain-linux-x86-64-20261001.tgz` |", body)
+        self.assertIn("/releases/download/upstream-2026-10-01/SHA256SUMS", body)
+
+    def test_each_revision_is_set_next_to_the_main_line(self):
+        _, body, _ = compose_upstream()
+        main = json.loads((REPO / "nix/revisions.json").read_text())
+        old = main["prjxray-db"]["rev"]
+        self.assertIn(f"`{old[:12]}` | [changes](https://github.com/openXC7/prjxray-db/"
+                      f"compare/{old}...517d66a383676cb971177ea92b0ff3b6ea6e8690) |", body)
+
+    def test_it_carries_the_drift(self):
+        _, body, _ = compose_upstream()
+        self.assertIn("### Changes against the main-line baselines", body)
+        self.assertIn("| linux-x86-64 | 2 | 1 | 0 | 1 | 0 |", body)
+        self.assertIn("| linux-x86-64 | bram/xc7a35tcpg236 | DRIFT | "
+                      "fmax_mhz: 470 -> 400 (-14.9%, worse) |", body)
+        self.assertNotIn("carry64", body)
+
+    def test_no_drift_says_so(self):
+        quiet = {**REPORT, "results": [REPORT["results"][1]]}
+        _, body, _ = compose_upstream(reports=(quiet,))
+        self.assertIn("No metric moved beyond its tolerance on any platform.", body)
+
+    def test_it_is_never_offered_for_promotion(self):
+        _, body, _ = compose_upstream()
+        self.assertNotIn("### Pre-release note", body)
+        self.assertNotIn("make-pre-release-stable", body)
+        self.assertIn("### Upstream nightly note", body)
+        # and the promotion rewrite leaves it as it is
+        self.assertEqual(trim(body), body)
+
+    def test_it_needs_the_main_line_to_compare_with(self):
+        code, _, error = compose_upstream(main=False)
+        self.assertEqual(code, 1)
+        self.assertIn("--main-revisions", error)
+
+    def test_a_dated_body_has_no_upstream_header(self):
+        _, body, _ = compose()
+        self.assertNotIn("UPSTREAM", body)
+        self.assertNotIn("Changes against the main-line baselines", body)
+
+
 if __name__ == "__main__":
     unittest.main()

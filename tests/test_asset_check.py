@@ -156,7 +156,7 @@ def release(**overrides) -> dict:
     return resum(files)
 
 
-def run(files, *args, flaky=0, calls=None) -> tuple:
+def run(files, *args, flaky=0, calls=None, tag=TAG) -> tuple:
     """Run the script's python over *files*; return (exit code, output).
 
     *flaky* makes the first N calls fail the way a dropped connection does;
@@ -176,7 +176,7 @@ def run(files, *args, flaky=0, calls=None) -> tuple:
             raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
         return FakeResponse(files[url])
 
-    argv = ["-", str(REPO), TAG, "", "0",
+    argv = ["-", str(REPO), tag, "", "0",
             "linux-x86-64", "darwin-arm64", "windows-amd64"]
     for index, value in enumerate(args):
         argv[3 + index] = value
@@ -191,6 +191,45 @@ def run(files, *args, flaky=0, calls=None) -> tuple:
         except SystemExit as exit_code:
             code = exit_code.code or 0
     return code, output.getvalue()
+
+
+UPSTREAM_TAG = f"upstream-{TAG}"
+
+
+def upstream_release(index_tag=TAG) -> dict:
+    """The upstream nightly of the same day: published under
+    upstream-<date>, with the same dated asset names, a BUILD-INFO naming
+    that tag and the index dated as the main line's (its format is one)."""
+    build_info = json.loads(release()[f"{BASE}/{BUILD_INFO}"])
+    build_info["release-tag"] = UPSTREAM_TAG
+    index = json.loads(release()[f"{BASE}/{INDEX}"])
+    index["release-tag"] = index_tag
+    files = release(**{f"{BASE}/{BUILD_INFO}": json.dumps(build_info).encode(),
+                       f"{BASE}/{INDEX}": json.dumps(index).encode()})
+    return {url.replace(f"/download/{TAG}/", f"/download/{UPSTREAM_TAG}/"): body
+            for url, body in files.items()}
+
+
+class UpstreamTagTests(unittest.TestCase):
+    def test_an_upstream_release_resolves_its_dated_assets(self):
+        code, output = run(upstream_release(), "", "1", tag=UPSTREAM_TAG)
+        self.assertEqual(code, 0, output)
+        self.assertIn("asset-check: OK", output)
+        self.assertIn(f"openxc7-toolchain-linux-x86-64-{DATE}.tgz", output)
+
+    def test_its_build_info_must_name_the_upstream_tag(self):
+        files = upstream_release()
+        url = f"https://github.com/{REPO_SLUG}/releases/download/{UPSTREAM_TAG}/{BUILD_INFO}"
+        info = json.loads(files[url])
+        info["release-tag"] = TAG
+        files[url] = json.dumps(info).encode()
+        code, output = run(files, tag=UPSTREAM_TAG)
+        self.assertEqual(code, 1, output)
+        self.assertIn(f"release-tag '{TAG}', not '{UPSTREAM_TAG}'", output)
+
+    def test_a_tag_of_no_line_is_refused(self):
+        code, output = run(release(), tag=f"nightly-{TAG}")
+        self.assertNotEqual(code, 0, output)
 
 
 class AssetCheckTests(unittest.TestCase):

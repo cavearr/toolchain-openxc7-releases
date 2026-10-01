@@ -4,6 +4,7 @@
 # a consumer will look for them, by this repository's naming rule.
 #
 # The naming rule: everything derives from the release TAG. Tag 2026-06-13
+# (or upstream-2026-06-13, the upstream nightly)
 # -> date 20260613 -> asset openxc7-toolchain-<platform>-20260613.tgz at
 # that release's download URL, for platform linux-x86-64, darwin-arm64 and
 # windows-amd64. A consumer that knows the tag (a manual install, or a
@@ -77,9 +78,17 @@ platforms = sys.argv[5:]
 sys.path.insert(0, repo_root)
 from pack.parts_index import (INDEX_ASSET, SCHEMA, STAMP_FILE,  # noqa: E402
                               previous_index_asset_names, validate_document)
+from pack.release_tags import split_tag  # noqa: E402
 
 repo = os.environ.get("ASSET_CHECK_REPO", "cavearr/toolchain-openxc7-releases")
-date = tag.replace("-", "")
+# The assets carry the date of the tag, whatever its line: 2026-10-01 and
+# upstream-2026-10-01 both name ...-20261001.tgz (pack/release_tags.py).
+# The index is dated the same way, so its release-tag is that date.
+try:
+    release_line, date_tag = split_tag(tag)
+except ValueError as error:
+    sys.exit(f"asset-check: {error}")
+date = date_tag.replace("-", "")
 # The naming rule of this repository's packages (see the header).
 PACKAGE = "openxc7-toolchain"
 
@@ -427,7 +436,7 @@ def check_chipdb_release():
         return False
 
     try:
-        generated = validate_document(info, expect_tag=tag)
+        generated = validate_document(info, expect_tag=date_tag)
     except ValueError as error:
         print(f"❌ {index_asset}: {error}")
         print("   apio reads this index to find each part's chipdb file: a")
