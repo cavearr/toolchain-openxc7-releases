@@ -1,10 +1,26 @@
 # toolchain-openxc7-releases
 
-Ready-to-use packages of the [openXC7](https://github.com/openXC7) toolchain
-for **Xilinx 7-series FPGAs** (Artix-7, Spartan-7, Zynq-7000 PL): place and
-route, bitstream generation and the device databases, built reproducibly
-with [Nix](https://nixos.org), validated end to end on every platform, and
-published as dated GitHub releases.
+Binary releases of the [openXC7](https://github.com/openXC7) toolchain for
+**Xilinx 7-series FPGAs** (Artix-7, Spartan-7, Zynq-7000 PL): place and
+route, bitstream generation and the device databases, as one package per
+platform (Linux x86-64, macOS on Apple Silicon, Windows x64), built
+reproducibly with [Nix](https://nixos.org) and validated end to end on
+every platform before they are published.
+
+Two release lines come out of here:
+
+- **Dated releases** (`2026-09-30`): built every night from the revisions
+  this repository records, and promoted by hand to **stable** once they
+  are validated. The repository's `latest` release is always the newest
+  stable one: the one to install, by hand or through any system that
+  distributes toolchains. [apio](https://github.com/FPGAwars/apio) is one
+  such consumer (see [Consumers](#consumers)); nothing here is specific to
+  it.
+- **Upstream rolling releases** (`upstream-2026-10-01`): built every night
+  from the HEAD of every openXC7 repository, with the regression suite in
+  report mode, so that a change upstream is measured here the day after it
+  lands. Never promoted, never `latest`: for following the project, not for
+  real work.
 
 This repository does not develop the toolchain: it **builds, validates and
 releases** it. Bugs in the tools themselves belong upstream (openXC7);
@@ -56,6 +72,17 @@ Zynq support is **PL only**: the toolchain produces the fabric bitstream
 (loaded over JTAG); the ARM PS boots on its own. Kintex-7 is work in
 progress upstream. `chipdb-parts.json` is the single source of truth for
 this list: the packer, the Windows build and the CI assertions all read it.
+The parts index of a release counts what that gives today: 202 parts
+(device, package and speed grade) supported by the packaged database, 128
+of them built, over 10 chipdb files.
+
+**Boards.** A board is supported when its part is in the index with
+`"generated": true`. Every Xilinx board apio defines (23 of them) maps to a
+part of the table above; among them: Digilent Arty A7-35T and A7-100T,
+Basys 3, Cmod A7-35T, Nexys A7-50T and A7-100T, Arty S7-25 and S7-50, Zybo
+Z7-10 and Z7-20; PYNQ-Z1, PYNQ-Z2 and ZedBoard (PL); Alchitry Au and Au+;
+Alinx AX7035; Colorlight i9+; Numato Mimas A7; QMTech XC7A100T; Microphase
+A7-Lite; ZXTRES, ZXTRES+ and ZXTRES++.
 
 ## The yosys these packages require
 
@@ -309,7 +336,7 @@ The per-platform and chipdb workflows are `workflow_call` only:
 `build-upstream-nightly.yaml` of the upstream one), and a validated package
 of any branch is a dispatch of it on that branch.
 
-**Nightly.** Every day `build-pre-release` publishes a **pre-release** whose
+**Dated nightly (the stable line).** Every day `build-pre-release` publishes a **pre-release** whose
 tag is the UTC date (`2026-09-30`), only after every platform is green. It
 carries six assets: the three tarballs, `XILINX-PARTS-INDEX.json`,
 `BUILD-INFO.json` (what the three packages agree on, plus each one's file
@@ -319,7 +346,7 @@ is the whole contract with a consumer: tag `YYYY-MM-DD` → asset
 `scripts/asset-check.sh <tag>` checks a published release against it. Only
 the newest five dated pre-releases are kept.
 
-**Upstream nightly.** Every day at 02:00 UTC `build-upstream-nightly`
+**Upstream rolling release.** Every day at 02:00 UTC `build-upstream-nightly`
 builds the HEAD of the default branch of `openXC7/nextpnr`,
 `openXC7/prjxray-db`, `openXC7/prjxray` and `openxc7/fasm`: it writes
 those revisions into `nix/revisions.json`, commits that on a branch
@@ -369,14 +396,20 @@ Workflow permissions: read and write).
 
 ## Consumers
 
-[apio](https://github.com/FPGAwars/apio) installs this toolchain as its
-`openxc7` package. Its packaging repository,
-[FPGAwars/tools-openxc7](https://github.com/FPGAwars/tools-openxc7), takes a
-release of this repository by its tag, checks it against `SHA256SUMS`, and
-republishes the packages under apio's names and conventions
-(`apio-openxc7-<platform>-<YYYYMMDD>.tgz`, its own `BUILD-INFO.json`, which
-copies the `yosys-release-tag` from ours); apio's remote-config names that
-repository's release. Nothing here depends on apio.
+Anything that can download a GitHub release asset can consume these
+releases: the whole contract is the naming rule (tag `YYYY-MM-DD` → the
+six assets named by that date), `SHA256SUMS` to check them, `latest` as
+the newest stable release, and the yosys tag each release declares.
+Nothing here depends on any consumer.
+
+The first one is [apio](https://github.com/FPGAwars/apio), which installs
+this toolchain as its `openxc7` package: its packaging repository,
+[FPGAwars/tools-openxc7](https://github.com/FPGAwars/tools-openxc7), takes
+a stable release of this repository by its tag, checks it against
+`SHA256SUMS`, and republishes the packages under apio's names and
+conventions (`apio-openxc7-<platform>-<YYYYMMDD>.tgz`, its own
+`BUILD-INFO.json`, which copies the `yosys-release-tag` from ours). A
+distribution, an installer or a build system can do the same.
 
 ## Repository layout
 
@@ -394,27 +427,16 @@ repository's release. Nothing here depends on apio.
 
 ## Credits
 
-The openXC7 toolchain is developed by the [openXC7 project](https://github.com/openXC7)
-and builds on [Project X-Ray](https://github.com/f4pga/prjxray),
+The toolchain is the work of the [openXC7 project](https://github.com/openXC7),
+built on [Project X-Ray](https://github.com/f4pga/prjxray),
 [nextpnr](https://github.com/YosysHQ/nextpnr) and
-[Yosys](https://github.com/YosysHQ/yosys). All credit for the tools
-themselves belongs to them.
+[Yosys](https://github.com/YosysHQ/yosys); all credit for the tools belongs
+to their authors.
 
-This repository continues the history of
-[FPGAwars/tools-openxc7](https://github.com/FPGAwars/tools-openxc7), created
-by **Juan González-Gómez ([Obijuan](https://github.com/Obijuan))** for
-FPGAwars, who set up the original Nix packaging and the Basys3 example this
-project still builds on.
-
-**Carlos Venegas ([cavearr](https://github.com/cavearr))** added
-multi-platform support (native macOS on Apple Silicon and Windows
-cross-compiled from Linux), fixes to the openXC7 toolchain itself (merged
-upstream, so the packages carry no local patches), the Spartan-7 and
-Zynq-7000 (PL) families, the regression suite and the build, validation and
-release workflows.
-
-**Fernando Mosquera ([Benitos](https://github.com/benitoss))** contributed
-designs, feedback, testing and real-world board tests.
+This repository descends from
+[FPGAwars/tools-openxc7](https://github.com/FPGAwars/tools-openxc7), whose
+full history it carries, and is maintained by
+[Carlos Venegas (cavearr)](https://github.com/cavearr).
 
 ## License
 
