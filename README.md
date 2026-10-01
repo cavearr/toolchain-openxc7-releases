@@ -265,8 +265,8 @@ files read it, the Windows build derives its sources from the native
 derivations, and `scripts/build-info.sh`, `scripts/release-body.py` and
 `scripts/validate-package.sh` read the revisions from it.
 `scripts/upstream-revisions.py` points every entry at the HEAD of its
-repository and computes the hash (by hand, keep only the entry you mean to
-bump), and
+repository and computes the hash (the upstream nightly runs it; by hand,
+keep only the entry you mean to bump), and
 `scripts/upstream-revisions.py --verify` recomputes the hash of every
 revision the file names.
 
@@ -299,13 +299,15 @@ To bump yosys:
 |---|---|
 | `test.yaml` | Per commit: compile nextpnr-xilinx, prjxray and fasm on linux and macos, nextpnr-xilinx and prjxray on windows-cross, plus the static gates |
 | `build-pre-release.yaml` | Daily (and on dispatch): the chipdb once, the three platforms in parallel, then the release |
+| `build-upstream-nightly.yaml` | Daily at 02:00 UTC (and on dispatch): the same graph over the HEAD of every openXC7 repository, L2 in report mode, then the `upstream-<date>` pre-release |
 | `chipdb.yml` | Generates or restores the chipdb, one file per die, three at a time under a memory budget; writes the identity stamp and the parts index |
 | `linux-package.yml`, `darwin-package.yml`, `windows-package.yml` | Build one platform's package with those bins inside, then L1 and L2 (windows under wine) |
 | `make-pre-release-stable.yaml` | By hand: re-verifies a release (`scripts/asset-check.sh --full`) and marks it stable; `latest` on request |
 
 The per-platform and chipdb workflows are `workflow_call` only:
-`build-pre-release.yaml` is the one entry point, and a validated package of
-any branch is a dispatch of it on that branch.
+`build-pre-release.yaml` is the entry point of the dated line (and
+`build-upstream-nightly.yaml` of the upstream one), and a validated package
+of any branch is a dispatch of it on that branch.
 
 **Nightly.** Every day `build-pre-release` publishes a **pre-release** whose
 tag is the UTC date (`2026-09-30`), only after every platform is green. It
@@ -315,7 +317,24 @@ name and build time) and `SHA256SUMS` over the other five. The naming rule
 is the whole contract with a consumer: tag `YYYY-MM-DD` → asset
 `openxc7-toolchain-<platform>-<YYYYMMDD>.tgz` at that release;
 `scripts/asset-check.sh <tag>` checks a published release against it. Only
-the newest five pre-releases are kept.
+the newest five dated pre-releases are kept.
+
+**Upstream nightly.** Every day at 02:00 UTC `build-upstream-nightly`
+builds the HEAD of the default branch of `openXC7/nextpnr`,
+`openXC7/prjxray-db`, `openXC7/prjxray` and `openxc7/fasm`: it writes
+those revisions into `nix/revisions.json`, commits that on a branch
+`upstream/<date>` and builds that commit through the same graph, with the
+same yosys. L1 and the end-to-end gate as on the dated line; L2 runs with
+`--report-only`, so the drift against the dated line's baselines is listed
+in the release text ("Changes against the main-line baselines") instead of
+failing the build. It publishes the pre-release **`upstream-<date>`**:
+the same six assets, named by the date, a text that opens with the
+revisions it was built from next to the dated line's, and a tag on the
+commit that records them (building it again builds the same sources). Its
+own five newest are kept, apart from the dated ones. It is never stable
+nor `latest` (`make-pre-release-stable` refuses the tag), and nothing that
+resolves a dated tag can take it: it is the regression tracker of openXC7,
+not a release to install for real work.
 
 **Stable and latest.** A release is kept by marking it stable, which is what
 `make-pre-release-stable` does after verifying every asset again; it also

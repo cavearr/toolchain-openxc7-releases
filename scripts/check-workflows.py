@@ -7,6 +7,12 @@ step that runs a local composite action (`uses: ./.github/actions/<a>`),
 and such a step needs an `actions/checkout` earlier in its job: the action
 is a file of the checked-out tree, so without one the step cannot start.
 
+Within one workflow, an input passed to one local workflow call must be
+passed to every other call whose target declares it: the calls of a run
+build one release, and a `ref` (or a `release_tag`, an `l2_mode`) given to
+three of the four jobs leaves the fourth building something else on its
+default.
+
 Both are silent failures in Actions -- an unknown input is ignored and an
 undeclared output evaluates to the empty string -- so they surface as a
 mystery halfway through a two-hour release build. Run over the checked-out
@@ -99,6 +105,21 @@ def strings(value):
             yield from strings(item)
 
 
+def check_run_wide_inputs(name, calls_made):
+    """*calls_made*: [(job, target, accepted inputs, supplied inputs)] of one
+    workflow. An input one call passes, every call that accepts it passes."""
+    passed = {}
+    for job_name, target, _, supplied in calls_made:
+        for key in supplied:
+            passed.setdefault(key, (job_name, target))
+    for job_name, target, accepted, supplied in calls_made:
+        for key, (other_job, other_target) in sorted(passed.items()):
+            if key in accepted and key not in supplied:
+                errors.append(
+                    f"{name}:{job_name}: passes no {key!r} to {target}, "
+                    f"which {other_job} passes to {other_target}")
+
+
 workflows = {name: load(name) for name in FILES}
 errors = []
 calls = 0
@@ -107,6 +128,7 @@ references = 0
 for name, workflow in workflows.items():
     jobs = workflow.get("jobs", {})
     job_outputs = {}
+    calls_made = []
     for job_name, job in jobs.items():
         uses = job.get("uses", "")
         if uses.startswith("./.github/workflows/"):
@@ -130,10 +152,13 @@ for name, workflow in workflows.items():
                     f"{name}:{job_name}: {target} misses required inputs {missing}"
                 )
             job_outputs[job_name] = set(outputs)
+            calls_made.append((job_name, target, accepted, supplied))
             calls += 1
         else:
             job_outputs[job_name] = set((job.get("outputs", {}) or {}).keys())
             action_calls += check_action_steps(name, job_name, job.get("steps"))
+
+    check_run_wide_inputs(name, calls_made)
 
     for value in strings(workflow):
         for producer, output in OUTPUT_REF.findall(value):

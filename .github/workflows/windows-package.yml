@@ -30,6 +30,21 @@ on:
         description: "Filename of the XILINX-PARTS-INDEX document in the parts-index artifact"
         required: true
         type: string
+      ref:
+        description: "Commit to build (default: the commit the run was started on). The upstream nightly passes the commit that records the upstream revisions in nix/revisions.json"
+        required: false
+        default: ""
+        type: string
+      release_tag:
+        description: "Tag the package is published under, recorded in BUILD-INFO (default: the date). The upstream nightly passes upstream-<date>"
+        required: false
+        default: ""
+        type: string
+      l2_mode:
+        description: "gate: drift beyond the baseline tolerances fails the regression suite. report: it is listed (regress.sh --report-only) and only a broken flow, an expectation or a clocked design without fmax fail"
+        required: false
+        default: "gate"
+        type: string
 
 jobs:
   # The chipdb-bins and parts-index artifacts come from the chipdb.yml job of
@@ -39,6 +54,16 @@ jobs:
     runs-on: ubuntu-22.04            # ecosystem runner version (apio hit issues on 24.04; see apio build-linux-x86-64.yaml)
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+      # l2_mode is a string input: an unknown value must stop the job, not
+      # fall through to one of the two modes.
+      - name: Check the inputs
+        run: |
+          case "${{ inputs.l2_mode }}" in
+            gate|report) echo "regression suite: ${{ inputs.l2_mode }} mode" ;;
+            *) echo "::error::l2_mode must be gate or report, not '${{ inputs.l2_mode }}'"; exit 1 ;;
+          esac
       - uses: DeterminateSystems/nix-installer-action@v22
         with:
           summarize: false          # no branded gantt/Discord footer
@@ -148,7 +173,7 @@ jobs:
           # the identity is the stamp that ships next to the bins
           ARTIFACT_ID=$(cat package-win/chipdb/chipdb-id.txt)
           CHIPDB_SOURCE="$CHIPDB_SOURCE_IN" CHIPDB_ID="$ARTIFACT_ID" \
-            bash scripts/build-info.sh windows-amd64 "$DATE" "$NAME" package-win/BUILD-INFO.json
+            bash scripts/build-info.sh windows-amd64 "${{ inputs.release_tag || inputs.date }}" "$NAME" package-win/BUILD-INFO.json
           # --mode=u+w: the nix store tree is read-only; without it Windows
           # extracts the files with the READONLY attribute and apio cannot
           # delete/reinstall the package (PermissionError on --force/upgrade)
@@ -269,6 +294,7 @@ jobs:
             E2E_WINPY=$(ls -d /nix/store/*-python3-x86_64-w64-mingw32-* 2>/dev/null | grep -v .drv | head -1 || true)
             [ -n "$E2E_WINPY" ] && export E2E_WINPY
             bash scripts/regress.sh "${{ steps.tar.outputs.name }}" \
+              ${{ inputs.l2_mode == 'report' && '--report-only' || '' }} \
               --json regress-report.json --markdown regress-report.md
           '
 

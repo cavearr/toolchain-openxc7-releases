@@ -1,0 +1,324 @@
+# The upstream line: every night, the HEAD of openXC7.
+#
+# build-pre-release.yaml builds the revisions nix/revisions.json records on
+# main: the line that is validated, promoted and consumed. This workflow
+# builds the HEAD of the default branch of every repository that file
+# names (openXC7/nextpnr, openXC7/prjxray-db, openXC7/prjxray,
+# openxc7/fasm) through the SAME graph -- chipdb.yml and the three
+# *-package.yml -- and publishes the result as the pre-release
+# upstream-<date>. It is the regression tracker of openXC7: a change
+# upstream shows up here, measured, before anyone bumps the main line.
+#
+#   resolve   reads each HEAD, hashes it, writes nix/revisions.json and
+#             commits it on the branch upstream/<date>. The commit's diff
+#             is that one file: the workflow token refuses (HTTP 403) to
+#             tag a commit whose diff touches .github/workflows, and may
+#             tag this one.
+#   chipdb, linux, darwin, windows
+#             build THAT commit (input `ref`). The chipdb cache is keyed by
+#             the identity files, nix/revisions.json among them, and this
+#             run's cache scope is the branch it runs on (main for the
+#             schedule): a night whose revisions are main's restores
+#             main's bins, a new revision generates once and the next
+#             nights restore it.
+#             L1 and the e2e gate as on the main line. L2 runs in report
+#             mode (`l2_mode: report`): drift against the main line's
+#             baselines is the information, not a failure; a broken flow,
+#             an expectation or a clocked design without fmax still fail.
+#   pre-release
+#             keeps the newest 5 upstream-* pre-releases (the dated line
+#             keeps its own), tags the resolve commit upstream-<date>,
+#             publishes the six assets with the revisions and the drift
+#             table in the text, verifies them as a consumer would and
+#             deletes the branch (the tag keeps the commit).
+#
+# The tag is not a date, so nothing that resolves a dated release can take
+# it; it is never promoted (make-pre-release-stable refuses it). Building
+# the tagged commit again builds the same sources: the revisions are in
+# its nix/revisions.json, in every BUILD-INFO.json and in the text.
+name: build-upstream-nightly
+
+on:
+  schedule:
+    - cron: "0 2 * * *"      # after the main line's nightly (00:00)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Date YYYY-MM-DD of the tag upstream-<date> (default: today, UTC)"
+        required: false
+      regenerate_chipdb:
+        description: "Ignore the chipdb cache and generate every die from scratch"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-release
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-22.04            # ecosystem runner version (apio hit issues on 24.04; see apio build-linux-x86-64.yaml)
+    outputs:
+      date: ${{ steps.d.outputs.date }}
+      tag: ${{ steps.d.outputs.tag }}
+      ref: ${{ steps.commit.outputs.ref }}
+      yosys_release_tag: ${{ steps.d.outputs.yosys_release_tag }}
+    steps:
+      # The release actions are files of this tree (.github/actions/).
+      - uses: actions/checkout@v7
+
+      - name: Get release and package tags (ecosystem convention)
+        uses: ./.github/actions/get-release-and-package-tags
+        with:
+          release-tag-var: RELEASE_TAG
+          package-tag-var: PACKAGE_TAG
+
+      # The yosys is the main line's: its single literal is
+      # YOSYS_RELEASE_TAG in build-pre-release.yaml. The upstream line
+      # changes the openXC7 sources only, so that the drift it reports
+      # comes from them.
+      - id: d
+        run: |
+          DATE="${{ github.event.inputs.date }}"
+          [ -n "$DATE" ] || DATE="$RELEASE_TAG"
+          case "$DATE" in
+            20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+            *) echo "::error::date '$DATE' is not YYYY-MM-DD"; exit 1 ;;
+          esac
+          YOSYS=$(sed -n 's/^  YOSYS_RELEASE_TAG: "\([0-9-]*\)"$/\1/p' .github/workflows/build-pre-release.yaml)
+          case "$YOSYS" in
+            20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+            *) echo "::error::no YOSYS_RELEASE_TAG literal in build-pre-release.yaml"; exit 1 ;;
+          esac
+          {
+            echo "date=$DATE"
+            echo "tag=upstream-$DATE"
+            echo "yosys_release_tag=$YOSYS"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag: upstream-$DATE · yosys release: $YOSYS"
+
+      # Fail FAST on a stable release of the same tag (there should never
+      # be one: make-pre-release-stable refuses upstream-* tags).
+      - name: Ensure no conflicting release (early, just-check)
+        uses: ./.github/actions/ensure-no-conflicting-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          release-tag: ${{ steps.d.outputs.tag }}
+          just-check: "true"
+
+      - uses: DeterminateSystems/nix-installer-action@v22
+        with:
+          summarize: false          # no branded gantt/Discord footer
+          diagnostic-endpoint: ""   # no telemetry
+
+      # The main line's file goes to the release text (each revision next
+      # to the one main builds); the summary table to this run's summary.
+      - name: Resolve the HEAD of every upstream repository
+        run: |
+          mkdir -p upstream-revisions
+          cp nix/revisions.json upstream-revisions/main-revisions.json
+          python3 scripts/upstream-revisions.py --summary upstream-revisions/revisions.md
+          cp nix/revisions.json upstream-revisions/revisions.json
+          {
+            echo "### upstream-${{ steps.d.outputs.date }}: revisions"
+            cat upstream-revisions/revisions.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # A commit even when nothing moved (--allow-empty): the tag must
+      # point at a commit whose own diff touches no workflow, and the tip
+      # of main may be one that does. The branch is replaced by a rebuild
+      # of the same day and deleted once the release exists; stale ones
+      # (a failed night) are deleted here.
+      - name: Commit the revisions on upstream/<date>
+        id: commit
+        env:
+          DATE: ${{ steps.d.outputs.date }}
+        run: |
+          BRANCH="upstream/$DATE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add nix/revisions.json
+          git commit --allow-empty -q \
+            -m "upstream nightly $DATE: build the HEAD of every openXC7 repository" \
+            -m "$(cat upstream-revisions/revisions.md)"
+          git push --force origin "HEAD:refs/heads/$BRANCH"
+          echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git log -1 --stat
+          for stale in $(git ls-remote origin 'refs/heads/upstream/*' | awk '{print $2}'); do
+            [ "$stale" = "refs/heads/$BRANCH" ] && continue
+            echo "deleting stale ${stale#refs/heads/}"
+            git push origin --delete "${stale#refs/heads/}" || true
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: upstream-revisions
+          path: upstream-revisions/
+          retention-days: 7
+          if-no-files-found: error
+
+  chipdb:
+    needs: resolve
+    uses: ./.github/workflows/chipdb.yml
+    with:
+      date: ${{ needs.resolve.outputs.date }}
+      regenerate: ${{ github.event.inputs.regenerate_chipdb == 'true' }}
+      ref: ${{ needs.resolve.outputs.ref }}
+
+  linux:
+    needs: [resolve, chipdb]
+    uses: ./.github/workflows/linux-package.yml
+    with:
+      date: ${{ needs.resolve.outputs.date }}
+      yosys_release_tag: ${{ needs.resolve.outputs.yosys_release_tag }}
+      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_id: ${{ needs.chipdb.outputs.identity }}
+      parts_index: ${{ needs.chipdb.outputs.parts_index }}
+      ref: ${{ needs.resolve.outputs.ref }}
+      release_tag: ${{ needs.resolve.outputs.tag }}
+      l2_mode: report
+
+  darwin:
+    needs: [resolve, chipdb]
+    uses: ./.github/workflows/darwin-package.yml
+    with:
+      date: ${{ needs.resolve.outputs.date }}
+      yosys_release_tag: ${{ needs.resolve.outputs.yosys_release_tag }}
+      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_id: ${{ needs.chipdb.outputs.identity }}
+      parts_index: ${{ needs.chipdb.outputs.parts_index }}
+      ref: ${{ needs.resolve.outputs.ref }}
+      release_tag: ${{ needs.resolve.outputs.tag }}
+      l2_mode: report
+
+  windows:
+    needs: [resolve, chipdb]
+    uses: ./.github/workflows/windows-package.yml
+    with:
+      date: ${{ needs.resolve.outputs.date }}
+      yosys_release_tag: ${{ needs.resolve.outputs.yosys_release_tag }}
+      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_id: ${{ needs.chipdb.outputs.identity }}
+      parts_index: ${{ needs.chipdb.outputs.parts_index }}
+      ref: ${{ needs.resolve.outputs.ref }}
+      release_tag: ${{ needs.resolve.outputs.tag }}
+      l2_mode: report
+
+  pre-release:
+    needs: [resolve, chipdb, linux, darwin, windows]
+    runs-on: ubuntu-22.04            # ecosystem runner version (apio hit issues on 24.04; see apio build-linux-x86-64.yaml)
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: openxc7-toolchain-*     # the 3 package artifacts (not chipdb-bins)
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: parts-index
+          path: .
+
+      # One directory per platform: regress-reports/regress-report-<platform>/.
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: regress-report-*
+          path: regress-reports
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: upstream-revisions
+          path: upstream-revisions
+
+      # Five upstream-* pre-releases are kept; the dated ones are not
+      # counted here (the action's tag-prefix).
+      - name: Cleanup old upstream pre-releases (keep the newest 5)
+        uses: ./.github/actions/cleanup-old-prereleases
+        with:
+          tag-prefix: "upstream-"
+
+      - name: Ensure no conflicting release (delete same-tag pre-release, fail on stable)
+        uses: ./.github/actions/ensure-no-conflicting-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          release-tag: ${{ needs.resolve.outputs.tag }}
+
+      # The text sets each revision next to the main line's and carries
+      # the drift every platform's suite reported. All three reports must
+      # be there: a platform job that is green always uploads one.
+      - name: Check the assets and compose the release body
+        run: |
+          REPORTS=$(find regress-reports -name regress-report.json | sort)
+          COUNT=$(printf '%s\n' "$REPORTS" | grep -c . || true)
+          [ "$COUNT" -eq 3 ] || { echo "::error::expected 3 regression reports, found $COUNT"; exit 1; }
+          # shellcheck disable=SC2086  # one path per line, no spaces
+          bash scripts/compose-release.sh "${{ needs.resolve.outputs.tag }}" \
+            --main-revisions upstream-revisions/main-revisions.json \
+            --drift $REPORTS
+
+      # The tag must be the resolve commit (the one that records the
+      # revisions): created here, before the release, which then finds it.
+      # A leftover tag of a failed same-day run is moved, not kept.
+      - name: Tag the resolve commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          REF: ${{ needs.resolve.outputs.ref }}
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$TAG" -f sha="$REF" > /dev/null 2>&1; then
+            echo "tag $TAG -> $REF"
+          else
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" \
+              -f sha="$REF" -F force=true > /dev/null
+            echo "tag $TAG moved -> $REF"
+          fi
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha)" = "$REF"
+
+      - name: Create the upstream prerelease (never latest) and upload assets
+        uses: ./.github/actions/create-pre-release
+        with:
+          release_tag: ${{ needs.resolve.outputs.tag }}
+          body_path: RELEASE-BODY.md
+          files: |
+            openxc7-toolchain-*.tgz
+            SHA256SUMS
+            BUILD-INFO.json
+            XILINX-PARTS-INDEX.json
+
+      - name: Verify the published assets the way a consumer will fetch them
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET_CHECK_REPO: ${{ github.repository }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+        run: |
+          # eventually consistent CDN, as in build-pre-release
+          for attempt in 1 2 3 4; do
+            bash scripts/asset-check.sh "$TAG" --expect-dir . && exit 0
+            echo "asset-check attempt $attempt: assets may still be propagating; retrying"
+            sleep 45
+          done
+          exit 1
+
+      - name: Delete the branch (the tag keeps the commit)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DATE: ${{ needs.resolve.outputs.date }}
+        run: |
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/upstream/$DATE" \
+            || echo "::warning::branch upstream/$DATE not deleted; the next night deletes it"
+          {
+            echo "## \`${{ needs.resolve.outputs.tag }}\` published (prerelease, never latest)"
+            echo
+            cat upstream-revisions/revisions.md
+          } >> "$GITHUB_STEP_SUMMARY"

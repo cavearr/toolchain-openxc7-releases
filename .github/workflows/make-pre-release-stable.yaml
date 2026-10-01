@@ -56,6 +56,9 @@ jobs:
   publish:
     runs-on: ubuntu-22.04            # ecosystem runner version (apio hit issues on 24.04; see apio build-linux-x86-64.yaml)
     steps:
+      # An upstream-<date> tag (the upstream nightly, built from the HEAD
+      # of every openXC7 repository) is never promoted: this guard is what
+      # refuses it.
       - name: Guard — only dated release tags
         run: |
           TAG="${{ inputs.tag }}"

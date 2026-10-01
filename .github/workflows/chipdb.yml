@@ -32,6 +32,11 @@ on:
         required: false
         default: false
         type: boolean
+      ref:
+        description: "Commit to build (default: the commit the run was started on). The upstream nightly passes the commit that records the upstream revisions in nix/revisions.json"
+        required: false
+        default: ""
+        type: string
     outputs:
       identity:
         description: "chipdb identity stamp (chipdb-id.txt) of the produced bins"
@@ -53,6 +58,8 @@ jobs:
       parts_index: ${{ steps.index.outputs.index }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
       - uses: DeterminateSystems/nix-installer-action@v22
         with:
           summarize: false          # no branded gantt/Discord footer

@@ -104,6 +104,22 @@ class WorkflowCheckerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("needs.chipdb.outputs.identidad is undeclared", result.stdout)
 
+    def test_an_input_given_to_one_call_is_given_to_every_call_that_takes_it(self):
+        """A `ref` passed to the chipdb job and forgotten on a platform job
+        builds that platform from the run's own commit, silently."""
+        write(self.root, ".github/workflows/reusable.yml",
+              REUSABLE.replace("      date:\n", "      ref:\n        required: false\n"
+                               "        type: string\n      date:\n"))
+        write(self.root, ".github/workflows/caller.yml", HEALTHY_CALLER.replace(
+            "      date: \"2026-08-28\"\n  after:",
+            "      date: \"2026-08-28\"\n      ref: abc\n"
+            "  platform:\n    uses: ./.github/workflows/reusable.yml\n"
+            "    with:\n      date: \"2026-08-28\"\n  after:"))
+        result = run("check-workflows.py", str(self.root))
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("caller.yml:platform: passes no 'ref' to "
+                      ".github/workflows/reusable.yml, which chipdb passes", result.stdout)
+
     def test_the_real_tree_is_consistent(self):
         result = run("check-workflows.py")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
