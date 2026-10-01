@@ -5,8 +5,9 @@ The release has to be usable on its own, without apio: so its text says
 what the packages are, which yosys they need, what each asset is, the
 revisions they were built from, and how to install one by hand. The facts
 come from the release-level BUILD-INFO.json (scripts/release-build-info.py,
-the document the three packages agree on) and, for the two revisions that
-document does not carry, from the one nix file that records each.
+the document the three packages agree on) and, for a revision that
+document does not carry, from nix/revisions.json, the one file that
+records them.
 
     scripts/release-body.py <release BUILD-INFO.json> <per-package md> > RELEASE-BODY.md
 
@@ -26,31 +27,30 @@ PACKAGE = "openxc7-toolchain"
 PLATFORMS = ("linux-x86-64", "darwin-arm64", "windows-amd64")
 SUITE = "https://github.com/YosysHQ/oss-cad-suite-build/releases/tag"
 
-# component -> (nix file that records its revision, upstream repository)
+REVISIONS = REPO_ROOT / "nix/revisions.json"
+
+# component -> its entry in nix/revisions.json
 SOURCES = {
-    "nextpnr-xilinx": ("nix/nextpnr-xilinx.nix", "openXC7/nextpnr"),
-    "prjxray-db": ("nix/prjxray-db.nix", "openXC7/prjxray-db"),
-    "prjxray": ("nix/prjxray.nix", "openXC7/prjxray"),
-    "fasm": ("nix/fasm/default.nix", "openxc7/fasm"),
+    "nextpnr-xilinx": "nextpnr",
+    "prjxray-db": "prjxray-db",
+    "prjxray": "prjxray",
+    "fasm": "fasm",
 }
-REV = re.compile(r'rev = "([0-9a-f]{7,40})"')
 
 
-def nix_revision(relative):
-    """The first `rev = "<sha>"` of a nix file (the source it fetches)."""
-    match = REV.search((REPO_ROOT / relative).read_text(encoding="utf-8"))
-    if not match:
-        raise ValueError(f"no revision in {relative}")
-    return match.group(1)
+def load_revisions(path=REVISIONS):
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def revisions(info):
+def revisions(info, recorded=None):
     """component -> (revision, repository). The build info wins where it
     has the field: it is what the packages were built from."""
+    recorded = recorded or load_revisions()
     rows = {}
-    for name, (relative, repository) in SOURCES.items():
-        rev = info.get(f"{name}-revision") or nix_revision(relative)
-        rows[name] = (rev, repository)
+    for name, key in SOURCES.items():
+        entry = recorded[key]
+        rev = info.get(f"{name}-revision") or entry["rev"]
+        rows[name] = (rev, f"{entry['owner']}/{entry['repo']}")
     return rows
 
 

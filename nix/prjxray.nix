@@ -1,8 +1,12 @@
 { stdenv, lib, fetchFromGitHub, cmake, git, python312Packages, eigen, python312
 , ... }:
+let
+  # The revision and its hash: nix/revisions.json.
+  source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray;
+in
 stdenv.mkDerivation rec {
   pname = "prjxray";
-  version = "9346969e7bfb9d070221957f8ccbaec28d5f1a93";
+  version = source.rev;
 
   # openXC7/prjxray master 2026-09-11. On top of ef5203e9 (our Windows/ODR
   # work, PR #5, and the bitread use-after-free fix, PR #6) the shipped
@@ -15,11 +19,8 @@ stdenv.mkDerivation rec {
   # bitread.cc is upstream's own rewrite of our PR #6 fix. The rest is
   # fuzzers, utils/ lab tooling and docs (our PRs #16 and #18).
   src = fetchFromGitHub {
-    owner = "openXC7";
-    repo = "prjxray";
-    rev = "9346969e7bfb9d070221957f8ccbaec28d5f1a93";
-    fetchSubmodules = true;
-    hash = "sha256-EuMiSApVPeMaJV5SM5Gp6/0bS4LiVDdr5oirSx2wuR8=";
+    inherit (source) owner repo rev hash;
+    fetchSubmodules = source.submodules;
   };
 
   nativeBuildInputs = [ cmake git ];

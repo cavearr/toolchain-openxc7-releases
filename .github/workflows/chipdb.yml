@@ -67,7 +67,8 @@ jobs:
           echo "Asset date: $DATE"
 
       # The .bin are byte-identical per (nextpnr, prjxray-db, chipdb
-      # derivation, manifest, patches) -> that tuple IS the cache key. It is
+      # derivation, manifest, patches) -> that tuple IS the cache key; the
+      # two revisions are in nix/revisions.json. It is
       # the set the packer hashes for the identity stamp (chipdb_identity()
       # in pack/chipdb.py; tests/test_chipdb_cache_key.py keeps the two
       # lists together), plus prjxray.nix, which only makes the key more
@@ -84,7 +85,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: chipdb-cache
-          key: chipdb-v2-${{ hashFiles('nix/nextpnr-xilinx.nix', 'nix/prjxray-db.nix', 'nix/nextpnr-xilinx-chipdb.nix', 'nix/prjxray.nix', 'chipdb-parts.json', 'nix/patches/*.patch') }}
+          key: chipdb-v2-${{ hashFiles('nix/revisions.json', 'nix/nextpnr-xilinx.nix', 'nix/prjxray-db.nix', 'nix/nextpnr-xilinx-chipdb.nix', 'nix/prjxray.nix', 'chipdb-parts.json', 'nix/patches/*.patch') }}
 
       # Three dies at a time under the packer's default memory budget
       # (OPENXC7_CHIPDB_MEM_GB, 14 GB for this 16 GB runner): a die starts

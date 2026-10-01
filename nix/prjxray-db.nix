@@ -3,7 +3,7 @@
 # The prjxray device database the package ships and every chipdb is
 # generated from. The himbaechel xilinx uarch does not vendor it (the
 # nextpnr-xilinx fork carried it as a gitlink under xilinx/external), so it
-# has its own revision here, written in this one file: the nextpnr
+# has its own revision, written in nix/revisions.json: the nextpnr
 # derivation links it into share/nextpnr/external/prjxray-db, where apio's
 # PRJXRAY_DB_DIR points, and the chipdb generation reads the same tree.
 #
@@ -14,9 +14,10 @@
 # the Arty S7-25 are written into their own words), and the one of xc7s100
 # (a grid derived from the pristine one, db#17, and the same offset fix,
 # db#20). Neither xc7s100 nor xc7s75 is in the manifest.
+let
+  source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
+in
 fetchFromGitHub {
-  owner = "openXC7";
-  repo = "prjxray-db";
-  rev = "a90f27c1caefee5276f47440f4c730b50519a86f";
-  hash = "sha256-EugZWK38rwLkhbp81eX/+kr4vrqdzRQuDbLpPn6ij7U=";
+  inherit (source) owner repo rev hash;
+  fetchSubmodules = source.submodules;
 }

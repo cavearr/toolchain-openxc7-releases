@@ -218,8 +218,8 @@ scripts/validate-package.sh <tools-only-tree-or-tarball> --chipdb-dir <bins>
 
 - the layout; every file the index names is in `chipdb/`, no extra `.bin`
   is there, and `chipdb-id.txt` matches the index's `chipdb-id`;
-- `--version` of the *packaged* binary against the revision in
-  `nix/nextpnr-xilinx.nix`, so a stale binary cannot reach a release;
+- `--version` of the *packaged* binary against the nextpnr revision in
+  `nix/revisions.json`, so a stale binary cannot reach a release;
 - on macOS, the ad-hoc signature, and that no Mach-O load command still
   points into `/nix/store`;
 - an **end-to-end run for every part of the manifest**
@@ -254,15 +254,24 @@ inputs and outputs between workflows and local actions),
 
 ## Bumping a component
 
-Each revision is written in exactly one file; the Windows build derives its
-sources from the native derivations.
+The four source revisions are written in one file, `nix/revisions.json`:
+for each source its GitHub `owner` and `repo`, the `rev`, the `hash` nix
+checks it against and whether the fetch includes `submodules`. The `.nix`
+files read it, the Windows build derives its sources from the native
+derivations, and `scripts/build-info.sh`, `scripts/release-body.py` and
+`scripts/validate-package.sh` read the revisions from it.
+`scripts/upstream-revisions.py` points every entry at the HEAD of its
+repository and computes the hash (by hand, keep only the entry you mean to
+bump), and
+`scripts/upstream-revisions.py --verify` recomputes the hash of every
+revision the file names.
 
-| Component | File | What follows |
+| Component | Entry in `nix/revisions.json` | What follows |
 |---|---|---|
-| nextpnr-xilinx | `nix/nextpnr-xilinx.nix` (`rev`, `hash`, `version`) | The chipdb identity changes (a new cache key: the chipdb job regenerates). A/B the regression suite's canonical FASM against the previous engine, then record the new baselines. |
-| prjxray-db | `nix/prjxray-db.nix` (`rev`, `hash`) | The chipdb identity changes; every die is regenerated. Run the full chain on any part whose data changed. |
-| prjxray | `nix/prjxray.nix` | Not part of the chipdb identity; L1 and L2 must stay unchanged. |
-| fasm | `nix/fasm/default.nix` | As prjxray. |
+| nextpnr-xilinx | `nextpnr` (and `version` in `nix/nextpnr-xilinx.nix`) | The chipdb identity changes (a new cache key: the chipdb job regenerates). A/B the regression suite's canonical FASM against the previous engine, then record the new baselines. |
+| prjxray-db | `prjxray-db` | The chipdb identity changes; every die is regenerated. Run the full chain on any part whose data changed. |
+| prjxray | `prjxray` | The file is part of the chipdb identity, so the bins are regenerated (byte-identical); L1 and L2 must stay unchanged. |
+| fasm | `fasm` | As prjxray. |
 | yosys | `YOSYS_RELEASE_TAG` in `.github/workflows/build-pre-release.yaml` | See below. |
 
 To bump yosys:
@@ -350,7 +359,7 @@ repository's release. Nothing here depends on apio.
 
 | Path | What it is |
 |---|---|
-| `flake.nix`, `nix/` | The reproducible build: every package, the dev shells and the Windows cross recipe |
+| `flake.nix`, `nix/` | The reproducible build: every package, the dev shells and the Windows cross recipe; `nix/revisions.json` records the four source revisions |
 | `openxc7-pack.py`, `pack/`, `macpack.py` | The packer: a thin CLI over the `pack/` modules (unit-tested in `tests/`); the macOS backend relocates Mach-O libraries and signs them |
 | `chipdb-parts.json` | The part manifest (family → footprints) |
 | `xc7pll` | The PLL calculator |

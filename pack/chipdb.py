@@ -143,7 +143,10 @@ def chipdb_identity() -> str:
     The identity is the hash of what determines the content: the nextpnr
     revision (generator, constids, metadata and bbasm all come from its
     source tree), the prjxray-db revision, the chipdb derivation, the
-    patches and the parts manifest (which dies are generated). The CI
+    patches and the parts manifest (which dies are generated). The two
+    revisions are written in nix/revisions.json, which also holds those of
+    prjxray and fasm: a bump of either of these moves the identity too,
+    which only makes it more conservative. The CI
     cache key covers the same set (.github/workflows/chipdb.yml), so that
     both match.
     """
@@ -151,6 +154,7 @@ def chipdb_identity() -> str:
         Path.cwd() / "nix/nextpnr-xilinx.nix",
         Path.cwd() / "nix/prjxray-db.nix",
         Path.cwd() / "nix/nextpnr-xilinx-chipdb.nix",
+        Path.cwd() / "nix/revisions.json",
         Path.cwd() / CHIPDB_PARTS_FILE,
     ]
     sources += sorted((Path.cwd() / "nix/patches").glob("*.patch"))

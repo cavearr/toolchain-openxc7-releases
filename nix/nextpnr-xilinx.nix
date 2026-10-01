@@ -1,17 +1,18 @@
 { stdenv, cmake, git, lib, fetchFromGitHub, python312Packages, python312
 , eigen, pkg-config, prjxray-db, ... }:
 let
+  # The revision and its hash live in nix/revisions.json, with the other
+  # three sources of the package: one file to bump, and the one file the
+  # upstream nightly rewrites with the HEAD of each repository.
+  source = (builtins.fromJSON (builtins.readFile ./revisions.json)).nextpnr;
   # Kept in a let so the version stamp below can read .rev. If local
   # patches ever return, wrap this in applyPatches AT THE SOURCE so the
   # binary, the chipdb generator and the Windows cross see one tree.
   upstream = fetchFromGitHub {
-    owner = "openXC7";
-    repo = "nextpnr";
-    rev = "c68c13582e972292c86a5025140d52e713384cbc";
-    hash = "sha256-iAgJMDDQtWyIsyzXqzWWEt18/UJztb8p/IIyjbfK2OY=";
+    inherit (source) owner repo rev hash;
     # himbaechel/uarch/xilinx/meta (openXC7/nextpnr-xilinx-meta a4af910c)
     # is what the chipdb generator reads the site and wire metadata from.
-    fetchSubmodules = true;
+    fetchSubmodules = source.submodules;
   };
 in
 stdenv.mkDerivation rec {
@@ -19,8 +20,9 @@ stdenv.mkDerivation rec {
   version = "1.0.0-unstable-2026-09-30";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
-  # the package moves to from the nextpnr-xilinx fork. The revision above
-  # is main after the tag 1.0.0 (e860c9c8), which has no newer tag yet.
+  # the package moves to from the nextpnr-xilinx fork. The revision in
+  # nix/revisions.json is main after the tag 1.0.0 (e860c9c8), which has no
+  # newer tag yet.
   # Over 1.0.0 it brings a shared LUT that drives a CARRY4 S input placed
   # at the carry site (#52), IFFDELMUXE3.P0 for an IDDR fed by an IDELAYE2
   # (#58), ISERDES OFB_USED with the OFB pairs kept off the _SING tiles

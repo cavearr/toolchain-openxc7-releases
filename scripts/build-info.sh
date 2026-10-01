@@ -6,8 +6,11 @@
 # package and the build that produced it (the FPGAwars convention, see
 # tools-oss-cad-suite, which apio's repackaging reads). Usage:
 #
-#   scripts/build-info.sh <target-platform> <date YYYY-MM-DD> <file-name> <out-file>
+#   scripts/build-info.sh <target-platform> <release tag> <file-name> <out-file>
 #
+# The release tag is the date (YYYY-MM-DD) on the main line and
+# upstream-<date> on the upstream nightly: it is the tag the package is
+# published under.
 # The yosys-release-tag (the runtime matching key, apio#927) is the release
 # of the installed oss-cad-suite the build validated against: the VERSION file
 # of a YosysHQ suite holds its date in digits (ci-install-oss-cad-suite.sh
@@ -20,8 +23,8 @@
 
 set -euo pipefail
 
-[ $# -eq 4 ] || { echo "usage: $0 <target-platform> <date YYYY-MM-DD> <file-name> <out-file>" >&2; exit 2; }
-PLAT=$1; DATE=$2; FNAME=$3; OUT=$4
+[ $# -eq 4 ] || { echo "usage: $0 <target-platform> <release tag> <file-name> <out-file>" >&2; exit 2; }
+PLAT=$1; TAG=$2; FNAME=$3; OUT=$4
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$HERE/.." && pwd)
@@ -55,14 +58,21 @@ case "$CHIPDB_SOURCE" in
     *)                   CHIPDB_CACHE_USED=false ;;
 esac
 
-# The revisions the package is built from, each read from the one nix file
-# that records it. nextpnr-xilinx-revision keeps its name: it is the
-# revision of the executable the package installs as nextpnr-xilinx (today
-# the himbaechel xilinx uarch of openXC7/nextpnr). The prjxray-db the
-# package ships -- and every chipdb is generated from -- has its own
-# derivation since that engine does not vendor it.
-NEXTPNR_REV=$(sed -n 's/.*rev = "\([0-9a-f]\{7,40\}\)".*/\1/p' "$REPO_ROOT/nix/nextpnr-xilinx.nix" | head -1)
-PRJXRAY_DB_REV=$(sed -n 's/.*rev = "\([0-9a-f]\{7,40\}\)".*/\1/p' "$REPO_ROOT/nix/prjxray-db.nix" | head -1)
+# The revisions the package is built from, read from nix/revisions.json,
+# the one file that records them (the .nix files read it too).
+# nextpnr-xilinx-revision keeps its name: it is the revision of the
+# executable the package installs as nextpnr-xilinx (today the himbaechel
+# xilinx uarch of openXC7/nextpnr). The prjxray-db the package ships -- and
+# every chipdb is generated from -- has its own entry since that engine
+# does not vendor it.
+revision() {
+    python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]]["rev"])' \
+        "$REPO_ROOT/nix/revisions.json" "$1" 2>/dev/null || true
+}
+NEXTPNR_REV=$(revision nextpnr)
+PRJXRAY_DB_REV=$(revision prjxray-db)
+PRJXRAY_REV=$(revision prjxray)
+FASM_REV=$(revision fasm)
 
 # The Eigen release nextpnr was compiled against. placer_heap solves its
 # analytic placement with Eigen, so its results move with the library even
@@ -89,7 +99,10 @@ if [ -z "$EIGEN_VERSION" ]; then
     fi
 fi
 
-COMMIT=${GITHUB_SHA:-$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)}
+# The commit of the tree that was built. Not GITHUB_SHA: a run can check
+# out another commit than the one it was triggered on (the upstream
+# nightly builds the commit that records the upstream revisions).
+COMMIT=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo "${GITHUB_SHA:-unknown}")
 
 # Normalize repo to lower case, as the FPGAwars packages do. Not
 # with bash's ${var,,}: the macOS runner's /bin/bash is 3.2, which has no
@@ -100,10 +113,12 @@ cat > "$OUT" <<EOF
 {
   "package-name"                   : "openxc7-toolchain",
   "description"                    : "openXC7 toolchain for Xilinx 7-series FPGAs: nextpnr-xilinx, prjxray, fasm and the chipdb",
-  "release-tag"                    : "$DATE",
+  "release-tag"                    : "$TAG",
   "yosys-release-tag"              : "$YOSYS_TAG",
   "nextpnr-xilinx-revision"        : "${NEXTPNR_REV:-unknown}",
   "prjxray-db-revision"            : "${PRJXRAY_DB_REV:-unknown}",
+  "prjxray-revision"               : "${PRJXRAY_REV:-unknown}",
+  "fasm-revision"                  : "${FASM_REV:-unknown}",
   "eigen-version"                  : "$EIGEN_VERSION",
   "chipdb-source"                  : "$CHIPDB_SOURCE",
   "use-cached-chipdb"              : "$CHIPDB_CACHE_USED",

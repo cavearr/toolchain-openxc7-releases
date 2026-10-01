@@ -12,6 +12,10 @@
 , fetchpatch
 }:
 
+let
+  # The revision and its hash: nix/revisions.json.
+  source = (builtins.fromJSON (builtins.readFile ../revisions.json)).fasm;
+in
 buildPythonPackage rec {
   name = "fasm";
   version = "0.0.2.r98.g9a73d70";
@@ -21,11 +25,8 @@ buildPythonPackage rec {
 
   src = fetchFromGitHub {
     inherit name;
-    owner = "openxc7";
-    repo = "fasm";
-    rev = "2f57ccb1727a120e8cacbb95c578f3c71bdcc95a";
-    fetchSubmodules = true;
-    hash = "sha256-4Na24czHPGvxuNuWKDiLkoBamsbqjGQkaQc8ogYHtuA=";
+    inherit (source) owner repo rev hash;
+    fetchSubmodules = source.submodules;
   };
 
   nativeBuildInputs = [

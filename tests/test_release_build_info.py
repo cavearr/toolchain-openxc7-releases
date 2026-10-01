@@ -43,6 +43,8 @@ def package(platform, **overrides):
         "yosys-release-tag": "2026-03-24",
         "nextpnr-xilinx-revision": "68aeeb39f92e39bfb239c7e4a44dd93451fc1889",
         "prjxray-db-revision": "a90f27c1caefee5276f47440f4c730b50519a86f",
+        "prjxray-revision": "9346969e7bfb9d070221957f8ccbaec28d5f1a93",
+        "fasm-revision": "2f57ccb1727a120e8cacbb95c578f3c71bdcc95a",
         "eigen-version": "3.4.0",
         "chipdb-source": "restored-from-cache",
         "use-cached-chipdb": True,

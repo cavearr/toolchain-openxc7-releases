@@ -18,6 +18,8 @@ def make_fixture(root: Path):
         "prjxray-db revision\n", encoding="utf-8")
     (root / "nix" / "nextpnr-xilinx-chipdb.nix").write_text(
         "chipdb derivation\n", encoding="utf-8")
+    (root / "nix" / "revisions.json").write_text(
+        '{"nextpnr": {"rev": "a"}, "prjxray-db": {"rev": "b"}}\n', encoding="utf-8")
     (root / CHIPDB_PARTS_FILE).write_text(
         '{"artix7": ["xc7a35tcsg324"]}\n', encoding="utf-8")
     (root / "nix" / "patches" / "a.patch").write_text(
@@ -102,6 +104,20 @@ class TestChipdbIdentity(unittest.TestCase):
         (self.root / "nix" / "prjxray-db.nix").write_text(
             "another prjxray-db revision\n", encoding="utf-8")
         self.assertNotEqual(chipdb_identity(), before)
+
+    def test_the_recorded_revisions_are_part_of_the_identity(self):
+        """nix/revisions.json holds the nextpnr and prjxray-db revisions the
+        bins are generated from (and the upstream nightly rewrites it):
+        a change to it must invalidate the bins."""
+        before = chipdb_identity()
+        (self.root / "nix" / "revisions.json").write_text(
+            '{"nextpnr": {"rev": "c"}, "prjxray-db": {"rev": "b"}}\n', encoding="utf-8")
+        self.assertNotEqual(chipdb_identity(), before)
+
+    def test_missing_revisions_exits(self):
+        (self.root / "nix" / "revisions.json").unlink()
+        with self.assertRaises(SystemExit):
+            chipdb_identity()
 
     def test_missing_database_derivation_exits(self):
         (self.root / "nix" / "prjxray-db.nix").unlink()

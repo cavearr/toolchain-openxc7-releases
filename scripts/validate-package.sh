@@ -259,8 +259,8 @@ fi
 ok "xc7pll: present and functional"
 
 # --- --version must be the expected rev ---------------------------------------
-EXPECTED_REV=$(sed -n 's/.*rev = "\([0-9a-f]\{40\}\)".*/\1/p' "$REPO_ROOT/nix/nextpnr-xilinx.nix" | head -1)
-[ -n "$EXPECTED_REV" ] || fail "cannot parse the expected nextpnr rev from nix/nextpnr-xilinx.nix"
+EXPECTED_REV=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["nextpnr"]["rev"])' "$REPO_ROOT/nix/revisions.json" 2>/dev/null || true)
+[ -n "$EXPECTED_REV" ] || fail "cannot read the expected nextpnr rev from nix/revisions.json"
 if [ "$WINE" = 1 ]; then
     VOUT=$(WINEDEBUG=-all wine64 "$NEXTPNR_BIN" --version </dev/null 2>&1 || true)
 else

@@ -1,0 +1,30 @@
+{
+  "nextpnr": {
+    "owner": "openXC7",
+    "repo": "nextpnr",
+    "submodules": true,
+    "rev": "c68c13582e972292c86a5025140d52e713384cbc",
+    "hash": "sha256-iAgJMDDQtWyIsyzXqzWWEt18/UJztb8p/IIyjbfK2OY="
+  },
+  "prjxray-db": {
+    "owner": "openXC7",
+    "repo": "prjxray-db",
+    "submodules": false,
+    "rev": "a90f27c1caefee5276f47440f4c730b50519a86f",
+    "hash": "sha256-EugZWK38rwLkhbp81eX/+kr4vrqdzRQuDbLpPn6ij7U="
+  },
+  "prjxray": {
+    "owner": "openXC7",
+    "repo": "prjxray",
+    "submodules": true,
+    "rev": "9346969e7bfb9d070221957f8ccbaec28d5f1a93",
+    "hash": "sha256-EuMiSApVPeMaJV5SM5Gp6/0bS4LiVDdr5oirSx2wuR8="
+  },
+  "fasm": {
+    "owner": "openxc7",
+    "repo": "fasm",
+    "submodules": true,
+    "rev": "2f57ccb1727a120e8cacbb95c578f3c71bdcc95a",
+    "hash": "sha256-4Na24czHPGvxuNuWKDiLkoBamsbqjGQkaQc8ogYHtuA="
+  }
+}
