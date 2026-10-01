@@ -11,6 +11,9 @@
 #   --tier <n>           run tiers up to n
 #   --tag <tag>          run tests carrying this tag
 #   --update-baseline    record the measured values as the new baseline
+#   --report-only        metric drift against the baseline is reported (DRIFT)
+#                        and does not fail; a broken flow, an expectation or a
+#                        clocked design without fmax still fail (upstream nightly)
 #   --json <file>        write the report as JSON
 #   --markdown <file>    write the report as markdown (CI job summary)
 #   --keep               keep the work directory for inspection

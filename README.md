@@ -237,12 +237,16 @@ every packaged family — primitives, structural properties, a parametric
 congestion pair, the untouched upstream demo projects — and compare fmax,
 utilisation and router time against per-platform baselines
 (`regress/baselines/<platform>.json`; each entry records the yosys it was
-measured with). A drift beyond tolerance fails the gate.
+measured with). A drift beyond tolerance fails the gate, and so does a
+design with flip-flops or block RAM whose `--report` carries no fmax (what
+`apio report` reads). `--report-only` lists the drift (status `DRIFT`)
+without failing on it: the upstream nightly runs it that way.
 
 ```bash
 scripts/fetch-demos.sh                     # third-party sources at their locked revision
 scripts/regress.sh <package.tgz>           # the whole catalogue
 scripts/regress.sh <pkg> --test srl --json report.json
+scripts/regress.sh <pkg> --report-only     # drift is information, not a failure
 scripts/regress.sh <tools-only-pkg> --chipdb-dir <bins>
 ```
 

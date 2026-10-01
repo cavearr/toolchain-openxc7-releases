@@ -115,11 +115,32 @@ def _metrics_present(names, spec, result, metrics) -> list[str]:
             if metrics.get(name) is None]
 
 
+def clocked_fmax(metrics) -> list[str]:
+    """A design with sequential elements must come out of place and route
+    with an fmax in the --report. The flip-flops and block RAMs bound in
+    the report say it has a clock to time; an empty fmax next to them is
+    the report losing it (as the hold-fix re-evaluation did, 0130), which
+    is what `apio report` reads. A design without either -- the SRL tests
+    clock only shift registers, which nextpnr does not time -- reports none
+    on every platform, and owes none."""
+    if not metrics or metrics.get("fmax_mhz") is not None:
+        return []
+    clocked = {name: metrics.get(name) for name in ("ffs", "brams")
+               if metrics.get(name)}
+    if not clocked:
+        return []
+    bound = ", ".join(f"{count} {name}" for name, count in clocked.items())
+    return [f"metric 'fmax_mhz' is missing from the --report of a clocked "
+            f"design ({bound} bound)"]
+
+
 def evaluate(spec, result, metrics) -> list[str]:
-    """Run every declared expectation, plus the implicit one: it must pass."""
+    """Run every declared expectation, plus the implicit ones: it must pass,
+    and a clocked design must report its fmax."""
     findings = []
     expectations = dict(spec.expect)
     expectations.setdefault("status", "pass")
     for name, value in expectations.items():
         findings.extend(REGISTRY[name](value, spec, result, metrics))
+    findings.extend(clocked_fmax(metrics))
     return findings

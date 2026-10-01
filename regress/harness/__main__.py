@@ -61,6 +61,11 @@ def main() -> int:
                         help="print what a test is for (its README) and exit")
     parser.add_argument("--update-baseline", action="store_true",
                         help="record the measured values as the new baseline")
+    parser.add_argument("--report-only", action="store_true",
+                        help="report metric drift against the baseline (DRIFT) "
+                             "without failing on it; a broken flow, a violated "
+                             "expectation or a clocked design without fmax "
+                             "still fail")
     parser.add_argument("--json", type=Path, help="write the report as JSON")
     parser.add_argument("--markdown", type=Path, help="write the report as markdown")
     parser.add_argument("--keep", action="store_true", help="keep the work directory")
@@ -68,6 +73,9 @@ def main() -> int:
                         help="directory of chipdb .bin for a local pack that "
                              "ships none (a release package already carries them)")
     args = parser.parse_args()
+    if args.report_only and args.update_baseline:
+        parser.error("--report-only and --update-baseline exclude each other")
+    mode = "report" if args.report_only else "gate"
 
     try:
         specs = select(spec_module.load_all(TESTS_DIR, REPO), args)
@@ -139,6 +147,11 @@ def main() -> int:
                 elif spec.track_metrics and not spec.expected_to_fail:
                     previous = baseline.get(spec.name, {}).get(part)
                     status, notes = metrics_module.compare(measured, previous, spec.tolerances)
+                    # A report-only run (the upstream nightly) compares
+                    # another toolchain with these baselines: the drift is
+                    # what it reports, not a failure of the run.
+                    if args.report_only and status == "FAIL":
+                        status = "DRIFT"
                     if previous and previous.get("env", {}) != versions:
                         notes.append("baseline recorded with different tool versions")
                         status = "WARN" if status == "OK" else status
@@ -175,9 +188,9 @@ def main() -> int:
         baseline_path.write_text(json.dumps(baseline, indent=2, sort_keys=True) + "\n")
         print(f"\nbaseline written: {baseline_path.relative_to(REPO)}")
     if args.json:
-        reporting.to_json(entries, versions, args.json)
+        reporting.to_json(entries, versions, args.json, package.platform, mode)
     if args.markdown:
-        reporting.to_markdown(entries, versions, package.platform, args.markdown)
+        reporting.to_markdown(entries, versions, package.platform, args.markdown, mode)
 
     summary = reporting.worst([entry["status"] for entry in entries])
     print(f"\nregression: {summary}")

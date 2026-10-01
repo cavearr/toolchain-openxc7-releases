@@ -11,7 +11,8 @@ have written on that runner, so the refresh is reproducible and reviewable
 in one diff instead of being retyped by hand.
 
 Recorded: every entry whose flow completed and whose expectations held
-(status OK/WARN/FAIL-by-drift, i.e. it has metrics and no findings).
+(status OK/WARN/FAIL-by-drift, or DRIFT from a --report-only run, i.e.
+it has metrics and no findings).
 Never recorded: broken flows, violated expectations (findings), SKIPs.
 The env (tool versions) comes from the report's `tools`.
 

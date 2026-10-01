@@ -9,9 +9,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-SEVERITY = {"OK": 0, "NEW": 1, "SKIP": 2, "WARN": 3, "FAIL": 4}
+# DRIFT is a metric beyond its fail tolerance in a --report-only run: worth
+# reading, never a failure of the run (only FAIL is).
+SEVERITY = {"OK": 0, "NEW": 1, "SKIP": 2, "WARN": 3, "DRIFT": 4, "FAIL": 5}
 _COLOUR = {"OK": "\033[0;32m", "NEW": "\033[0;34m", "SKIP": "\033[0;36m",
-           "WARN": "\033[1;33m", "FAIL": "\033[0;31m"}
+           "WARN": "\033[1;33m", "DRIFT": "\033[0;35m", "FAIL": "\033[0;31m"}
 _RESET = "\033[0m"
 
 
@@ -56,8 +58,11 @@ def catalogue(specs) -> None:
             print(f"{'':<30} · {item}")
 
 
-def to_json(entries: list[dict], versions: dict, path: Path) -> None:
+def to_json(entries: list[dict], versions: dict, path: Path,
+            platform: str = "", mode: str = "gate") -> None:
     payload = {
+        "platform": platform,
+        "mode": mode,
         "tools": versions,
         "summary": worst([entry["status"] for entry in entries]),
         "results": entries,
@@ -65,9 +70,13 @@ def to_json(entries: list[dict], versions: dict, path: Path) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n")
 
 
-def to_markdown(entries: list[dict], versions: dict, platform: str, path: Path) -> None:
-    rows = ["## Regression — " + platform, "",
-            f"`{versions.get('yosys', '?')}`", f"`{versions.get('nextpnr', '?')}`", "",
+def to_markdown(entries: list[dict], versions: dict, platform: str, path: Path,
+                mode: str = "gate") -> None:
+    rows = ["## Regression — " + platform, ""]
+    if mode == "report":
+        rows += ["Report only: drift against the baselines is listed (DRIFT), "
+                 "it does not fail the run.", ""]
+    rows += [f"`{versions.get('yosys', '?')}`", f"`{versions.get('nextpnr', '?')}`", "",
             "| Status | Test | Part | fmax | LUT | FF | BRAM | DSP | pnr |",
             "|---|---|---|---|---|---|---|---|---|"]
     for entry in entries:
@@ -79,7 +88,8 @@ def to_markdown(entries: list[dict], versions: dict, platform: str, path: Path) 
             f"{cell('ffs')} | {cell('brams')} | "
             f"{cell('dsps')} | {cell('pnr_seconds')} |"
         )
-    problems = [entry for entry in entries if entry["status"] in ("FAIL", "WARN")]
+    problems = [entry for entry in entries
+                if entry["status"] in ("FAIL", "DRIFT", "WARN")]
     if problems:
         rows += ["", "### Findings", ""]
         for entry in problems:
