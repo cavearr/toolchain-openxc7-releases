@@ -194,6 +194,62 @@ class LocalActionCheckerTests(unittest.TestCase):
         self.assertIn("has no action.yaml", result.stdout)
 
 
+# The shape of the Windows E2E step: the whole script is one single-quoted
+# argument of `bash -c`, closed by a quote alone on its last line.
+QUOTED_STEP = r"""name: quoted
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: E2E
+        run: |
+          nix shell nixpkgs#wine64 -c bash -euo pipefail -c '
+            export WINEDEBUG=-all
+            # (the engine opens the chipdb of its die from the package,
+            # share/nextpnr/himbaechel/xilinx/, no --chipdb)
+            echo "it'\''s escaped" ${{ inputs.mode == 'report' && '--x' || '' }}
+            wine64 nextpnr-xilinx.exe --version
+          '
+"""
+
+
+@unittest.skipUnless(HAVE_YAML, "PyYAML not installed (the CI job installs it)")
+class QuotedScriptCheckerTests(unittest.TestCase):
+    """A quote inside a `-c '...'` script ends it early; bash -n cannot tell."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def check(self, text):
+        write(self.root, ".github/workflows/quoted.yml", text)
+        return run("check-workflows.py", str(self.root))
+
+    def test_a_clean_quoted_script_passes(self):
+        """The shell's escaped quote and an Actions expression are fine."""
+        result = self.check(QUOTED_STEP)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_an_apostrophe_in_a_comment_fails(self):
+        """The comment that broke the Windows E2E step (wine64: command not
+        found): an apostrophe in `package's`."""
+        result = self.check(QUOTED_STEP.replace(
+            "from the package,", "from the package's"))
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("quoted.yml:build: step E2E: line 3", result.stdout)
+        self.assertIn("from the package's", result.stdout)
+
+    def test_a_block_that_is_never_closed_fails(self):
+        result = self.check(QUOTED_STEP.replace("          '\n", ""))
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("is never closed", result.stdout)
+
+
 @unittest.skipUnless(HAVE_YAML, "PyYAML not installed (the CI job installs it)")
 class ArtifactCheckerTests(unittest.TestCase):
     PRODUCER = """\

@@ -15,8 +15,18 @@ default.
 
 Both are silent failures in Actions -- an unknown input is ignored and an
 undeclared output evaluates to the empty string -- so they surface as a
-mystery halfway through a two-hour release build. Run over the checked-out
-tree (no network, no Actions):
+mystery halfway through a two-hour release build.
+
+A `run` script whose body is one single-quoted argument (`... -c '` at the
+end of a line, the closing `'` alone on a later line) must carry no other
+single quote in between: an apostrophe in a comment closes the string
+there, and the outer shell runs the rest of the script without the tools
+the inner one was given (`wine64: command not found`). It is still valid
+shell, so `bash -n` passes it. The shell's own escaped quote, and a
+quote inside a `${{ ... }}` expression (Actions expands it before the
+shell runs), are allowed.
+
+Run over the checked-out tree (no network, no Actions):
 
     scripts/check-workflows.py [repo-root]
 """
@@ -36,6 +46,11 @@ FILES = sorted(
     for path in (ROOT / ".github/workflows").glob("*.y*ml")
 )
 OUTPUT_REF = re.compile(r"needs\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z0-9_-]+)")
+# A line that opens a multi-line single-quoted script: `-c '` at its end.
+QUOTED_SCRIPT_OPEN = re.compile(r"\s-c\s+'\s*$")
+# What the shell never sees as a quote: Actions expands `${{ ... }}` before
+# the step runs, and '\'' is the shell's own way to put one in the string.
+NOT_A_SHELL_QUOTE = re.compile(r"\$\{\{.*?\}\}|'\\''")
 
 if not FILES:
     sys.exit(f"no workflows under {ROOT}/.github/workflows")
@@ -92,6 +107,32 @@ def check_action_steps(name, job_name, steps):
         if missing:
             errors.append(f"{where} misses required inputs {missing}")
     return count
+
+
+def check_quoted_scripts(name, job_name, steps):
+    """No stray single quote inside a multi-line `-c '...'` run script."""
+    for number, step in enumerate(steps or [], 1):
+        script = step.get("run")
+        if not isinstance(script, str):
+            continue
+        where = f"{name}:{job_name}: step {step.get('name') or number}"
+        inside = False
+        for line_number, line in enumerate(script.splitlines(), 1):
+            if not inside:
+                inside = bool(QUOTED_SCRIPT_OPEN.search(line))
+                continue
+            if line.strip() == "'":
+                inside = False
+                continue
+            if "'" in NOT_A_SHELL_QUOTE.sub("", line):
+                errors.append(
+                    f"{where}: line {line_number} of its run script has a "
+                    "single quote inside the -c '...' block, which ends the "
+                    f"quoted script there: {line.strip()}")
+        if inside:
+            errors.append(
+                f"{where}: a -c '...' block of its run script is never "
+                "closed by a line holding only the quote")
 
 
 def strings(value):
@@ -157,6 +198,7 @@ for name, workflow in workflows.items():
         else:
             job_outputs[job_name] = set((job.get("outputs", {}) or {}).keys())
             action_calls += check_action_steps(name, job_name, job.get("steps"))
+            check_quoted_scripts(name, job_name, job.get("steps"))
 
     check_run_wide_inputs(name, calls_made)
 
