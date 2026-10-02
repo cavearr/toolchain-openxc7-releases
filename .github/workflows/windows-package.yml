@@ -1,8 +1,9 @@
 # Build + validate the Windows package. The flake produces only the tools
 # tree; this workflow copies the chipdb bins and chipdb-id.txt from the
-# chipdb.yml artifact into chipdb/, embeds the XILINX-PARTS-INDEX document
-# that job wrote, and validates the assembled tarball under Wine. Schema 8
-# ships those bins inside the package (apio#1070). The .exe is the
+# chipdb.yml artifact into share/nextpnr/himbaechel/xilinx/ (where the
+# engine looks for them), embeds the XILINX-PARTS-INDEX document that job
+# wrote, and validates the assembled tarball under Wine. Schema 9 ships
+# those bins inside the package. The .exe is the
 # himbaechel xilinx uarch without an embedded Python: `apio report` reads
 # its --report JSON, the same on every platform. See nix/windows/.
 name: windows-package
@@ -69,7 +70,7 @@ jobs:
           summarize: false          # no branded gantt/Discord footer
           diagnostic-endpoint: ""   # no telemetry
 
-      # Copied into package-win/chipdb/ below and shipped in the tarball.
+      # Copied into the package's chipdb directory below and shipped in the tarball.
       - name: Download the verified chipdb bins
         uses: actions/download-artifact@v8
         with:
@@ -87,6 +88,7 @@ jobs:
           nix build -L \
             '.#packages.x86_64-linux.openxc7-windows-amd64-tools' --out-link result-win-tools
           test ! -e result-win-tools/chipdb
+          test ! -e result-win-tools/share/nextpnr/himbaechel
           test -f result-win-tools/bin/nextpnr-xilinx.exe
           test -f result-win-tools/bin/xc7frames2bit.exe
           # the mingw runtime sits next to the .exe (no rpath on Windows)
@@ -108,9 +110,11 @@ jobs:
           cp -aL result-win-tools package-win
           chmod -R u+w package-win
 
-          # The nix output is tools-only. The bins go in chipdb/, the same
-          # place the linux and darwin packer seeds them, and they ship.
-          mkdir -p package-win/chipdb
+          # The nix output is tools-only. The bins go where the engine opens
+          # them (pack.parts_index.CHIPDB_SUBDIR), the same place the linux
+          # and darwin packer seeds them, and they ship.
+          CHIPDB_DIR=package-win/$(python3 -c 'from pack.parts_index import CHIPDB_SUBDIR; print(CHIPDB_SUBDIR)')
+          mkdir -p "$CHIPDB_DIR"
 
           # The artifact must be the right one: one chipdb-<die>.bin per die
           # of the manifest (the packer's rule, pack.families.chipdb_dies),
@@ -132,8 +136,9 @@ jobs:
           DECLARED_ID="${{ inputs.chipdb_id }}"
           [ "$DECLARED_ID" = "$ARTIFACT_ID" ] \
             || { echo "::error::chipdb artifact identity ($ARTIFACT_ID) differs from the caller's chipdb_id ($DECLARED_ID)"; exit 1; }
-          cp chipdb-bins/*.bin chipdb-bins/chipdb-id.txt package-win/chipdb/
-          test ! -e package-win/chipdb/README.txt
+          cp chipdb-bins/*.bin chipdb-bins/chipdb-id.txt "$CHIPDB_DIR/"
+          test ! -e "$CHIPDB_DIR/README.txt"
+          test ! -e package-win/chipdb
           echo "$ACTUAL chipdb bins copied into the package (identity $ARTIFACT_ID)"
 
           # The same index the linux and darwin packages embed, under the
@@ -171,7 +176,7 @@ jobs:
           # provenance comes from the chipdb job of the calling run
           CHIPDB_SOURCE_IN="${{ inputs.chipdb_source }}"
           # the identity is the stamp that ships next to the bins
-          ARTIFACT_ID=$(cat package-win/chipdb/chipdb-id.txt)
+          ARTIFACT_ID=$(cat package-win/share/nextpnr/himbaechel/xilinx/chipdb-id.txt)
           CHIPDB_SOURCE="$CHIPDB_SOURCE_IN" CHIPDB_ID="$ARTIFACT_ID" \
             bash scripts/build-info.sh windows-amd64 "${{ inputs.release_tag || inputs.date }}" "$NAME" package-win/BUILD-INFO.json
           # --mode=u+w: the nix store tree is read-only; without it Windows
@@ -218,14 +223,14 @@ jobs:
             DB=$PKG/share/nextpnr/external/prjxray-db/artix7
             mkdir -p run && cd run
             yosys -q -p "synth_xilinx -arch xc7 -top ledon; write_json ledon.json" ../example/ledon.v
-            # The command line apio runs for a schema 8 package: the part in
-            # --device, the chipdb of its die (the file inside this package),
-            # the XDC and the FASM as -o options, and --report, whose JSON
-            # is what apio report reads.
+            # The command line of a schema 9 package: the part in --device
+            # (the engine opens the chipdb of its die from the package's
+            # share/nextpnr/himbaechel/xilinx/, no --chipdb), the XDC and the
+            # FASM as -o options, and --report, whose JSON is what a consumer
+            # reads for timing and utilization.
             # stdin from /dev/null and stdout through a pipe: wine wants
             # valid handles, not a detached terminal.
             wine64 ../$PKG/bin/nextpnr-xilinx.exe --device xc7a35tcpg236-1 \
-              --chipdb ../$PKG/chipdb/chipdb-xc7a50t.bin \
               -o xdc=../config/basys3.xdc --json ledon.json \
               -o fasm=ledon.fasm --report ledon.report.json </dev/null 2>&1 | cat
             python3 - ledon.report.json <<"PYEOF"

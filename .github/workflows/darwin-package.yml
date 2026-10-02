@@ -8,7 +8,8 @@
 #
 # chipdb.yml owns generation, cache, identity and the XILINX-PARTS-INDEX
 # document. This job seeds the package from that job's bins, so the tarball
-# ships them in chipdb/ (schema 8, apio#1070). L1 and L2 validate that
+# ships them in share/nextpnr/himbaechel/xilinx/, where the engine
+# looks for them (schema 9). L1 and L2 validate that
 # tarball as it stands.
 # This macOS runner only packages and validates the artifacts the calling
 # run already produced on Linux.
@@ -88,7 +89,7 @@ jobs:
           echo "dateid=${DATE//-/}" >> "$GITHUB_OUTPUT"
           echo "Package date: $DATE"
 
-      # Seed for the packer: copied into the package's chipdb/ and shipped.
+      # Seed for the packer: copied into the package's share/nextpnr/himbaechel/xilinx/ and shipped.
       - name: Download the verified chipdb bins
         uses: actions/download-artifact@v8
         with:

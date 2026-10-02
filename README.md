@@ -36,9 +36,9 @@ One tarball per platform, `openxc7-toolchain-<platform>-<YYYYMMDD>.tgz`:
 | `xc7frames2bit`, `bitread`, `xc7patch` | [openXC7/prjxray](https://github.com/openXC7/prjxray) | Frames → bitstream, and bitstream inspection |
 | `fasm2frames` + the `fasm` Python library | [openxc7/fasm](https://github.com/openxc7/fasm) | FASM → configuration frames |
 | `xc7pll` | this repository | PLL parameter calculator (PLLE2_BASE): a ready-to-instantiate Verilog module, or the table with `--report` |
-| `chipdb/` | built here | The device databases nextpnr reads: one `chipdb-<die>.bin` per die, plus the identity stamp `chipdb-id.txt` |
+| `share/nextpnr/himbaechel/xilinx/` | built here | The device databases nextpnr reads, where it looks for them: one `chipdb-<die>.bin` per die, plus the identity stamp `chipdb-id.txt` |
 | `share/nextpnr/external/prjxray-db` | [openXC7/prjxray-db](https://github.com/openXC7/prjxray-db) | Part data (`part.yaml`, `package_pins.csv`, …) and the segbits `fasm2frames` writes; every chipdb is generated from it |
-| `XILINX-PARTS-INDEX.json` | built here | Every part the database supports, which of them this release built, and the chipdb file of each |
+| `XILINX-PARTS-INDEX.json` | built here | Every part the database supports, and which of them this release built |
 | `BUILD-INFO.json` | built here | What this package is and how it was built: revisions, the yosys it was validated with, chipdb identity, commit and run |
 
 | Platform | Built on | Notes |
@@ -115,15 +115,13 @@ names, at run time. The tag is written in exactly one place,
 
 ## Using it
 
-For a part such as `xc7a35tcsg324-1` (family `artix7`; the chipdb file of
-each part is in `XILINX-PARTS-INDEX.json`), with the package extracted in
-`openxc7/`:
+For a part such as `xc7a35tcsg324-1` (family `artix7`; nextpnr-xilinx finds
+the chipdb of its die by itself), with the package extracted in `openxc7/`:
 
 ```bash
 yosys -p 'synth_xilinx -arch xc7 -top top; write_json top.json' top.v
 
 nextpnr-xilinx --device xc7a35tcsg324-1 \
-  --chipdb openxc7/chipdb/chipdb-xc7a50t.bin \
   -o xdc=top.xdc -o fasm=top.fasm --json top.json --report report.json
 
 DB=openxc7/share/nextpnr/external/prjxray-db/artix7
@@ -142,13 +140,15 @@ computes PLL parameters: `xc7pll -i 100 -o 25` prints a Verilog module,
 published with each release under the same name. It is keyed by the full
 part (`xc7a200tfbg484-3`: device, package, speed grade); each entry gives
 its `family`, `base-part` and `speed`, whether this release built it
-(`generated`) and, for the parts it built, the `chipdb` file name in
-`chipdb/` (the parts of one die repeat that name). A part with
-`"generated": false` is supported by the packaged database but not built:
-"not built" rather than "unknown part". The top level carries the
+(`generated`). A part with `"generated": false` is supported by the
+packaged database but not built: "not built" rather than "unknown part"
+(this includes the speed grades the engine's `--device` pattern rejects,
+such as `xc7s50csga324-1IL`). Which chipdb file serves a part is the
+engine's business and the index does not say. The top level carries the
 `chipdb-id` and the counts. Its `schema` number is the contract with a
-reader: schema 8 is today's (the xilinx uarch installed as `nextpnr-xilinx`,
-one chipdb file per die, shipped in the package), and any change to its
+reader: schema 9 is today's (the xilinx uarch installed as `nextpnr-xilinx`,
+one chipdb file per die in `share/nextpnr/himbaechel/xilinx/`, and no
+`--chipdb` on the command line), and any change to its
 keys is a new schema. `pack/parts_index.py` is the only code that writes
 it and the validator every reader here goes through.
 
@@ -169,7 +169,7 @@ python3.12 openxc7-pack.py --no-chipdb    # local tools-only tree, no chipdb
 The default pack is the release pack: it generates the chipdb of every die
 of the manifest, or copies one already generated (`OPENXC7_CHIPDB_SEED`,
 which must carry this toolchain's `chipdb-id.txt`), and ships those files in
-`chipdb/`. `--no-chipdb` (or `OPENXC7_NO_CHIPDB=1`) leaves a `README.txt`
+`share/nextpnr/himbaechel/xilinx/`. `--no-chipdb` (or `OPENXC7_NO_CHIPDB=1`) leaves a `README.txt`
 there and no bins, for local iteration. The first `nix develop` builds the
 whole toolchain (tens of minutes); later ones take seconds.
 
@@ -209,17 +209,18 @@ wrote them.
 nix build .#packages.x86_64-linux.openxc7-windows-amd64-tools
 ```
 
-The result is a **tools-only tree** without `chipdb/`. CI copies in the bins
+The result is a **tools-only tree** without the chipdb. CI copies in the bins
 and `chipdb-id.txt` from the single `chipdb.yml` job, embeds the parts index
 that job wrote, writes `BUILD-INFO.json` and makes the tarball. To
 reproduce that assembly locally:
 
 ```bash
 cp -aL result package-win && chmod -R u+w package-win
-mkdir -p package-win/chipdb
-cp /path/to/chipdb-bins/*.bin /path/to/chipdb-bins/chipdb-id.txt package-win/chipdb/
+CHIPDB=package-win/share/nextpnr/himbaechel/xilinx
+mkdir -p $CHIPDB
+cp /path/to/chipdb-bins/*.bin /path/to/chipdb-bins/chipdb-id.txt $CHIPDB/
 cp /path/to/XILINX-PARTS-INDEX.json package-win/XILINX-PARTS-INDEX.json
-CHIPDB_SOURCE=restored-from-cache CHIPDB_ID="$(cat package-win/chipdb/chipdb-id.txt)" \
+CHIPDB_SOURCE=restored-from-cache CHIPDB_ID="$(cat $CHIPDB/chipdb-id.txt)" \
   bash scripts/build-info.sh windows-amd64 YYYY-MM-DD \
   openxc7-toolchain-windows-amd64-YYYYMMDD.tgz package-win/BUILD-INFO.json
 tar czhf openxc7-toolchain-windows-amd64-YYYYMMDD.tgz --mode=u+w -C package-win .
@@ -243,8 +244,11 @@ scripts/validate-package.sh <package.tgz> --parts "xc7a35tcpg236" --keep
 scripts/validate-package.sh <tools-only-tree-or-tarball> --chipdb-dir <bins>
 ```
 
-- the layout; every file the index names is in `chipdb/`, no extra `.bin`
-  is there, and `chipdb-id.txt` matches the index's `chipdb-id`;
+- the layout; the chipdb of every built part's die is in
+  `share/nextpnr/himbaechel/xilinx/`, no extra `.bin` is there, and
+  `chipdb-id.txt` matches the index's `chipdb-id`;
+- that the engine opens its chipdb for every part the index says is built,
+  from `--device` alone and with no `--chipdb` (`e2e/accept-parts.py`);
 - `--version` of the *packaged* binary against the nextpnr revision in
   `nix/revisions.json`, so a stale binary cannot reach a release;
 - on macOS, the ad-hoc signature, and that no Mach-O load command still

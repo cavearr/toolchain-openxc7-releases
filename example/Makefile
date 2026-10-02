@@ -19,8 +19,9 @@ PRJXRAY_DB_DIR = ${TOOLS_OPENXC7}/share/nextpnr/external/prjxray-db
 # -- it; only the chipdb target needs it.
 NEXTPNR_XILINX_CHIPDB_GEN ?=
 
-# -- Folder for the binary database
-CHIPDB_DIR = ${TOOLS_OPENXC7}/chipdb
+# -- Folder for the binary database: where nextpnr-xilinx looks for it, so
+# -- the command line needs no --chipdb
+CHIPDB_DIR = ${TOOLS_OPENXC7}/share/nextpnr/himbaechel/xilinx
 
 #-- ANSI Colors
 GREEN='\033[0;32m'
@@ -103,7 +104,7 @@ $(TOP).fasm: ${TOP}.json ${CHIPDB}
 	@echo -e ${BLUE}"─────────────────────────────────────"${RESET}
 	@echo -e ${BLUE}"➡️  Routing..."${RESET}
 	@echo -e ${BLUE}"─────────────────────────────────────"${RESET}
-	nextpnr-xilinx --device ${PART1} --chipdb ${CHIPDB} \
+	nextpnr-xilinx --device ${PART1} \
        -o xdc=${XDC} --json ${TOP}.json -o fasm=${TOP}.fasm #-q
 	@echo
 

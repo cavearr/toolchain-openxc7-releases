@@ -9,8 +9,9 @@
 # Generating them is the slow, memory-heavy step of the whole build (the
 # generator of xc7z100 alone peaks at 12.4 GB, more than a hosted macOS
 # runner has), so it happens ONCE here, on a linux runner. The platform
-# jobs seed their packages from `chipdb-bins`: schema 8 ships those files
-# inside each tarball (apio#1070). There is no per-die release asset.
+# jobs seed their packages from `chipdb-bins`: schema 9 ships those files
+# inside each tarball, in share/nextpnr/himbaechel/xilinx/, where the engine
+# opens them. There is no per-die release asset.
 # `parts-index` (~50 kB) is the document each package embeds and the
 # release publishes under the same name.
 #
@@ -120,7 +121,7 @@ jobs:
           nix develop .#pack --command bash -c 'python3.12 openxc7-pack.py --chipdb-only'
           # refresh the cache content from what was produced (bins + stamp)
           mkdir -p chipdb-cache
-          cp dist/chipdb/*.bin dist/chipdb/chipdb-id.txt chipdb-cache/
+          cp dist/share/nextpnr/himbaechel/xilinx/*.bin dist/share/nextpnr/himbaechel/xilinx/chipdb-id.txt chipdb-cache/
           ls -la chipdb-cache
 
       # The file list comes from the manifest through the packer's own rule
@@ -131,9 +132,9 @@ jobs:
           python3 -c 'from pack.families import chipdb_dies; from pack.chipdb import chipdb_file; print("\n".join(chipdb_file(die) for _, die in chipdb_dies()))' > chipdb-files.txt
           test -s chipdb-files.txt
           while read -r f; do
-            test -f "dist/chipdb/$f" || { echo "::error::chipdb missing: $f"; exit 1; }
+            test -f "dist/share/nextpnr/himbaechel/xilinx/$f" || { echo "::error::chipdb missing: $f"; exit 1; }
           done < chipdb-files.txt
-          for f in dist/chipdb/*.bin; do
+          for f in dist/share/nextpnr/himbaechel/xilinx/*.bin; do
             grep -Fxq "$(basename "$f")" chipdb-files.txt \
               || { echo "::error::unexpected chipdb file: $f"; exit 1; }
           done
@@ -142,14 +143,14 @@ jobs:
       - name: Export the identity stamp
         id: stamp
         run: |
-          ID=$(cat dist/chipdb/chipdb-id.txt)
+          ID=$(cat dist/share/nextpnr/himbaechel/xilinx/chipdb-id.txt)
           echo "identity=$ID" >> "$GITHUB_OUTPUT"
           echo "chipdb identity: $ID"
           {
             echo "### chipdb"
-            echo "mode: **${{ steps.gen.outputs.mode }}** · identity: \`$ID\` · $(ls dist/chipdb/*.bin | wc -l) files, one per die"
+            echo "mode: **${{ steps.gen.outputs.mode }}** · identity: \`$ID\` · $(ls dist/share/nextpnr/himbaechel/xilinx/*.bin | wc -l) files, one per die"
             echo ""
-            python3 - dist/chipdb <<'PYEOF'
+            python3 - dist/share/nextpnr/himbaechel/xilinx <<'PYEOF'
           import hashlib, sys
           from pathlib import Path
           from pack.chipdb import chipdb_file
@@ -173,13 +174,13 @@ jobs:
           rm -rf parts-index
           START=$SECONDS
           bash scripts/chipdb-assets.sh \
-            dist/chipdb parts-index "${{ steps.d.outputs.dateid }}" \
+            dist/share/nextpnr/himbaechel/xilinx parts-index "${{ steps.d.outputs.dateid }}" \
             dist/share/nextpnr/external/prjxray-db
           echo "index written in $((SECONDS - START))s"
           # The published index carries the same name as the file inside
           # every package, XILINX-PARTS-INDEX.json: the release it belongs
           # to is written inside it, so its name does not repeat the date
-          # (PARTS-INDEX.json before the apio#1002 rename). Schema 8
+          # (PARTS-INDEX.json before the apio#1002 rename). Schema 9
           # publishes no per-die asset next to it.
           INDEX="XILINX-PARTS-INDEX.json"
           test -f "parts-index/$INDEX"
@@ -189,13 +190,14 @@ jobs:
           echo "index=$INDEX" >> "$GITHUB_OUTPUT"
           python3 - "parts-index/$INDEX" >> "$GITHUB_STEP_SUMMARY" <<'PYEOF'
           import json, sys
+          from pack.parts_index import chipdb_name
           data = json.load(open(sys.argv[1]))
           print("### parts index (XILINX-PARTS-INDEX.json)")
           print(f"schema: **{data['schema']}** · release-tag: "
                 f"`{data['release-tag']}` · date: `{data['date']}`")
           print(f"built: **{data['generated-count']}** of {data['part-count']} parts "
                 f"the packaged database supports ({data['base-part-count']} base "
-                f"parts), from **{data['chipdb-count']}** chipdb files")
+                f"parts)")
           print()
           print("| family | parts | built |")
           print("|---|---:|---:|")
@@ -210,7 +212,8 @@ jobs:
           files = {}
           for entry in data["parts"].values():
               if entry["generated"]:
-                  files[entry["chipdb"]] = files.get(entry["chipdb"], 0) + 1
+                  name = chipdb_name(entry["base-part"])
+                  files[name] = files.get(name, 0) + 1
           print("| chipdb file | parts |")
           print("|---|---:|")
           for name, parts in sorted(files.items()):
@@ -219,14 +222,14 @@ jobs:
 
       # Consumed by the linux, darwin and windows package jobs of this run:
       # one generation, one set of bins. Each package seeds from these bytes
-      # and ships them in chipdb/.
+      # and ships them in the engine's chipdb directory.
       - name: Publish the chipdb bins for the platform jobs
         uses: actions/upload-artifact@v7
         with:
           name: chipdb-bins
           path: |
-            dist/chipdb/*.bin
-            dist/chipdb/chipdb-id.txt
+            dist/share/nextpnr/himbaechel/xilinx/*.bin
+            dist/share/nextpnr/himbaechel/xilinx/chipdb-id.txt
           compression-level: 1     # already dense binary data
           retention-days: 7
           if-no-files-found: error
