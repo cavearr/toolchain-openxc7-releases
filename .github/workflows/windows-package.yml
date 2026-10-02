@@ -224,7 +224,7 @@ jobs:
             mkdir -p run && cd run
             yosys -q -p "synth_xilinx -arch xc7 -top ledon; write_json ledon.json" ../example/ledon.v
             # The command line of a schema 9 package: the part in --device
-            # (the engine opens the chipdb of its die from the package's
+            # (the engine opens the chipdb of its die from the package,
             # share/nextpnr/himbaechel/xilinx/, no --chipdb), the XDC and the
             # FASM as -o options, and --report, whose JSON is what a consumer
             # reads for timing and utilization.
