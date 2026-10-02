@@ -25,10 +25,11 @@ TAG = "2026-08-28"
 DATE = "20260828"
 BASE_PART = "xc7a35tcpg236"
 PARTS = (f"{BASE_PART}-1", f"{BASE_PART}-2L")   # one chipdb file, two parts
-# xc7a35t is the xc7a50t die: schema 8 names that die's file.
+# xc7a35t is the xc7a50t die: that die's file is the one the package needs.
 CHIPDB = "chipdb-xc7a50t.bin"
+CHIPDB_DIR = "share/nextpnr/himbaechel/xilinx"   # where the engine looks
 STAMP = "fixture-id"
-# A name schema 7 published and schema 8 must not.
+# A name schema 7 published and schema 9 must not.
 ASSET = f"apio-xilinx-chipdb-xc7a50t-{DATE}.bin.tgz"
 INDEX = "XILINX-PARTS-INDEX.json"        # since the apio#1002 rename
 BUILD_INFO = "BUILD-INFO.json"           # the release-level one, apio#1009
@@ -52,11 +53,11 @@ def _tgz(payload: bytes, arcname: str) -> bytes:
 
 def _package(payload: bytes = BIN, stamp: str = STAMP,
              extra=()) -> bytes:
-    """A platform package carrying chipdb/<file> and chipdb-id.txt."""
+    """A platform package carrying the chipdb file and chipdb-id.txt."""
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
-        members = [(f"chipdb/{CHIPDB}", payload),
-                   ("chipdb/chipdb-id.txt", (stamp + "\n").encode())]
+        members = [(f"{CHIPDB_DIR}/{CHIPDB}", payload),
+                   (f"{CHIPDB_DIR}/chipdb-id.txt", (stamp + "\n").encode())]
         members.extend(extra)
         for name, data in members:
             if data is None:
@@ -105,7 +106,7 @@ def resum(files: dict, promised=None) -> dict:
 
 
 def release(**overrides) -> dict:
-    """A healthy schema 8 release: three packages, the index, BUILD-INFO.
+    """A healthy schema 9 release: three packages, the index, BUILD-INFO.
 
     Six assets once SHA256SUMS is added. No chipdb release asset: the bin
     travels inside each platform package.
@@ -114,15 +115,14 @@ def release(**overrides) -> dict:
         f"openxc7-toolchain-{platform}-{DATE}.tgz": _package()
         for platform in ("linux-x86-64", "darwin-arm64", "windows-amd64")
     }
-    built = {"generated": True, "chipdb": CHIPDB}
+    built = {"generated": True}
     info = {
-        "schema": 8,
+        "schema": 9,
         "date": DATE,
         "release-tag": TAG,
         "chipdb-id": "fixture-id",
         "part-count": len(PARTS),
         "generated-count": len(PARTS),
-        "chipdb-count": 1,
         "base-part-count": 1,
         "note": "fixture",
         "parts": {
@@ -238,7 +238,7 @@ class AssetCheckTests(unittest.TestCase):
         self.assertEqual(code, 0, output)
         self.assertIn("asset-check: OK", output)
         self.assertIn(f"✅ {INDEX}", output)
-        self.assertIn("schema 8", output)
+        self.assertIn("schema 9", output)
         self.assertIn("travel inside the platform packages", output)
         self.assertNotIn(ASSET, output)
         self.assertNotIn("chipdb assets", output)
@@ -246,7 +246,7 @@ class AssetCheckTests(unittest.TestCase):
     def test_one_request_for_the_index_not_per_part(self):
         """Two parts share a chipdb file: the index is fetched once.
 
-        Schema 8 does not fetch a chipdb asset at all.
+        Schema 9 does not fetch a chipdb asset at all.
         """
         calls = []
         code, output = run(release(), calls=calls)
@@ -269,7 +269,7 @@ class AssetCheckTests(unittest.TestCase):
     def test_full_names_an_extra_bin(self):
         linux = f"openxc7-toolchain-linux-x86-64-{DATE}.tgz"
         files = release(**{f"{BASE}/{linux}": _package(
-            extra=[("chipdb/extra.bin", b"no such part")])})
+            extra=[(f"{CHIPDB_DIR}/extra.bin", b"no such part")])})
         code, output = run(resum(files), "", "1")
         self.assertEqual(code, 1)
         self.assertIn("unexpected ['extra.bin']", output)
@@ -345,13 +345,13 @@ class AssetCheckTests(unittest.TestCase):
              "parts": {}}).encode()
         code, output = run(files)
         self.assertEqual(code, 0, output)
-        self.assertIn("schema 4, not 8", output)
+        self.assertIn("schema 4, not 9", output)
         self.assertIn("legacy release", output)
 
     def test_the_last_schema_5_index_is_legacy_not_a_failure(self):
         """The index the 2026-09-15 release published, byte for byte.
 
-        Schema 8 is what this gate checks; a release published under
+        Schema 9 is what this gate checks; a release published under
         schema 5 is what apio 1.6.x installs from, and it is not this
         gate's contract any more.
         """
@@ -359,12 +359,12 @@ class AssetCheckTests(unittest.TestCase):
         files[f"{BASE}/{INDEX}"] = PUBLISHED_SCHEMA_5.read_bytes()
         code, output = run(resum(files))
         self.assertEqual(code, 0, output)
-        self.assertIn(f"— {INDEX}: schema 5, not 8", output)
+        self.assertIn(f"— {INDEX}: schema 5, not 9", output)
         self.assertIn("legacy release", output)
         self.assertIn("asset-check: OK", output)
 
     def test_a_schema_6_index_is_legacy_not_a_failure(self):
-        """Schema 6 is an older engine's index. This gate checks schema 8,
+        """Schema 6 is an older engine's index. This gate checks schema 9,
         so a schema 6 release is legacy, not a failed one."""
         files = release()
         info = json.loads(files[f"{BASE}/{INDEX}"])
@@ -372,7 +372,7 @@ class AssetCheckTests(unittest.TestCase):
         files[f"{BASE}/{INDEX}"] = json.dumps(info).encode()
         code, output = run(files)
         self.assertEqual(code, 0, output)
-        self.assertIn(f"— {INDEX}: schema 6, not 8", output)
+        self.assertIn(f"— {INDEX}: schema 6, not 9", output)
         self.assertIn("legacy release", output)
         self.assertNotIn("❌", output)
 
@@ -386,10 +386,40 @@ class AssetCheckTests(unittest.TestCase):
         files[f"{BASE}/{INDEX}"] = json.dumps(info).encode()
         code, output = run(files)
         self.assertEqual(code, 0, output)
-        self.assertIn(f"— {INDEX}: schema 7, not 8", output)
+        self.assertIn(f"— {INDEX}: schema 7, not 9", output)
         self.assertIn("legacy release", output)
         self.assertIn("asset-check: OK", output)
         self.assertNotIn("❌", output)
+
+    def test_a_schema_8_index_is_legacy_not_a_failure(self):
+        """Schema 8 (bins in chipdb/, --chipdb on the command line) is the
+        previous contract: legacy, like schema 7 was when 8 came."""
+        files = release()
+        info = json.loads(files[f"{BASE}/{INDEX}"])
+        info["schema"] = 8
+        files[f"{BASE}/{INDEX}"] = json.dumps(info).encode()
+        code, output = run(files)
+        self.assertEqual(code, 0, output)
+        self.assertIn(f"— {INDEX}: schema 8, not 9", output)
+        self.assertIn("legacy release", output)
+        self.assertIn("asset-check: OK", output)
+        self.assertNotIn("❌", output)
+
+    def test_full_rejects_bins_left_in_the_old_chipdb_directory(self):
+        """Schema 8's chipdb/ at the package root is not where schema 9
+        keeps the bins: the die file is missing from the new directory."""
+        linux = f"openxc7-toolchain-linux-x86-64-{DATE}.tgz"
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+            for name, data in ((f"chipdb/{CHIPDB}", BIN),
+                               ("chipdb/chipdb-id.txt", (STAMP + "\n").encode())):
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
+        files = release(**{f"{BASE}/{linux}": buffer.getvalue()})
+        code, output = run(resum(files), "", "1")
+        self.assertEqual(code, 1, output)
+        self.assertIn(f"missing ['{CHIPDB}']", output)
 
     def test_full_checks_the_downloaded_package_against_sha256sums(self):
         """The published bytes differ from the manifest. HEAD cannot see

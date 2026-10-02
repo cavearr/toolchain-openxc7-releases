@@ -9,8 +9,22 @@ from pathlib import Path
 import ansi
 
 from .components import copy_file
-from .parts_index import PACKAGE_FILE
+from .parts_index import CHIPDB_SUBDIR, PACKAGE_FILE
 from .platform import plat_token
+
+
+def _clean_keeping(directory: Path, keep: Path):
+    """Delete everything under *directory* except the path *keep* (relative)."""
+    keep_first = keep.parts[0]
+    for entry in directory.iterdir():
+        if entry.name == keep_first and len(keep.parts) > 1 and entry.is_dir():
+            _clean_keeping(entry, Path(*keep.parts[1:]))
+        elif entry.name == keep_first:
+            continue
+        elif entry.is_dir() and not entry.is_symlink():
+            shutil.rmtree(entry)
+        else:
+            entry.unlink()
 
 
 # ----------------------------------------------------------
@@ -23,7 +37,7 @@ from .platform import plat_token
 #    +-- bin  --> Wrappers for the binaries
 #    +-- libexec --> Executables (elf, bash shell, python)
 #    +-- lib     --> Dynamic libraries
-#    +-- chipdb  --> binary database
+#    +-- share/nextpnr/himbaechel/xilinx --> binary database (chipdb)
 # ----------------------------------------------------------
 def distribution_init():
     # -- Base directory of the distribution
@@ -33,26 +47,21 @@ def distribution_init():
     # -- the files that already exist, so an old dist/ freezes binaries
     # -- from earlier builds into the package (release 2026-07-16 shipped
     # -- an unpatched nextpnr on all 3 platforms because of this).
-    # -- Everything is deleted EXCEPT dist/chipdb: the .bin are expensive
-    # -- to regenerate, they are platform-independent and they have their
-    # -- own refresh mechanism (explicit deletion + OPENXC7_CHIPDB_SEED).
+    # -- Everything is deleted EXCEPT the chipdb directory: the .bin are
+    # -- expensive to regenerate, they are platform-independent and they
+    # -- have their own refresh mechanism (explicit deletion +
+    # -- OPENXC7_CHIPDB_SEED).
     if base_dir.exists():
-        print("➡️  Limpiando dist/ anterior (se conserva dist/chipdb)...")
+        print(f"➡️  Limpiando dist/ anterior (se conserva dist/{CHIPDB_SUBDIR})...")
         subprocess.run(["chmod", "-R", "+w", str(base_dir)],
                        check=True, capture_output=True, text=True)
-        for entry in base_dir.iterdir():
-            if entry.name == "chipdb":
-                continue
-            if entry.is_dir() and not entry.is_symlink():
-                shutil.rmtree(entry)
-            else:
-                entry.unlink()
+        _clean_keeping(base_dir, Path(CHIPDB_SUBDIR))
 
     # -- Create the structure
     (base_dir / "bin").mkdir(parents=True, exist_ok=True)
     (base_dir / "lib").mkdir(parents=True, exist_ok=True)
     (base_dir / "libexec").mkdir(parents=True, exist_ok=True)
-    (base_dir / "chipdb").mkdir(parents=True, exist_ok=True)
+    (base_dir / CHIPDB_SUBDIR).mkdir(parents=True, exist_ok=True)
 
 
 # ------------------------------------------------------
@@ -88,8 +97,8 @@ def write_env():
         print()
 
     # -- The index of the parts: which ones the packaged database supports,
-    # -- which of them this release built, and the chipdb file each built
-    # -- part uses. The files themselves travel in chipdb/. The release
+    # -- which of them this release built. The chipdb files travel in the
+    # -- engine's share directory, where nextpnr-xilinx finds them. The release
     # -- publishes the same document; inside every package its name is
     # -- fixed, so apio locates it without deriving the release date.
     parts_index = os.environ.get("OPENXC7_PARTS_INDEX")

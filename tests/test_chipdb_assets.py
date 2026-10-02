@@ -1,6 +1,6 @@
 """Tests for the parts-index writer and the database inventory.
 
-pack.chipdb_assets used to also build the per-die release assets. Schema 8
+pack.chipdb_assets used to also build the per-die release assets. Schema 9
 publishes none: the writer produces XILINX-PARTS-INDEX.json and nothing else.
 """
 
@@ -10,8 +10,9 @@ import unittest
 from pathlib import Path
 
 from pack.chipdb_assets import build_index, database_parts
-from pack.parts_index import (ENTRY_KEYS, INDEX_ASSET, PACKAGE_FILE,
-                              SCHEMA, release_tag, validate_document)
+from pack.parts_index import (CHIPDB_SUBDIR, ENTRY_KEYS, INDEX_ASSET,
+                              PACKAGE_FILE, SCHEMA, release_tag,
+                              validate_document)
 
 DIE_FILE = "chipdb-xc7a50t.bin"     # the die of xc7a35t and xc7a50t parts
 
@@ -21,7 +22,7 @@ class ChipdbAssetsTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.repo = self.root / "repo"
-        self.chipdb = self.root / "package" / "chipdb"
+        self.chipdb = self.root / "package" / CHIPDB_SUBDIR
         self.database = (
             self.root / "package" / "share" / "nextpnr" / "external" /
             "prjxray-db"
@@ -125,19 +126,18 @@ class ChipdbAssetsTests(unittest.TestCase):
         self.assertEqual(info["chipdb-id"], "fixture-id")
         self.assertEqual(info["part-count"], 3)
         self.assertEqual(info["generated-count"], 2)
-        self.assertEqual(info["chipdb-count"], 1)
+        self.assertNotIn("chipdb-count", info)
         self.assertEqual(info["base-part-count"], 2)
         self.assertEqual(sorted(info["parts"]),
                          sorted([f"{part}-1", f"{part}-2", f"{other}-1"]))
 
         entry = info["parts"][f"{part}-1"]
         self.assertEqual(list(entry), ["family", "base-part", "speed",
-                                       "generated", "chipdb"])
+                                       "generated"])
         self.assertTrue(entry["generated"])
         self.assertEqual(entry["family"], "artix7")
         self.assertEqual(entry["base-part"], part)
         self.assertEqual(entry["speed"], "1")
-        self.assertEqual(entry["chipdb"], DIE_FILE)
         self.assertEqual(info["parts"][f"{part}-2"] | {"speed": "1"}, entry)
         self.assertEqual(info["parts"][f"{other}-1"],
                          {"family": "artix7", "base-part": other,
@@ -157,14 +157,13 @@ class ChipdbAssetsTests(unittest.TestCase):
                          {True, False})
         for part, entry in info["parts"].items():
             with self.subTest(part=part):
-                self.assertEqual(list(entry),
-                                 [key for key in ENTRY_KEYS if key in entry])
+                self.assertEqual(list(entry), list(ENTRY_KEYS))
         self.assertEqual(sorted(validate_document(info, "2026-08-27")),
                          ["xc7a35tcpg236-1", "xc7a35tcpg236-2"])
 
     def test_one_file_per_die_shared_by_its_parts(self):
         """Two manifest base parts on the xc7a50t die and one on xc7a100t:
-        two chipdb files, and the parts of a die repeat the same file."""
+        two chipdb files are needed (one per die), and the index names none."""
         for base in ("xc7a35tcpg236", "xc7a50tcsg324", "xc7a100tcsg324"):
             self.add_database_part("artix7", f"{base}-1")
             self.add_database_part("artix7", f"{base}-2")
@@ -183,15 +182,36 @@ class ChipdbAssetsTests(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in self.output.iterdir()),
                          [INDEX_ASSET])
         self.assertEqual((info["part-count"], info["generated-count"],
-                          info["chipdb-count"], info["base-part-count"]),
-                         (6, 6, 2, 3))
-        self.assertEqual(info["parts"]["xc7a35tcpg236-1"]["chipdb"],
-                         info["parts"]["xc7a50tcsg324-2"]["chipdb"])
-        self.assertEqual(info["parts"]["xc7a100tcsg324-1"]["chipdb"],
-                         "chipdb-xc7a100t.bin")
-        self.assertNotEqual(info["parts"]["xc7a35tcpg236-1"]["chipdb"],
-                            info["parts"]["xc7a100tcsg324-1"]["chipdb"])
+                          info["base-part-count"]), (6, 6, 3))
+        self.assertNotIn("chipdb-count", info)
+        for entry in info["parts"].values():
+            self.assertNotIn("chipdb", entry)
         self.assertEqual(len(validate_document(info, "2026-08-27")), 6)
+
+    def test_a_part_the_engine_rejects_is_not_generated(self):
+        """The manifest base part is built, but the engine's --device
+        pattern takes one digit and an optional L as speed grade: the -1IL
+        and -1Q parts of xc7s50 are supported, not built."""
+        base = "xc7s50csga324"
+        for speed in ("1", "1IL", "1Q", "2L"):
+            self.add_database_part("spartan7", f"{base}-{speed}")
+        (self.repo / "chipdb-parts.json").write_text(
+            json.dumps({"spartan7": [base]}), encoding="utf-8")
+        (self.chipdb / "chipdb-id.txt").write_text("fixture-id\n",
+                                                   encoding="utf-8")
+        (self.chipdb / "chipdb-xc7s50.bin").write_bytes(b"xc7s50 die")
+
+        info = json.loads(build_index(
+            self.repo, self.chipdb, self.output, "20260827", self.database
+        ).read_text())
+
+        built = {part: entry["generated"]
+                 for part, entry in info["parts"].items()}
+        self.assertEqual(built, {f"{base}-1": True, f"{base}-1IL": False,
+                                 f"{base}-1Q": False, f"{base}-2L": True})
+        self.assertEqual(info["generated-count"], 2)
+        self.assertEqual(sorted(validate_document(info, "2026-08-27")),
+                         [f"{base}-1", f"{base}-2L"])
 
     def test_generated_part_must_exist_in_database(self):
         part = "xc7a35tcpg236"

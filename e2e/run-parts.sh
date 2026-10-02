@@ -4,12 +4,13 @@
 #   e2e/run-parts.sh <package-dir> <workdir> [wine]
 #
 # For every part of every family in chipdb-parts.json:
-#   yosys (host) -> nextpnr-xilinx (the chipdb file the package's
-#   XILINX-PARTS-INDEX.json names for the part, generated XDC, --report)
+#   yosys (host) -> nextpnr-xilinx (the package's own chipdb, generated XDC,
+#   --report)
 #   -> fasm2frames -> xc7frames2bit -> .bit
 # The place-and-route line is the one apio runs for the package's schema
-# number: schema 7 and 8 (himbaechel) take the part in --device, the XDC
-# and the FASM as uarch options and one chipdb per die, and route with
+# number: schema 7, 8 and 9 (himbaechel) take the part in --device, the XDC
+# and the FASM as uarch options and one chipdb per die (named with --chipdb
+# up to schema 8; from schema 9 the engine finds it itself), and route with
 # router2 by default; schema 6 and 5 take --xdc/--fasm and one chipdb per
 # base part, and are asked for router2.
 # With `wine`, nextpnr-xilinx.exe / xc7frames2bit.exe run under wine64
@@ -38,8 +39,9 @@ DB="$PKG/share/nextpnr/external/prjxray-db"
 PARTS=${E2E_PARTS:-$(python3 -c "import json;print(' '.join(p for ps in json.load(open('$REPO/chipdb-parts.json')).values() for p in ps))")}
 
 # The schema and the chipdb file of every part, from the package's own
-# XILINX-PARTS-INDEX.json, the way apio reads them: a "schema <number>"
-# line, then one "<part> <chipdb file>" line per part.
+# XILINX-PARTS-INDEX.json: a "schema <number>" line, then one
+# "<part> <chipdb file>" line per part (the file is only passed to the engine
+# up to schema 8).
 # shellcheck disable=SC2086
 PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}" python3 -c '
 import sys
@@ -107,9 +109,18 @@ for part in $PARTS; do
          --fasm "blinky-$part.fasm"
          --report "blinky-$part.pnr"
          --router router2 -q)
-  else
+  elif [ "$SCHEMA_NUM" -le 8 ]; then
     pnr=(--device "$device"
          --chipdb "$PKG/chipdb/$chipdb"
+         -o "xdc=blinky-$part.xdc"
+         --json blinky.json
+         -o "fasm=blinky-$part.fasm"
+         --report "blinky-$part.pnr"
+         -q)
+  else
+    # schema 9: no --chipdb, the engine opens its own from
+    # <package>/share/nextpnr/himbaechel/xilinx/
+    pnr=(--device "$device"
          -o "xdc=blinky-$part.xdc"
          --json blinky.json
          -o "fasm=blinky-$part.fasm"

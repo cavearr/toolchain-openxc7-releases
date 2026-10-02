@@ -14,18 +14,20 @@
 # tag whose release was never published). This script chases exactly that:
 # it recomputes each URL by the rule and checks what is actually there.
 #
-# Schema 8 (apio#1070) publishes six assets: the three platform tarballs,
-# SHA256SUMS, XILINX-PARTS-INDEX.json and BUILD-INFO.json. The chipdb files
-# travel inside each tarball (chipdb/chipdb-<die>.bin), and the index names
-# the file each part uses. There is no apio-xilinx-chipdb-*.bin.tgz asset.
-# --full downloads each platform package and checks that the bins inside
-# it are exactly the files the index names, with the index's chipdb-id.
+# Schema 9 publishes six assets, like schema 8 (apio#1070): the three
+# platform tarballs, SHA256SUMS, XILINX-PARTS-INDEX.json and BUILD-INFO.json.
+# The chipdb files travel inside each tarball, in the engine's share directory
+# (share/nextpnr/himbaechel/xilinx/chipdb-<die>.bin); the index names no file,
+# the die of each built part says which are needed. There is no
+# apio-xilinx-chipdb-*.bin.tgz asset. --full downloads each platform package
+# and checks that the bins inside it are exactly the dies of the built parts,
+# with the index's chipdb-id.
 # A release whose index is not the current schema -- absent under every
 # name it has been published with, or an older schema -- predates this
 # contract and is reported as legacy, not failed.
 #
 # SHA256SUMS covers every asset since apio#990 (it used to list only the
-# three packages). A schema 8 release's manifest lists the six assets
+# three packages). A schema 9 release's manifest lists the six assets
 # above and nothing else.
 #
 # BUILD-INFO.json is published alongside them since apio#1009: the identity
@@ -76,7 +78,8 @@ platforms = sys.argv[5:]
 # The index is validated by the SAME code that writes it (one validator,
 # used by L1 on a package and here on a release).
 sys.path.insert(0, repo_root)
-from pack.parts_index import (INDEX_ASSET, SCHEMA, STAMP_FILE,  # noqa: E402
+from pack.parts_index import (CHIPDB_SUBDIR, INDEX_ASSET, SCHEMA,  # noqa: E402
+                              STAMP_FILE, chipdb_name,
                               previous_index_asset_names, validate_document)
 from pack.release_tags import split_tag  # noqa: E402
 
@@ -113,7 +116,7 @@ def request(url, method="GET", attempts=3):
     if token and url.startswith("https://api.github.com/"):
         req.add_header("Authorization", f"Bearer {token}")
     # A transient connection failure is not an answer about the release, and
-    # this check makes one request per published asset -- six on a schema 8
+    # this check makes one request per published asset -- six on a schema 9
     # release, the three platform packages with --full. Retried, with a pause; an
     # HTTPError is NOT retried, because 404 is the answer we came for.
     for attempt in range(1, attempts + 1):
@@ -336,10 +339,13 @@ has_build_info = check_build_info()
 
 # ---------------------------------------------------------------------------
 # The parts index. The chipdb files it names travel inside each platform
-# package; schema 8 publishes no separate chipdb asset.
+# package; schema 9 publishes no separate chipdb asset.
 # ---------------------------------------------------------------------------
 def chipdb_members(blob):
-    """(set of chipdb/*.bin names, chipdb-id.txt text) inside a package."""
+    """(set of chipdb *.bin names, chipdb-id.txt text) inside a package.
+
+    The chipdb directory is where the engine looks for them (CHIPDB_SUBDIR).
+    """
     bins = set()
     stamp = ""
     with tarfile.open(fileobj=io.BytesIO(blob), mode="r:*") as archive:
@@ -347,12 +353,13 @@ def chipdb_members(blob):
             if not member.isfile():
                 continue
             name = member.name[2:] if member.name.startswith("./") else member.name
-            if name == f"chipdb/{STAMP_FILE}":
+            if name == f"{CHIPDB_SUBDIR}/{STAMP_FILE}":
                 extracted = archive.extractfile(member)
                 stamp = extracted.read().decode().strip() if extracted else ""
-            elif (name.startswith("chipdb/") and name.endswith(".bin")
-                    and name.count("/") == 1):
-                bins.add(name.split("/", 1)[1])
+            elif (name.startswith(f"{CHIPDB_SUBDIR}/")
+                    and name.endswith(".bin")
+                    and name.count("/") == CHIPDB_SUBDIR.count("/") + 1):
+                bins.add(name.rsplit("/", 1)[1])
     return bins, stamp
 
 
@@ -367,13 +374,13 @@ def check_package_chipdb(asset, blob, info, described):
     missing = sorted(described - bins)
     extra = sorted(bins - described)
     if missing or extra:
-        print(f"❌ {asset}: chipdb/ does not match the index: "
+        print(f"❌ {asset}: {CHIPDB_SUBDIR}/ does not match the index: "
               f"missing {missing or 'none'}, unexpected {extra or 'none'}")
         failed.append(asset)
         return
     if stamp != info.get("chipdb-id"):
         found = stamp or "absent"
-        print(f"❌ {asset}: chipdb/{STAMP_FILE} is {found!r}, "
+        print(f"❌ {asset}: {CHIPDB_SUBDIR}/{STAMP_FILE} is {found!r}, "
               f"index chipdb-id is {info.get('chipdb-id')!r}")
         failed.append(asset)
         return
@@ -439,17 +446,16 @@ def check_chipdb_release():
         generated = validate_document(info, expect_tag=date_tag)
     except ValueError as error:
         print(f"❌ {index_asset}: {error}")
-        print("   apio reads this index to find each part's chipdb file: a")
-        print("   release whose map is wrong points every build at the")
-        print("   wrong file.")
+        print("   a consumer reads this index to know which parts the")
+        print("   packages build: a release whose map is wrong promises")
+        print("   parts the engine cannot open.")
         failed.append(index_asset)
         return False
 
     line = (f"✅ {index_asset}: HTTP 200 ({len(raw)} B) ·"
             f" schema {info['schema']} · release-tag {info['release-tag']}"
             f" · chipdb-id {info['chipdb-id']} · {info['generated-count']}"
-            f" of {info['part-count']} parts built from"
-            f" {info['chipdb-count']} chipdb files")
+            f" of {info['part-count']} parts built")
     # These bytes are already here: hashing them is free, and it is the
     # one asset whose SHA256SUMS line nothing else can vouch for.
     if covers_everything:
@@ -472,7 +478,8 @@ def check_chipdb_release():
     # already downloaded those tarballs; check them once each, not once
     # per part (every part of a die names the same file).
     if full:
-        described = {entry["chipdb"] for entry in generated.values()}
+        described = {chipdb_name(entry["base-part"])
+                     for entry in generated.values()}
         for platform in platforms:
             asset = package_asset(platform)
             blob = package_blobs.get(asset)

@@ -159,10 +159,10 @@ def body(info, per_package, main_revisions=None, reports=None):
     ]
     for platform, tarball in zip(PLATFORMS, tarballs):
         lines.append(f"| `{tarball}` | The toolchain for {platform}, "
-                     "with every chipdb file in `chipdb/` |")
+                     "with every chipdb file where nextpnr-xilinx looks for it, " "`share/nextpnr/himbaechel/xilinx/` |")
     lines += [
         "| `XILINX-PARTS-INDEX.json` | The parts index every package carries at "
-        "its root: each part, whether this release built it, and its chipdb file |",
+        "its root: each part of the packaged database and whether this release " "built it |",
         "| `BUILD-INFO.json` | What the three packages agree on (revisions, "
         "yosys tag, chipdb identity, commit, run), plus each package's file "
         "and build time |",
@@ -205,7 +205,7 @@ def body(info, per_package, main_revisions=None, reports=None):
     lines += [
         "The chipdb files are generated once per die and shared by every",
         "part of that die; they only work with the packages of this same",
-        "tag. `XILINX-PARTS-INDEX.json` is schema 8: an entry with",
+        "tag. `XILINX-PARTS-INDEX.json` is schema 9: an entry with",
         "`generated: false` is supported by the packaged prjxray database but",
         "not built by this release.",
         "",
@@ -224,11 +224,10 @@ def body(info, per_package, main_revisions=None, reports=None):
         f"# 3. the yosys: YosysHQ oss-cad-suite {yosys}, its bin/ on the PATH too",
         "```",
         "Then, for a part such as `xc7a35tcsg324-1` (family `artix7`; the",
-        "index gives the chipdb file of each part):",
+        "engine finds the chipdb of its die by itself):",
         "```sh",
         "yosys -p 'synth_xilinx -arch xc7 -top top; write_json top.json' top.v",
         "nextpnr-xilinx --device xc7a35tcsg324-1 \\",
-        "  --chipdb openxc7/chipdb/chipdb-xc7a50t.bin \\",
         "  -o xdc=top.xdc -o fasm=top.fasm --json top.json --report report.json",
         "DB=openxc7/share/nextpnr/external/prjxray-db/artix7",
         "fasm2frames --part xc7a35tcsg324-1 --db-root $DB top.fasm > top.frames",

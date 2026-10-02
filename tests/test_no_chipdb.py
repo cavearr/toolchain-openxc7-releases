@@ -8,6 +8,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from pack.chipdb import PLACEHOLDER, skip_chipdb
+from pack.parts_index import CHIPDB_SUBDIR
 
 PART = "xc7a35tcpg236"
 DATA = b"packaged chipdb"
@@ -19,7 +20,7 @@ class PlaceholderTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.old_cwd = Path.cwd()
         os.chdir(self.root)
-        self.chipdb = self.root / "dist" / "chipdb"
+        self.chipdb = self.root / "dist" / CHIPDB_SUBDIR
         self.chipdb.mkdir(parents=True)
 
     def tearDown(self):
@@ -35,6 +36,7 @@ class PlaceholderTests(unittest.TestCase):
         self.assertIn("--no-chipdb", text)
         self.assertIn("chipdb-<die>.bin", text)
         self.assertNotIn("on-demand", text)
+        self.assertNotIn("Apio does not download", text)
         self.assertFalse((self.chipdb / "chipdb-id.txt").exists())
         self.assertFalse((self.chipdb / f"{PART}.bba").exists())
 

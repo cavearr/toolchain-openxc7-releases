@@ -5,9 +5,10 @@ user gets after `source start`, so the suite measures the artefact we ship and
 not whatever happens to be on PATH.
 
 A package carries ONE place-and-route engine, and its XILINX-PARTS-INDEX.json
-schema number says which. Schema 7 is the himbaechel engine; schema 6 and 5
-are the current one. The number decides the command line, the chipdb file of
-each part and the baseline.
+schema number says which. Schemas 7 to 9 are the himbaechel engine; schema 6
+and 5 are the earlier one. The number decides the command line (from schema 9
+no --chipdb: the engine opens its chipdb from its own share directory), the
+place the chipdb files live and the baseline.
 """
 
 from __future__ import annotations
@@ -23,7 +24,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from pack.families import family_of
-from pack.parts_index import SCHEMA, chipdb_name, read_package_schema
+from pack.parts_index import (CHIPDB_SUBDIR, SCHEMA, chipdb_name,
+                              read_package_schema)
 
 
 def _windows_python() -> str:
@@ -34,6 +36,11 @@ def _windows_python() -> str:
     candidatos = [p for p in glob.glob("/nix/store/*-python3-x86_64-w64-mingw32-*")
                   if not p.endswith(".drv") and Path(p, "bin/python3.exe").exists()]
     return sorted(candidatos)[-1] if candidatos else ""
+
+
+def _chipdb_subdir(schema: int) -> str:
+    """Where a package of *schema* keeps its chipdb files, from its root."""
+    return "chipdb" if schema <= 8 else CHIPDB_SUBDIR
 
 
 @dataclass
@@ -58,21 +65,23 @@ class Package:
                 tar.extractall(tmp.name)
             root = Path(tmp.name)
 
-        # A release package ships its chipdb. A local --no-chipdb tree does
-        # not: given a directory of bins, copy them into an extracted tree
-        # (ours to modify) and otherwise read them from where they are
-        # (`chipdb()`). A package that already has the file keeps it.
-        if chipdb_dir is not None:
-            chipdb_dir = Path(chipdb_dir).resolve()
-            if tmp is not None and not list((root / "chipdb").glob("*.bin")):
-                (root / "chipdb").mkdir(exist_ok=True)
-                for source in sorted(chipdb_dir.glob("*.bin")):
-                    shutil.copy2(source, root / "chipdb" / source.name)
-
         try:
             schema, chipdb_files = read_package_schema(root)
         except ValueError as error:
             raise SystemExit(str(error))
+
+        # A release package ships its chipdb. A local --no-chipdb tree does
+        # not: given a directory of bins, copy them into an extracted tree
+        # (ours to modify) where the package's schema keeps them, and
+        # otherwise read them from where they are (`chipdb()`). A package
+        # that already has the file keeps it.
+        if chipdb_dir is not None:
+            chipdb_dir = Path(chipdb_dir).resolve()
+            target = root / _chipdb_subdir(schema)
+            if tmp is not None and not list(target.glob("*.bin")):
+                target.mkdir(parents=True, exist_ok=True)
+                for source in sorted(chipdb_dir.glob("*.bin")):
+                    shutil.copy2(source, target / source.name)
         if (root / "bin" / "nextpnr-xilinx.exe").exists():
             return cls(root=root, platform="windows-amd64", wine=True,
                        winpy=_windows_python(), chipdb_dir=chipdb_dir,
@@ -148,7 +157,7 @@ class Package:
 
     def chipdb(self, part: str) -> Path:
         name = self.chipdb_file(part)
-        packaged = self.root / "chipdb" / name
+        packaged = self.root / _chipdb_subdir(self.schema) / name
         if not packaged.exists() and self.chipdb_dir is not None:
             external = self.chipdb_dir / name
             if external.exists():

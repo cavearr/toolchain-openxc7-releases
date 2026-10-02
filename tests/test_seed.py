@@ -11,6 +11,7 @@ from unittest import mock
 
 from pack.chipdb import seed_chipdb, write_stamp
 from pack.families import CHIPDB_PARTS_FILE
+from pack.parts_index import CHIPDB_SUBDIR
 
 IDENTITY = "0123456789abcdef"
 PART = "xc7a35tcsg324"
@@ -31,7 +32,7 @@ class TestSeedChipdb(unittest.TestCase):
             json.dumps({"artix7": [PART, "xc7a50tcsg324"]}), encoding="utf-8")
 
         # -- Target tree and seed directory with one prebuilt .bin
-        self.dst_dir = self.root / "dist" / "chipdb"
+        self.dst_dir = self.root / "dist" / CHIPDB_SUBDIR
         self.dst_dir.mkdir(parents=True)
         self.seed_dir = self.root / "seed"
         self.seed_dir.mkdir()

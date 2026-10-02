@@ -34,13 +34,13 @@ if IS_DARWIN:
     from pack.relocate import macpack
 
 # -- `--chipdb-only`: stop after the chipdb is generated (or seeded) and
-# -- stamped, leaving dist/chipdb/*.bin + chipdb-id.txt in place. This is
+# -- stamped, leaving the bins + chipdb-id.txt in dist/share/nextpnr/himbaechel/xilinx. This is
 # -- what the CI `chipdb` job runs: the .bin files are platform-independent
 # -- and generated once, then every platform package seeds from them.
 CHIPDB_ONLY = "--chipdb-only" in sys.argv[1:]
 
 # -- `--no-chipdb` (or OPENXC7_NO_CHIPDB=1): local tools-only pack.
-# -- chipdb/ ships a README.txt and no bins. That tree is not a release
+# -- The chipdb directory ships a README.txt and no bins. That tree is not a release
 # -- package. The release pack is the default: the bins are generated, or
 # -- seeded from OPENXC7_CHIPDB_SEED (what CI points at the chipdb job),
 # -- and travel inside the tarball next to XILINX-PARTS-INDEX.json.
@@ -83,7 +83,7 @@ else:
     build_chipdb()
 
 if CHIPDB_ONLY:
-    print(f"{ansi.GREEN}chipdb-only: dist/chipdb generated and stamped; stopping here.{ansi.DEFAULT}")
+    print(f"{ansi.GREEN}chipdb-only: the chipdb is generated and stamped in the dist chipdb directory; stopping here.{ansi.DEFAULT}")
     sys.exit(0)
 
 # -- Final configuration

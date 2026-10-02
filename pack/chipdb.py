@@ -1,17 +1,18 @@
 """Chipdb generation, and the placeholder a tools-only pack leaves behind.
 
-One dist/chipdb/chipdb-<die>.bin is generated per die of the manifest
+One chipdb-<die>.bin is generated per die of the manifest
 chipdb-parts.json (single source of parts, shared with
 nix/windows/default.nix): every part of a die routes on that die's chipdb,
 so xc7a35t and xc7a50t parts share one file. The set is guarded by the
 identity stamp so that bins from another toolchain are never reused.
 
-A release package carries those bins in chipdb/, next to chipdb-id.txt.
-``--no-chipdb`` is a local tools-only pack: chipdb/ gets the README this
-module writes and no bins, and that tree is not a release package. Run
-as a script to write that placeholder into a directory:
+A release package carries those bins in share/nextpnr/himbaechel/xilinx/
+(CHIPDB_SUBDIR), where the engine looks for them, next to chipdb-id.txt.
+``--no-chipdb`` is a local tools-only pack: that directory gets the README
+this module writes and no bins, and that tree is not a release package.
+Run as a script to write that placeholder into a directory:
 
-    python3 -m pack.chipdb <package>/chipdb
+    python3 -m pack.chipdb <package>/share/nextpnr/himbaechel/xilinx
 """
 
 import hashlib
@@ -27,6 +28,7 @@ from pathlib import Path
 import ansi
 
 from .families import CHIPDB_PARTS_FILE, chipdb_dies, chipdb_parts, die_of
+from .parts_index import CHIPDB_SUBDIR
 
 # -- Identity stamp of the .bin files (see chipdb_identity). No leading dot
 # -- on purpose: a hidden file gets lost in transit (actions/upload-artifact
@@ -34,7 +36,12 @@ from .families import CHIPDB_PARTS_FILE, chipdb_dies, chipdb_parts, die_of
 # -- inside the package which toolchain the chipdb was generated with.
 CHIPDB_STAMP = "chipdb-id.txt"
 
-# -- The placeholder that occupies chipdb/ in a local --no-chipdb pack. It
+# -- Where the bins live in dist/ while they are generated, seeded and
+# -- packed: the directory the engine reads them from at run time.
+DIST_CHIPDB = f"dist/{CHIPDB_SUBDIR}"
+
+# -- The placeholder that occupies the chipdb directory in a local
+# -- --no-chipdb pack. It
 # -- is the first thing a user looking for a missing .bin will read, so it
 # -- says this tree is not a release package and where the files belong.
 PLACEHOLDER = "README.txt"
@@ -42,10 +49,10 @@ PLACEHOLDER_TEXT = """\
 This directory is empty because this tree was packed with --no-chipdb.
 
 That is a local tools-only pack, not a release package. A release package
-carries the device databases here: one file per die, chipdb-<die>.bin,
-named by XILINX-PARTS-INDEX.json at the root of the package (the chipdb
-field of each part this release built). Apio does not download them.
-Parts the packaged database supports that this release did not build are
+carries the device databases here, where nextpnr-xilinx looks for them:
+one file per die, chipdb-<die>.bin. XILINX-PARTS-INDEX.json at the root
+of the package lists the parts this release built (generated=true);
+parts the packaged database supports that this release did not build are
 listed there with generated=false: supported, not built.
 
 chipdb-id.txt, next to those files, is the identity stamp of the set. A
@@ -92,26 +99,26 @@ def write_placeholder(directory: Path) -> Path:
 
 
 def skip_chipdb():
-    """Leave dist/chipdb as the tools-only placeholder instead of bins.
+    """Leave the chipdb directory as the tools-only placeholder instead of bins.
 
     Nothing is deleted: the .bin are the expensive part of a build and
-    dist/chipdb deliberately survives across runs (see
+    the chipdb directory deliberately survives across runs (see
     pack.assemble.distribution_init), so leftovers from a full pack are
     reported and the run stops rather than shipping half a package or
     throwing away the generation.
     """
-    chipdb_dir = Path.cwd() / "dist/chipdb"
+    chipdb_dir = Path.cwd() / DIST_CHIPDB
     chipdb_dir.mkdir(parents=True, exist_ok=True)
     leftovers = sorted(chipdb_dir.glob("*.bin"))
     if leftovers:
         raise SystemExit(
-            f"❌ --no-chipdb: dist/chipdb still holds {len(leftovers)} .bin "
+            f"❌ --no-chipdb: {DIST_CHIPDB} still holds {len(leftovers)} .bin "
             "from a previous run.\n"
             "   A tools-only pack ships only the placeholder "
             f"{PLACEHOLDER}, and these\n"
             "   are too expensive to delete here. Move them out and re-run:\n"
             "       mkdir -p chipdb-bins\n"
-            f"       mv dist/chipdb/*.bin dist/chipdb/{CHIPDB_STAMP} chipdb-bins/\n"
+            f"       mv {DIST_CHIPDB}/*.bin {DIST_CHIPDB}/{CHIPDB_STAMP} chipdb-bins/\n"
             "   (that directory is what OPENXC7_CHIPDB_SEED and\n"
             "   validate-package.sh --chipdb-dir take.)"
         )
@@ -126,7 +133,7 @@ def skip_chipdb():
     print("  CHIPDB AUSENTE (pack local, sin bins)")
     print(f"{ansi.GREEN}──────────────────────────────────")
     print(ansi.DEFAULT, end='', flush=True)
-    print(f"🔵 ✅chipdb/{target.name} (no es un paquete de release)")
+    print(f"🔵 ✅{CHIPDB_SUBDIR}/{target.name} (no es un paquete de release)")
     print()
 
 
@@ -246,7 +253,7 @@ def seed_chipdb(identity: str):
         )
     for _, die in chipdb_dies():
         src = seed_dir / chipdb_file(die)
-        dst = Path.cwd() / "dist/chipdb" / chipdb_file(die)
+        dst = Path.cwd() / DIST_CHIPDB / chipdb_file(die)
         if src.exists() and not dst.exists():
             print(f"🌱 Sembrando {chipdb_file(die)} desde {seed_dir}")
             shutil.copy2(src, dst)
@@ -274,7 +281,7 @@ def _run_measured(cmd: list) -> tuple:
 
 
 def build_chipdb_die(family: str, die: str) -> str:
-    """Generate (or reuse) dist/chipdb/chipdb-<die>.bin. Returns the log.
+    """Generate (or reuse) <chipdb dir>/chipdb-<die>.bin. Returns the log.
 
     The generator of the packaged nextpnr's own source tree writes the
     .bba from the packaged prjxray-db, and bbasm assembles it. Both steps
@@ -282,7 +289,7 @@ def build_chipdb_die(family: str, die: str) -> str:
     Ctrl-C, full disk) never leaves a truncated .bba/.bin that a rerun
     could take as good and package.
     """
-    chipdb_dir = Path.cwd() / "dist/chipdb"
+    chipdb_dir = Path.cwd() / DIST_CHIPDB
     bin_file = chipdb_dir / chipdb_file(die)
     if bin_file.exists():
         return f"🔵 📌{bin_file.name}"
@@ -412,9 +419,9 @@ def build_chipdb():
     # -- shipped with an incompatible chipdb that was only detected at
     # -- runtime (three times: 2026-07-16, 07-31 and 08-03).
     identity = chipdb_identity()
-    chipdb_dir = Path.cwd() / "dist/chipdb"
+    chipdb_dir = Path.cwd() / DIST_CHIPDB
     chipdb_dir.mkdir(parents=True, exist_ok=True)
-    # dist/chipdb survives across runs (the .bin are expensive), so a
+    # The chipdb directory survives across runs (the .bin are expensive), so a
     # previous --no-chipdb pack may have left its placeholder behind: a
     # package that ships the bins must not also tell the user to download
     # them.

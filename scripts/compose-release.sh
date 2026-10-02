@@ -49,7 +49,7 @@ test -f XILINX-PARTS-INDEX.json \
 # No per-die chipdb asset is published. A leftover from the
 # previous contract must not ride along.
 if compgen -G 'apio-xilinx-chipdb-*.bin.tgz' > /dev/null; then
-    echo "::error::chipdb assets are not part of a schema 8 release"
+    echo "::error::chipdb assets are not part of a schema 9 release"
     exit 1
 fi
 
@@ -60,8 +60,8 @@ fi
 python3 - "$DATE_TAG" <<'PYEOF'
 import json, sys, tarfile, tempfile
 from pathlib import Path
-from pack.parts_index import (PACKAGE_FILE, validate_document,
-                              validate_package_info)
+from pack.parts_index import (CHIPDB_SUBDIR, PACKAGE_FILE,
+                              validate_document, validate_package_info)
 tag = sys.argv[1]
 published = Path(PACKAGE_FILE)
 raw = published.read_bytes()
@@ -75,7 +75,7 @@ for tarball in tarballs:
             members = []
             for member in archive.getmembers():
                 name = member.name[2:] if member.name.startswith("./") else member.name
-                if name == PACKAGE_FILE or name.startswith("chipdb/"):
+                if name == PACKAGE_FILE or name.startswith(f"{CHIPDB_SUBDIR}/"):
                     member.name = name
                     members.append(member)
             archive.extractall(root, members=members)
@@ -87,10 +87,10 @@ for tarball in tarballs:
         try:
             info = json.loads(raw)
             validate_document(info, expect_tag=tag)
-            counts = validate_package_info(index, root / "chipdb")
+            counts = validate_package_info(index, root / CHIPDB_SUBDIR)
         except ValueError as error:
             sys.exit(f"::error::{tarball.name}: {error}")
-    print(f"{tarball.name}: {counts['chipdb-count']} chipdb files, "
+    print(f"{tarball.name}: {counts['chipdb-files']} chipdb files, "
           f"{counts['generated-count']} of {counts['part-count']} parts "
           f"(schema {info['schema']})")
 PYEOF

@@ -16,19 +16,22 @@
 #   --skip-e2e             layout/index/version checks only (fast)
 #   --keep                 keep the scratch directory for inspection
 #
-# A release package ships its chipdb: chipdb/ holds chipdb-<die>.bin and
-# chipdb-id.txt, and XILINX-PARTS-INDEX.json at the root names those files.
-# L1 checks that the set matches (every named file present, no extra bin,
-# stamp equal to chipdb-id) and then runs the E2E on that tree.
-# --chipdb-dir remains for a local --no-chipdb pack, whose chipdb/ holds
-# only the placeholder: the bins are checked the same way and then copied
-# in, so the E2E still has them. When the package already ships its bins
-# the flag is ignored.
+# A release package ships its chipdb where the engine looks for it:
+# share/nextpnr/himbaechel/xilinx/ holds chipdb-<die>.bin and chipdb-id.txt
+# (one file per die), and XILINX-PARTS-INDEX.json at the root lists the
+# parts built from them. L1 checks that the set matches (a file for every
+# built part's die, no extra bin, stamp equal to chipdb-id), that the engine
+# accepts every built part from --device alone (no --chipdb), and then runs
+# the E2E on that tree.
+# --chipdb-dir remains for a local --no-chipdb pack, whose chipdb directory
+# holds only the placeholder: the bins are checked the same way and then
+# copied in, so the E2E still has them. When the package already ships its
+# bins the flag is ignored.
 #
-# Checks: package layout, chipdb completeness vs chipdb-parts.json (the
-# chipdb file of each part is the one XILINX-PARTS-INDEX.json names: one
+# Checks: package layout, chipdb completeness vs chipdb-parts.json (one file
 # per die for the himbaechel engine), XILINX-PARTS-INDEX.json and its
-# agreement with the bins it describes, --version == the rev recorded in
+# agreement with the bins, the engine opening its chipdb for every built
+# part without --chipdb, --version == the rev recorded in
 # nix/, platform extras on darwin (ad-hoc codesign + zero residual
 # /nix/store references), and the multi-part E2E (e2e/run-parts.sh)
 # against the extracted package, whose --report JSON must carry fmax and
@@ -56,7 +59,7 @@ while [ $# -gt 0 ]; do
         --expect-date) EXPECT_DATE="$2"; shift ;;
         --skip-e2e) SKIP_E2E=1 ;;
         --keep) KEEP=1 ;;
-        -h|--help) sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) fail "unknown option: $1" ;;
         *) [ -z "$PKG_IN" ] && PKG_IN="$1" || fail "unexpected argument: $1" ;;
     esac
@@ -90,21 +93,27 @@ else
 fi
 
 # --- chipdb: shipped with the package, or a local tools-only tree? ----------
-# A release package carries chipdb-<die>.bin and chipdb-id.txt. A local
+# CHIPDB_REL is where the engine opens chipdb-<die>.bin when it is not told
+# (pack.parts_index.CHIPDB_SUBDIR). A release package carries the bins and
+# chipdb-id.txt there. A local
 # --no-chipdb pack carries only the placeholder README.txt; --chipdb-dir
 # supplies the bins and they are copied in before the E2E.
 TOOLS_ONLY=0
-if [ -z "$(find "$PKG/chipdb" -maxdepth 1 -name '*.bin' -print -quit 2>/dev/null)" ]; then
+CHIPDB_REL=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    python3 -c 'from pack.parts_index import CHIPDB_SUBDIR; print(CHIPDB_SUBDIR)')
+CHIPDB_PKG="$PKG/$CHIPDB_REL"
+if [ -z "$(find "$CHIPDB_PKG" -maxdepth 1 -name '*.bin' -print -quit 2>/dev/null)" ]; then
     TOOLS_ONLY=1
 fi
 if [ "$TOOLS_ONLY" = 1 ]; then
-    [ -f "$PKG/chipdb/README.txt" ] \
-        || fail "chipdb/ has neither bins nor the --no-chipdb README.txt placeholder"
-    STRAY=$(cd "$PKG/chipdb" && ls -A | grep -vx 'README.txt' | tr '\n' ' ' || true)
-    [ -z "$STRAY" ] || fail "chipdb/ must hold README.txt only, it also has: $STRAY"
+    [ -f "$CHIPDB_PKG/README.txt" ] \
+        || fail "$CHIPDB_REL/ has neither bins nor the --no-chipdb README.txt placeholder"
+    STRAY=$(cd "$CHIPDB_PKG" && ls -A | grep -vx 'README.txt' | tr '\n' ' ' || true)
+    [ -z "$STRAY" ] || fail "$CHIPDB_REL/ must hold README.txt only, it also has: $STRAY"
+    [ ! -e "$PKG/chipdb" ] || fail "chipdb/ at the package root: schema 9 keeps the bins in $CHIPDB_REL/ only"
     [ -n "$CHIPDB_DIR" ] \
         || fail "this package ships no chipdb: pass --chipdb-dir <dir with the bins>"
-    note "tools-only pack: chipdb/ holds only README.txt; bins from $CHIPDB_DIR"
+    note "tools-only pack: $CHIPDB_REL/ holds only README.txt; bins from $CHIPDB_DIR"
     if [ -z "$TARBALL" ]; then
         # A directory the caller owns: validate a copy of it, so the
         # injection never leaves 1.1 GB of bins in someone else's tree.
@@ -115,7 +124,8 @@ if [ "$TOOLS_ONLY" = 1 ]; then
     CHIPDB_SRC="$CHIPDB_DIR"
 else
     [ -z "$CHIPDB_DIR" ] || note "--chipdb-dir ignored: this package ships its own chipdb"
-    CHIPDB_SRC="$PKG/chipdb"
+    [ ! -e "$PKG/chipdb" ] || fail "chipdb/ at the package root: schema 9 keeps the bins in $CHIPDB_REL/ only"
+    CHIPDB_SRC="$CHIPDB_PKG"
 fi
 
 # --- identify the package platform -----------------------------------------
@@ -180,18 +190,17 @@ else
 fi
 
 # --- chipdb completeness vs the manifest ------------------------------------
-# The chipdb file of a part is the one the package's index names for it
-# (several parts share one: one per die under schema 8).
+# The chipdb file of a part is its die's (several parts share one).
 PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     python3 - "$REPO_ROOT/chipdb-parts.json" "$PKG" > "$SCRATCH/parts.txt" <<'PYEOF'
 import json, sys
 from pack.parts_index import chipdb_name, read_package_schema
-schema, files = read_package_schema(sys.argv[2])
+schema, _ = read_package_schema(sys.argv[2])
 with open(sys.argv[1]) as f:
     manifest = json.load(f)
 for family, parts in manifest.items():
     for part in parts:
-        print(f"{family} {part} {files.get(part) or chipdb_name(part, schema)}")
+        print(f"{family} {part} {chipdb_name(part, schema)}")
 PYEOF
 [ -s "$SCRATCH/parts.txt" ] || fail "empty part list from chipdb-parts.json"
 NPARTS=0
@@ -227,14 +236,28 @@ fi
 
 # --- copy the bins into a tools-only tree before the E2E --------------------
 if [ "$TOOLS_ONLY" = 1 ]; then
-    cp "$CHIPDB_SRC"/*.bin "$PKG/chipdb/"
+    rm -f "$CHIPDB_PKG/README.txt"
+    cp "$CHIPDB_SRC"/*.bin "$CHIPDB_PKG/"
     if [ -f "$CHIPDB_SRC/chipdb-id.txt" ]; then
-        cp "$CHIPDB_SRC/chipdb-id.txt" "$PKG/chipdb/"
+        cp "$CHIPDB_SRC/chipdb-id.txt" "$CHIPDB_PKG/"
     fi
-    INJECTED=$(find "$PKG/chipdb" -maxdepth 1 -name '*.bin' | wc -l | tr -d ' ')
+    INJECTED=$(find "$CHIPDB_PKG" -maxdepth 1 -name '*.bin' | wc -l | tr -d ' ')
     [ "$INJECTED" = "$NFILES" ] || fail "copied $INJECTED bins, expected $NFILES"
-    ok "chipdb copied: $INJECTED bins in chipdb/"
+    ok "chipdb copied: $INJECTED bins in $CHIPDB_REL/"
 fi
+
+# --- the engine finds its chipdb for every part the index says is built -----
+# No --chipdb: nextpnr-xilinx opens chipdb-<die>.bin from its own share
+# directory, for the --device alone (schema 9). A part that is generated=true
+# and does not start is a lie in the index.
+if [ "$WINE" = 1 ]; then
+    ACCEPT_CMD=(wine64 "$NEXTPNR_BIN")
+else
+    ACCEPT_CMD=("$PKG/bin/nextpnr-xilinx")
+fi
+WINEDEBUG=-all python3 "$REPO_ROOT/e2e/accept-parts.py" "$INDEX" -- "${ACCEPT_CMD[@]}" \
+    || fail "the engine does not accept every built part without --chipdb"
+ok "engine: every built part opens its chipdb from --device alone"
 
 # --- bundled tools ----------------------------------------------------------
 if [ "$PLAT" = "windows-amd64" ]; then

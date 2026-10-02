@@ -2,9 +2,10 @@
 
 The document describes every part the packaged prjxray database knows
 about. It travels twice under one name, ``XILINX-PARTS-INDEX.json``: as a
-release asset and at the root of every platform package. Schema 8 ships
-the chipdb files inside the package, so this module writes the index
-only. The per-die ``.bin.tgz`` assets belonged to schema 7 and earlier.
+release asset and at the root of every platform package. Schema 9 ships
+the chipdb files in the engine's share directory, inside the package, so
+this module writes the index only. The per-die ``.bin.tgz`` assets
+belonged to schema 7 and earlier.
 
 The format itself (schema, key order, validation) lives in
 ``pack.parts_index``.
@@ -18,7 +19,7 @@ from pathlib import Path
 
 from .families import die_of, family_of
 from .parts_index import (ENTRY_KEYS, INDEX_ASSET, NOTE, SCHEMA,
-                          chipdb_name, release_tag)
+                          chipdb_name, engine_accepts, release_tag)
 
 # Name of the identity stamp inside a chipdb directory (pack.chipdb owns it;
 # repeated here to keep this module importable on its own).
@@ -61,7 +62,7 @@ def database_parts(database: Path) -> dict[str, dict]:
 
 def build_index(repo: Path, chipdb: Path, output: Path, date: str,
                 database: Path) -> Path:
-    """Write the parts index that names each built part's chipdb file.
+    """Write the parts index: which parts of the database this package builds.
 
     ``chipdb`` must hold the manifest bins and ``chipdb-id.txt``. The
     document is the only file written into ``output``.
@@ -102,17 +103,16 @@ def build_index(repo: Path, chipdb: Path, output: Path, date: str,
 
     # One entry per part of the database, part-sorted, with the keys of an
     # entry always in the same order. A part is built when its base part
-    # is in the manifest -- the parts L1 routes -- and the parts of a die
-    # repeat its chipdb file name on purpose: which parts share a file is
-    # ours to change, and the index is what hides it.
+    # is in the manifest -- the parts L1 routes -- and the packaged engine
+    # accepts it as --device: a part the engine rejects cannot be built,
+    # whatever the chipdb holds. Which file serves a part is the engine's
+    # business and the index does not say.
     parts_doc = {}
     for part, meta in inventory.items():
         entry = dict(meta)
-        entry["generated"] = meta["base-part"] in manifest_base_parts
-        if entry["generated"]:
-            entry["chipdb"] = chipdb_name(meta["base-part"])
-        parts_doc[part] = {key: entry[key] for key in ENTRY_KEYS
-                           if key in entry}
+        entry["generated"] = (meta["base-part"] in manifest_base_parts
+                              and engine_accepts(part))
+        parts_doc[part] = {key: entry[key] for key in ENTRY_KEYS}
 
     info = {
         "schema": SCHEMA,
@@ -122,7 +122,6 @@ def build_index(repo: Path, chipdb: Path, output: Path, date: str,
         "part-count": len(parts_doc),
         "generated-count": sum(1 for entry in parts_doc.values()
                                if entry["generated"]),
-        "chipdb-count": len(dies),
         "base-part-count": len(known_base_parts),
         "note": NOTE,
         "parts": parts_doc,
@@ -132,7 +131,7 @@ def build_index(repo: Path, chipdb: Path, output: Path, date: str,
     print(
         f"parts index: {info_path.name} "
         f"({info['generated-count']} of {info['part-count']} parts built, "
-        f"from {info['chipdb-count']} chipdb files, "
+        f"from {len(dies)} chipdb files, "
         f"chipdb-id {stamp})"
     )
     return info_path
