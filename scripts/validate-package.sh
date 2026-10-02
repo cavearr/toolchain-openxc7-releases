@@ -102,6 +102,16 @@ TOOLS_ONLY=0
 CHIPDB_REL=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     python3 -c 'from pack.parts_index import CHIPDB_SUBDIR; print(CHIPDB_SUBDIR)')
 CHIPDB_PKG="$PKG/$CHIPDB_REL"
+# An index that names its chipdb files is the chipdb/ layout of the
+# releases up to 2026-10-01 (the same schema number, 8): not what this
+# packer produces, and the checks below would only trip over it piecemeal.
+if PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -c '
+import sys
+from pack.parts_index import names_chipdb_files, read_package_index
+sys.exit(0 if names_chipdb_files(read_package_index(sys.argv[1])) else 1)
+' "$PKG"; then
+    fail "XILINX-PARTS-INDEX.json names chipdb files: the chipdb/ layout of the releases up to 2026-10-01, not the $CHIPDB_REL/ one this branch packs"
+fi
 if [ -z "$(find "$CHIPDB_PKG" -maxdepth 1 -name '*.bin' -print -quit 2>/dev/null)" ]; then
     TOOLS_ONLY=1
 fi
@@ -110,7 +120,7 @@ if [ "$TOOLS_ONLY" = 1 ]; then
         || fail "$CHIPDB_REL/ has neither bins nor the --no-chipdb README.txt placeholder"
     STRAY=$(cd "$CHIPDB_PKG" && ls -A | grep -vx 'README.txt' | tr '\n' ' ' || true)
     [ -z "$STRAY" ] || fail "$CHIPDB_REL/ must hold README.txt only, it also has: $STRAY"
-    [ ! -e "$PKG/chipdb" ] || fail "chipdb/ at the package root: schema 9 keeps the bins in $CHIPDB_REL/ only"
+    [ ! -e "$PKG/chipdb" ] || fail "chipdb/ at the package root: the bins live in $CHIPDB_REL/ only"
     [ -n "$CHIPDB_DIR" ] \
         || fail "this package ships no chipdb: pass --chipdb-dir <dir with the bins>"
     note "tools-only pack: $CHIPDB_REL/ holds only README.txt; bins from $CHIPDB_DIR"
@@ -124,7 +134,7 @@ if [ "$TOOLS_ONLY" = 1 ]; then
     CHIPDB_SRC="$CHIPDB_DIR"
 else
     [ -z "$CHIPDB_DIR" ] || note "--chipdb-dir ignored: this package ships its own chipdb"
-    [ ! -e "$PKG/chipdb" ] || fail "chipdb/ at the package root: schema 9 keeps the bins in $CHIPDB_REL/ only"
+    [ ! -e "$PKG/chipdb" ] || fail "chipdb/ at the package root: the bins live in $CHIPDB_REL/ only"
     CHIPDB_SRC="$CHIPDB_PKG"
 fi
 
@@ -248,7 +258,7 @@ fi
 
 # --- the engine finds its chipdb for every part the index says is built -----
 # No --chipdb: nextpnr-xilinx opens chipdb-<die>.bin from its own share
-# directory, for the --device alone (schema 9). A part that is generated=true
+# directory, for the --device alone. A part that is generated=true
 # and does not start is a lie in the index.
 if [ "$WINE" = 1 ]; then
     ACCEPT_CMD=(wine64 "$NEXTPNR_BIN")

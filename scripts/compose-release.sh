@@ -49,7 +49,7 @@ test -f XILINX-PARTS-INDEX.json \
 # No per-die chipdb asset is published. A leftover from the
 # previous contract must not ride along.
 if compgen -G 'apio-xilinx-chipdb-*.bin.tgz' > /dev/null; then
-    echo "::error::chipdb assets are not part of a schema 9 release"
+    echo "::error::chipdb assets are not part of a release: the bins travel in the packages"
     exit 1
 fi
 

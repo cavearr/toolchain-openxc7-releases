@@ -13,7 +13,8 @@ from pack.assemble import write_env
 from pack.chipdb import write_placeholder
 from pack.parts_index import (CHIPDB_SUBDIR, ENTRY_KEYS, INDEX_ASSET, NOTE,
                               PACKAGE_FILE, SCHEMA, STAMP_FILE, asset_name,
-                              chipdb_name, engine_accepts, package_schema,
+                              chipdb_name, chipdb_subdir, engine_accepts,
+                              names_chipdb_files, package_schema,
                               previous_index_asset_names, read_package_schema,
                               validate_document, validate_package_info)
 
@@ -42,7 +43,7 @@ class PartsIndexTests(unittest.TestCase):
         (chipdb / STAMP_FILE).write_text(STAMP + "\n", encoding="utf-8")
 
     def make_index(self, **overrides):
-        """A valid schema 9 index plus the one chipdb file it implies.
+        """A valid index plus the one chipdb file it implies.
 
         Two speed grades of one base part, one file: the die's. The other
         base part of that die is listed and not built.
@@ -187,11 +188,11 @@ class PartsIndexTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "schema"):
             validate_package_info(index_path, chipdb)
 
-    def test_accepts_a_schema_9_document(self):
-        """Schema 9: no file name, no engine field, four keys per entry."""
+    def test_accepts_a_schema_8_document_without_file_names(self):
+        """No file name, no engine field, four keys per entry."""
         _, _, info = self.make_index()
         self.assertEqual(info["schema"], SCHEMA)
-        self.assertEqual(SCHEMA, 9)
+        self.assertEqual(SCHEMA, 8)
         for entry in info["parts"].values():
             self.assertEqual(list(entry), list(ENTRY_KEYS))
             self.assertNotIn("chipdb", entry)
@@ -213,10 +214,9 @@ class PartsIndexTests(unittest.TestCase):
                     validate_package_info(index_path, chipdb)
 
     def test_rejects_the_removed_download_fields(self):
-        """Schema 8's file name and schema 7's sizes, hashes and asset name
-        are not schema 9."""
-        for key, value in (("chipdb", DIE_FILE),
-                           ("chipdb-size", 1),
+        """The chipdb/ layout's file name and schema 7's sizes, hashes and
+        asset name are not what this module emits."""
+        for key, value in (("chipdb-size", 1),
                            ("chipdb-sha256", "a" * 64),
                            ("asset", "apio-xilinx-chipdb-xc7a50t-20260827.bin.tgz"),
                            ("asset-size", 1),
@@ -235,41 +235,47 @@ class PartsIndexTests(unittest.TestCase):
         self.assertNotIn("in chipdb/", NOTE)
         self.assertIn("generated=false", NOTE)
         self.assertIn("supported, not built", NOTE)
-        self.assertIn("schema 9", NOTE)
+        self.assertIn("no --chipdb", NOTE)
         self.assertNotIn("--chipdb <file>", NOTE)
         self.assertNotIn("asset-sha256", NOTE)
         self.assertNotIn("download", NOTE)
 
     def test_the_published_schema_5_document_is_rejected(self):
         """The index of the 2026-09-15 release, as published. This
-        validator accepts schema 9 only."""
+        validator accepts schema 8 only."""
         info = json.loads(PUBLISHED_SCHEMA_5.read_text(encoding="utf-8"))
-        with self.assertRaisesRegex(ValueError, "schema is 5, expected 9"):
+        with self.assertRaisesRegex(ValueError, "schema is 5, expected 8"):
             validate_document(info, "2026-09-15")
 
     def test_a_schema_6_document_is_rejected(self):
         info = json.loads(PUBLISHED_SCHEMA_5.read_text(encoding="utf-8"))
         info["schema"] = 6
-        with self.assertRaisesRegex(ValueError, "schema is 6, expected 9"):
+        with self.assertRaisesRegex(ValueError, "schema is 6, expected 8"):
             validate_document(info, "2026-09-15")
 
-    def test_a_schema_7_or_8_document_is_rejected(self):
-        """Schemas 7 and 8 are previous contracts. Bumping nothing else, a
-        schema 9 reader refuses them."""
-        for old in (7, 8):
-            with self.subTest(schema=old):
-                _, _, info = self.make_index()
-                info["schema"] = old
-                with self.assertRaisesRegex(
-                        ValueError, f"schema is {old}, expected 9"):
-                    validate_document(info, "2026-08-27")
+    def test_a_schema_7_document_is_rejected(self):
+        """Schema 7 is a previous contract. Changing nothing else, this
+        validator refuses it."""
+        _, _, info = self.make_index()
+        info["schema"] = 7
+        with self.assertRaisesRegex(ValueError, "schema is 7, expected 8"):
+            validate_document(info, "2026-08-27")
 
-    def test_bumping_a_schema_5_document_to_9_is_not_enough(self):
-        """The published document's download fields are unknown keys, and
-        its files are one per base part."""
+    def test_the_chipdb_directory_layout_is_rejected(self):
+        """Schema 8 as published up to 2026-10-01: each built part names
+        its file. Same number, the earlier layout: refused by name."""
+        _, _, info = self.make_index()
+        info["parts"][PART]["chipdb"] = DIE_FILE
+        info["parts"][SLOW]["chipdb"] = DIE_FILE
+        with self.assertRaisesRegex(ValueError, "the chipdb/ layout"):
+            validate_document(info, "2026-08-27")
+
+    def test_renumbering_a_schema_5_document_is_not_enough(self):
+        """The published document names a file per base part, and its
+        download fields are unknown keys."""
         info = json.loads(PUBLISHED_SCHEMA_5.read_text(encoding="utf-8"))
-        info["schema"] = 9
-        with self.assertRaisesRegex(ValueError, "unknown keys"):
+        info["schema"] = SCHEMA
+        with self.assertRaisesRegex(ValueError, "names its chipdb files"):
             validate_document(info, "2026-09-15")
 
     def test_accepts_one_chipdb_file_per_die(self):
@@ -284,7 +290,6 @@ class PartsIndexTests(unittest.TestCase):
     def test_the_schema_decides_the_file_name(self):
         """Schema 7 and 8 name the die; schema 6 names the base part."""
         self.assertEqual(chipdb_name(BASE), DIE_FILE)
-        self.assertEqual(chipdb_name(BASE, 9), DIE_FILE)
         self.assertEqual(chipdb_name(BASE, 8), DIE_FILE)
         self.assertEqual(chipdb_name(BASE, 7), DIE_FILE)
         self.assertEqual(chipdb_name(BASE, 6), f"{BASE}.bin")
@@ -309,8 +314,8 @@ class PartsIndexTests(unittest.TestCase):
         """What the harness and the E2E run: the schema of the package,
         and the file each built base part needs, as apio reads them."""
         _, _, info = self.make_die_index()
-        # Schema 9 names no file: the engine finds its own.
-        self.assertEqual(package_schema(info), (9, {}))
+        # The index this module emits names no file: the engine finds its own.
+        self.assertEqual(package_schema(info), (8, {}))
         # Older schemas are refused by the validator and still reported
         # by the reader, so a harness can open an older package.
         per_die_8 = {
@@ -350,12 +355,39 @@ class PartsIndexTests(unittest.TestCase):
             validate_package_info(index_path, chipdb)
 
     def test_rejects_a_chipdb_key_in_an_entry(self):
-        """Schema 8's file name is an unknown key in schema 9."""
+        """The chipdb/ layout's file name: on a built part it marks that
+        layout; on any other entry it is an unknown key."""
         index_path, chipdb, info = self.make_index()
         info["parts"][PART]["chipdb"] = DIE_FILE
         self.rewrite(index_path, info)
-        with self.assertRaisesRegex(ValueError, f"{PART} has unknown key chipdb"):
+        with self.assertRaisesRegex(ValueError, "names its chipdb files"):
             validate_package_info(index_path, chipdb)
+        index_path, chipdb, info = self.make_index()
+        info["parts"][f"{OTHER}-1"]["chipdb"] = DIE_FILE
+        self.rewrite(index_path, info)
+        with self.assertRaisesRegex(
+                ValueError, f"{OTHER}-1 has unknown key chipdb"):
+            validate_package_info(index_path, chipdb)
+
+    def test_the_document_tells_the_two_schema_8_layouts_apart(self):
+        """Same number, two layouts: the file names in the entries decide
+        where the bins are and whether the engine is given one."""
+        _, _, info = self.make_index()
+        self.assertFalse(names_chipdb_files(info))
+        self.assertEqual(chipdb_subdir(info), CHIPDB_SUBDIR)
+        info["parts"][PART]["chipdb"] = DIE_FILE
+        self.assertTrue(names_chipdb_files(info))
+        self.assertEqual(chipdb_subdir(info), "chipdb")
+        # Only a BUILT part's file name counts.
+        _, _, info = self.make_index()
+        info["parts"][f"{OTHER}-1"]["chipdb"] = DIE_FILE
+        self.assertFalse(names_chipdb_files(info))
+        # No document: the layout this module emits.
+        self.assertFalse(names_chipdb_files(None))
+        self.assertEqual(chipdb_subdir(None), CHIPDB_SUBDIR)
+        # Older schemas name their files too.
+        published = json.loads(PUBLISHED_SCHEMA_5.read_text(encoding="utf-8"))
+        self.assertTrue(names_chipdb_files(published))
 
     def test_rejects_a_tag_that_is_not_the_date(self):
         index_path, chipdb, info = self.make_index()

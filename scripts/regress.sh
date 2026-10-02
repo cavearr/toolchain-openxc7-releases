@@ -18,8 +18,8 @@
 #   --markdown <file>    write the report as markdown (CI job summary)
 #   --keep               keep the work directory for inspection
 #   --chipdb-dir <dir>   optional. A release package already carries its
-#                        chipdb (share/nextpnr/himbaechel/xilinx/ since schema
-#                        9). A local --no-chipdb tree does not: pass the
+#                        chipdb (share/nextpnr/himbaechel/xilinx/, or
+#                        chipdb/ up to 2026-10-01). A local --no-chipdb tree does not: pass the
 #                        bins and the suite reads them. Ignored for the files
 #                        the package already has.
 #

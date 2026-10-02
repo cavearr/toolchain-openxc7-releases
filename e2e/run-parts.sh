@@ -8,11 +8,13 @@
 #   --report)
 #   -> fasm2frames -> xc7frames2bit -> .bit
 # The place-and-route line is the one apio runs for the package's schema
-# number: schema 7, 8 and 9 (himbaechel) take the part in --device, the XDC
-# and the FASM as uarch options and one chipdb per die (named with --chipdb
-# up to schema 8; from schema 9 the engine finds it itself), and route with
+# number: schema 7 and 8 (himbaechel) take the part in --device, the XDC
+# and the FASM as uarch options and one chipdb per die, and route with
 # router2 by default; schema 6 and 5 take --xdc/--fasm and one chipdb per
-# base part, and are asked for router2.
+# base part, and are asked for router2. The chipdb is passed with --chipdb
+# from chipdb/ when the package's index names the files (every package up
+# to the 2026-10-01 release); when it names none, the engine opens its own
+# from share/nextpnr/himbaechel/xilinx/ and gets no --chipdb.
 # With `wine`, nextpnr-xilinx.exe / xc7frames2bit.exe run under wine64
 # (fasm2frames runs with the host python, as apio does on Windows via
 # oss-cad-suite).
@@ -38,21 +40,28 @@ DB="$PKG/share/nextpnr/external/prjxray-db"
 # E2E_PARTS overrides the manifest (space-separated) — handy for quick runs
 PARTS=${E2E_PARTS:-$(python3 -c "import json;print(' '.join(p for ps in json.load(open('$REPO/chipdb-parts.json')).values() for p in ps))")}
 
-# The schema and the chipdb file of every part, from the package's own
-# XILINX-PARTS-INDEX.json: a "schema <number>" line, then one
-# "<part> <chipdb file>" line per part (the file is only passed to the engine
-# up to schema 8).
+# The schema, the layout and the chipdb file of every part, from the
+# package's own XILINX-PARTS-INDEX.json: a "schema <number>" line, a
+# "names-chipdb <0|1>" line (pack.parts_index.names_chipdb_files), a
+# "chipdb-dir <dir>" line, then one "<part> <chipdb file>" line per part
+# (the file is only passed to the engine when the index names it).
 # shellcheck disable=SC2086
 PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}" python3 -c '
 import sys
-from pack.parts_index import chipdb_name, read_package_schema
-schema, files = read_package_schema(sys.argv[1])
+from pack.parts_index import (chipdb_name, chipdb_subdir, names_chipdb_files,
+                              package_schema, read_package_index)
+index = read_package_index(sys.argv[1])
+schema, files = package_schema(index)
 print("schema", schema)
+print("names-chipdb", int(names_chipdb_files(index)))
+print("chipdb-dir", chipdb_subdir(index))
 for part in sys.argv[2:]:
     print(part, files.get(part) or chipdb_name(part, schema))
 ' "$PKG" $PARTS > parts-chipdb.txt
 SCHEMA_NUM=$(awk '$1 == "schema" {print $2}' parts-chipdb.txt)
-echo "== schema: $SCHEMA_NUM =="
+NAMES_CHIPDB=$(awk '$1 == "names-chipdb" {print $2}' parts-chipdb.txt)
+CHIPDB_REL=$(awk '$1 == "chipdb-dir" {print $2}' parts-chipdb.txt)
+echo "== schema: $SCHEMA_NUM, chipdb in $CHIPDB_REL/, --chipdb on the command line: $NAMES_CHIPDB =="
 
 # part -> family, same prefix rule as pack/families.py
 family_of() {
@@ -103,23 +112,23 @@ for part in $PARTS; do
 
   rm -f "blinky-$part.pnr"
   if [ "$SCHEMA_NUM" -le 6 ]; then
-    pnr=(--chipdb "$PKG/chipdb/$chipdb"
+    pnr=(--chipdb "$PKG/$CHIPDB_REL/$chipdb"
          --xdc "blinky-$part.xdc"
          --json blinky.json
          --fasm "blinky-$part.fasm"
          --report "blinky-$part.pnr"
          --router router2 -q)
-  elif [ "$SCHEMA_NUM" -le 8 ]; then
+  elif [ "$NAMES_CHIPDB" = 1 ]; then
     pnr=(--device "$device"
-         --chipdb "$PKG/chipdb/$chipdb"
+         --chipdb "$PKG/$CHIPDB_REL/$chipdb"
          -o "xdc=blinky-$part.xdc"
          --json blinky.json
          -o "fasm=blinky-$part.fasm"
          --report "blinky-$part.pnr"
          -q)
   else
-    # schema 9: no --chipdb, the engine opens its own from
-    # <package>/share/nextpnr/himbaechel/xilinx/
+    # the index names no file: no --chipdb, the engine opens its own
+    # from <package>/share/nextpnr/himbaechel/xilinx/
     pnr=(--device "$device"
          -o "xdc=blinky-$part.xdc"
          --json blinky.json

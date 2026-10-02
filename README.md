@@ -146,9 +146,12 @@ packaged database but not built: "not built" rather than "unknown part"
 such as `xc7s50csga324-1IL`). Which chipdb file serves a part is the
 engine's business and the index does not say. The top level carries the
 `chipdb-id` and the counts. Its `schema` number is the contract with a
-reader: schema 9 is today's (the xilinx uarch installed as `nextpnr-xilinx`,
-one chipdb file per die in `share/nextpnr/himbaechel/xilinx/`, and no
-`--chipdb` on the command line), and any change to its
+reader: schema 8 is today's (the xilinx uarch installed as `nextpnr-xilinx`,
+one chipdb file per die inside the package). Since the chipdb lives in the
+engine's share directory, `share/nextpnr/himbaechel/xilinx/`, the index
+names no file and the command line has no `--chipdb`; packages up to
+2026-10-01 kept the bins in `chipdb/`, named each file in the index and
+passed it with `--chipdb`, under the same number. Any other change to its
 keys is a new schema. `pack/parts_index.py` is the only code that writes
 it and the validator every reader here goes through.
 

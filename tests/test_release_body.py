@@ -166,12 +166,12 @@ class ComposedBodyTests(unittest.TestCase):
             self.assertIn(f"| `{asset}` |", body)
 
     def test_the_manual_install_has_no_chipdb_option(self):
-        """Schema 9: the engine finds its chipdb from --device."""
+        """The engine finds its chipdb from --device; the index names none."""
         _, body, _ = compose()
         self.assertIn("nextpnr-xilinx --device xc7a35tcsg324-1", body)
         self.assertNotIn("--chipdb", body)
         self.assertNotIn("openxc7/chipdb/", body)
-        self.assertIn("schema 9", body)
+        self.assertIn("(schema 8) names no chipdb file", body)
         self.assertIn("share/nextpnr/himbaechel/xilinx/", body)
 
     def test_it_gives_every_revision_and_the_stamp(self):

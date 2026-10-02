@@ -21,6 +21,7 @@ from pkg import Package  # noqa: E402
 
 class _FakePackage:
     schema = 7
+    names_chipdb = True
     env_extra: dict = {}
 
     def __init__(self, root: Path):
@@ -40,25 +41,26 @@ class _FakePackage:
         return self.root / "chipdb" / "chipdb-xc7a50t.bin"
 
 
-class PnrCommandBySchema(unittest.TestCase):
-    """The command line is the one of the package's schema."""
+class PnrCommandByLayout(unittest.TestCase):
+    """The command line is the one of the package's schema and layout."""
 
-    def command(self, schema, root=Path("/pkg")):
+    def command(self, schema, names_chipdb=True, root=Path("/pkg")):
         package = _FakePackage(root)
         package.schema = schema
+        package.names_chipdb = names_chipdb
         with tempfile.TemporaryDirectory() as scratch:
             spec = _spec(Path(scratch))
         return flow._pnr_command(spec, package, "xc7a35tcpg236", Path("a.xdc"),
                                  Path("n.json"), Path("o.fasm"),
                                  Path("r.json"))
 
-    def test_schema_9_passes_no_chipdb(self):
-        cmd = self.command(9)
+    def test_an_index_without_file_names_passes_no_chipdb(self):
+        cmd = self.command(8, names_chipdb=False)
         self.assertNotIn("--chipdb", cmd)
         self.assertEqual(cmd[cmd.index("--device") + 1], "xc7a35tcpg236-1")
         self.assertIn("xdc=a.xdc", cmd)
 
-    def test_schema_7_and_8_name_the_chipdb(self):
+    def test_an_index_with_file_names_names_the_chipdb(self):
         for schema in (7, 8):
             with self.subTest(schema=schema):
                 cmd = self.command(schema)
@@ -72,23 +74,42 @@ class PnrCommandBySchema(unittest.TestCase):
         self.assertNotIn("--device", cmd)
 
 
-class PackageChipdbBySchema(unittest.TestCase):
-    def package(self, root, schema):
-        return Package(root=root, platform="linux-x86-64", schema=schema)
+def _index(names_files):
+    """A schema 8 document with one built part; *names_files* = old layout."""
+    entry = {"family": "artix7", "base-part": "xc7a35tcsg324", "speed": "1",
+             "generated": True}
+    if names_files:
+        entry["chipdb"] = "chipdb-xc7a50t.bin"
+    return {"schema": 8, "parts": {"xc7a35tcsg324-1": entry}}
 
-    def test_the_chipdb_lives_where_the_schema_keeps_it(self):
-        root = Path("/pkg")
-        self.assertEqual(self.package(root, 8).chipdb("xc7a35tcsg324"),
-                         root / "chipdb" / "chipdb-xc7a50t.bin")
-        self.assertEqual(
-            self.package(root, 9).chipdb("xc7a35tcsg324"),
-            root / "share/nextpnr/himbaechel/xilinx/chipdb-xc7a50t.bin")
+
+class PackageChipdbByLayout(unittest.TestCase):
+    def open(self, root, names_files):
+        (root / "libexec").mkdir(parents=True)
+        (root / "libexec" / "nextpnr-xilinx").write_text("")
+        (root / "XILINX-PARTS-INDEX.json").write_text(
+            json.dumps(_index(names_files)))
+        return Package.open(root)
+
+    def test_the_chipdb_lives_where_the_layout_keeps_it(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            old = self.open(Path(scratch) / "old", names_files=True)
+            new = self.open(Path(scratch) / "new", names_files=False)
+            self.assertEqual((old.schema, new.schema), (8, 8))
+            self.assertTrue(old.names_chipdb)
+            self.assertFalse(new.names_chipdb)
+            self.assertEqual(old.chipdb("xc7a35tcsg324"),
+                             old.root / "chipdb" / "chipdb-xc7a50t.bin")
+            self.assertEqual(
+                new.chipdb("xc7a35tcsg324"),
+                new.root / "share/nextpnr/himbaechel/xilinx/chipdb-xc7a50t.bin")
 
     def test_an_external_chipdb_dir_is_used_when_the_package_lacks_the_file(self):
         with tempfile.TemporaryDirectory() as scratch:
             external = Path(scratch)
             (external / "chipdb-xc7a50t.bin").write_bytes(b"x")
-            package = self.package(Path(scratch) / "pkg", 9)
+            package = Package(root=Path(scratch) / "pkg",
+                              platform="linux-x86-64")
             package.chipdb_dir = external
             self.assertEqual(package.chipdb("xc7a35tcsg324"),
                              external / "chipdb-xc7a50t.bin")

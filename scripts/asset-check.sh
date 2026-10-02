@@ -14,20 +14,21 @@
 # tag whose release was never published). This script chases exactly that:
 # it recomputes each URL by the rule and checks what is actually there.
 #
-# Schema 9 publishes six assets, like schema 8 (apio#1070): the three
-# platform tarballs, SHA256SUMS, XILINX-PARTS-INDEX.json and BUILD-INFO.json.
-# The chipdb files travel inside each tarball, in the engine's share directory
-# (share/nextpnr/himbaechel/xilinx/chipdb-<die>.bin); the index names no file,
-# the die of each built part says which are needed. There is no
+# A schema 8 release publishes six assets (apio#1070): the three platform
+# tarballs, SHA256SUMS, XILINX-PARTS-INDEX.json and BUILD-INFO.json. The
+# chipdb files travel inside each tarball, in the engine's share directory
+# (share/nextpnr/himbaechel/xilinx/chipdb-<die>.bin); the index names no
+# file, the die of each built part says which are needed. There is no
 # apio-xilinx-chipdb-*.bin.tgz asset. --full downloads each platform package
 # and checks that the bins inside it are exactly the dies of the built parts,
 # with the index's chipdb-id.
-# A release whose index is not the current schema -- absent under every
-# name it has been published with, or an older schema -- predates this
-# contract and is reported as legacy, not failed.
+# A release whose index is not this contract -- absent under every name it
+# has been published with, another schema, or a schema 8 index that names
+# its chipdb files (the chipdb/ layout of the releases up to 2026-10-01,
+# pack.parts_index.names_chipdb_files) -- is reported as legacy, not failed.
 #
 # SHA256SUMS covers every asset since apio#990 (it used to list only the
-# three packages). A schema 9 release's manifest lists the six assets
+# three packages). A current release's manifest lists the six assets
 # above and nothing else.
 #
 # BUILD-INFO.json is published alongside them since apio#1009: the identity
@@ -59,7 +60,7 @@ while [ $# -gt 0 ]; do
         --expect-dir) EXPECT_DIR="$2"; shift 2 ;;
         --full) FULL=1; shift ;;
         --platform) PLATFORMS+=("$2"); shift 2 ;;
-        -h|--help) sed -n '3,48p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '3,52p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) echo "unknown option: $1" >&2; exit 2 ;;
         *) TAG="$1"; shift ;;
     esac
@@ -79,7 +80,7 @@ platforms = sys.argv[5:]
 # used by L1 on a package and here on a release).
 sys.path.insert(0, repo_root)
 from pack.parts_index import (CHIPDB_SUBDIR, INDEX_ASSET, SCHEMA,  # noqa: E402
-                              STAMP_FILE, chipdb_name,
+                              STAMP_FILE, chipdb_name, names_chipdb_files,
                               previous_index_asset_names, validate_document)
 from pack.release_tags import split_tag  # noqa: E402
 
@@ -116,7 +117,7 @@ def request(url, method="GET", attempts=3):
     if token and url.startswith("https://api.github.com/"):
         req.add_header("Authorization", f"Bearer {token}")
     # A transient connection failure is not an answer about the release, and
-    # this check makes one request per published asset -- six on a schema 9
+    # this check makes one request per published asset -- six on a current
     # release, the three platform packages with --full. Retried, with a pause; an
     # HTTPError is NOT retried, because 404 is the answer we came for.
     for attempt in range(1, attempts + 1):
@@ -339,7 +340,7 @@ has_build_info = check_build_info()
 
 # ---------------------------------------------------------------------------
 # The parts index. The chipdb files it names travel inside each platform
-# package; schema 9 publishes no separate chipdb asset.
+# package; the release publishes no separate chipdb asset.
 # ---------------------------------------------------------------------------
 def chipdb_members(blob):
     """(set of chipdb *.bin names, chipdb-id.txt text) inside a package.
@@ -433,13 +434,22 @@ def check_chipdb_release():
 
     # This schema IS the contract: the index written by the same run that
     # builds the packages (pack/parts_index.py, where SCHEMA is a constant,
-    # so a current run cannot produce an older one). An older one is a
-    # release from before that contract, and what its assets mean is its
-    # own gate's business, not this one's. Reported, never failed.
+    # so a current run cannot produce another one). Another number is a
+    # release from another contract -- older, or a branch pre-release that
+    # tried a new one -- and what its assets mean is its own gate's
+    # business, not this one's. Reported, never failed.
     if info.get("schema") != SCHEMA:
         print(f"— {index_asset}: schema {info.get('schema')!r}, not {SCHEMA}")
-        print("  legacy release: an index older than the contract this gate"
-              " checks, so its assets are not what apio installs from today")
+        print("  legacy release: an index of another schema than the one"
+              " this gate checks, so its assets are not checked against it")
+        return False
+    # The same number, the earlier layout: the index names each built
+    # part's file, the bins are in chipdb/ and the command line passes one.
+    if names_chipdb_files(info):
+        print(f"— {index_asset}: schema {SCHEMA}, the chipdb/ layout")
+        print("  legacy release: its index names the chipdb files, which"
+              " live in chipdb/ and go on the command line with --chipdb;"
+              f" this gate checks the {CHIPDB_SUBDIR}/ layout")
         return False
 
     try:

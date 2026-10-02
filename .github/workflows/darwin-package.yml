@@ -9,7 +9,7 @@
 # chipdb.yml owns generation, cache, identity and the XILINX-PARTS-INDEX
 # document. This job seeds the package from that job's bins, so the tarball
 # ships them in share/nextpnr/himbaechel/xilinx/, where the engine
-# looks for them (schema 9). L1 and L2 validate that
+# looks for them. L1 and L2 validate that
 # tarball as it stands.
 # This macOS runner only packages and validates the artifacts the calling
 # run already produced on Linux.

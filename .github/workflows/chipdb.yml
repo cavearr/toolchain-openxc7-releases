@@ -9,8 +9,8 @@
 # Generating them is the slow, memory-heavy step of the whole build (the
 # generator of xc7z100 alone peaks at 12.4 GB, more than a hosted macOS
 # runner has), so it happens ONCE here, on a linux runner. The platform
-# jobs seed their packages from `chipdb-bins`: schema 9 ships those files
-# inside each tarball, in share/nextpnr/himbaechel/xilinx/, where the engine
+# jobs seed their packages from `chipdb-bins`: each tarball ships those
+# files in share/nextpnr/himbaechel/xilinx/, where the engine
 # opens them. There is no per-die release asset.
 # `parts-index` (~50 kB) is the document each package embeds and the
 # release publishes under the same name.
@@ -180,8 +180,8 @@ jobs:
           # The published index carries the same name as the file inside
           # every package, XILINX-PARTS-INDEX.json: the release it belongs
           # to is written inside it, so its name does not repeat the date
-          # (PARTS-INDEX.json before the apio#1002 rename). Schema 9
-          # publishes no per-die asset next to it.
+          # (PARTS-INDEX.json before the apio#1002 rename). No per-die
+          # asset is published next to it.
           INDEX="XILINX-PARTS-INDEX.json"
           test -f "parts-index/$INDEX"
           # The writer produces the document and nothing else.

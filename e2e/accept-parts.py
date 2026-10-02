@@ -6,8 +6,8 @@
 For each part with generated=true the engine is run with ``--device <part>``
 and nothing else the chipdb would need: no ``--chipdb``, a design with an
 empty top module. The engine must find its own chipdb for that device and
-exit 0. That is the contract of the index (schema 9): a built part works
-from the part number alone.
+exit 0. That is the contract of the index: a built part works from the
+part number alone.
 """
 
 import argparse

@@ -2,9 +2,9 @@
 
 The document describes every part the packaged prjxray database knows
 about. It travels twice under one name, ``XILINX-PARTS-INDEX.json``: as a
-release asset and at the root of every platform package. Schema 9 ships
-the chipdb files in the engine's share directory, inside the package, so
-this module writes the index only. The per-die ``.bin.tgz`` assets
+release asset and at the root of every platform package. The package
+ships the chipdb files in the engine's share directory, so this module
+writes the index only. The per-die ``.bin.tgz`` assets
 belonged to schema 7 and earlier.
 
 The format itself (schema, key order, validation) lives in

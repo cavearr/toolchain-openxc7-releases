@@ -1,7 +1,7 @@
 """Tests for the parts-index writer and the database inventory.
 
-pack.chipdb_assets used to also build the per-die release assets. Schema 9
-publishes none: the writer produces XILINX-PARTS-INDEX.json and nothing else.
+pack.chipdb_assets used to also build the per-die release assets. A release
+publishes none since schema 8: the writer produces XILINX-PARTS-INDEX.json and nothing else.
 """
 
 import json

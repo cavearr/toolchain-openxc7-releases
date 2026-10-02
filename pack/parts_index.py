@@ -1,10 +1,10 @@
 """XILINX-PARTS-INDEX.json: which parts a package supports and which it built.
 
 Every package carries this document at its root, and the release
-publishes the same bytes under the same name. Schema 9, which this
-module emits, ships the chipdb files where the engine looks for them,
+publishes the same bytes under the same name. The package ships the
+chipdb files where the engine looks for them,
 ``share/nextpnr/himbaechel/xilinx/``, so a part number is all the engine
-needs: an entry no longer names a file.
+needs: an entry names no file.
 
 The naming is Vivado's. ``xc7a200t`` is the device, ``fbg484`` the
 package and ``3`` the speed grade; ``xc7a200tfbg484-3`` is the **part**
@@ -21,10 +21,14 @@ release against it -- one validator, three callers.
 
 The schema number is the contract (apio#1071, apio#1070). A package
 carries one engine, so a reader asserts the number and already knows the
-binary and the command line. Schema 9 is the himbaechel engine with the
-chipdb files in its own share directory and no ``--chipdb`` on the
-command line. An entry has no engine field, no download fields and no
-file name.
+binary. Schema 8 is the himbaechel engine with the chipdb files inside
+the package. Packages up to the 2026-10-01 release kept them in a
+``chipdb/`` directory at the root, named each one in the index and passed
+it with ``--chipdb``; since then they live in the engine's own share
+directory, the index names none and the command line has no ``--chipdb``.
+Both carry schema 8, so the document itself tells them apart:
+``names_chipdb_files()``. An entry has no engine field, no download
+fields and no file name.
 """
 
 from __future__ import annotations
@@ -36,17 +40,17 @@ from pathlib import Path
 
 from .families import die_of, family_of
 
-SCHEMA = 9
+SCHEMA = 8
 
 # Schema 6 (and 5 before it): one chipdb file per base part, command line
 # ``nextpnr-xilinx --chipdb <file> --xdc``. Schema 7 was the himbaechel
 # engine with the same per-die files, published as separate release assets
-# for apio to download. Schema 8 shipped those files in the package's
-# chipdb/ and the command line still named one. Schema 9, which this
-# module emits, puts them in the engine's share directory and drops
-# ``--chipdb``. The validator accepts only the schema this branch emits.
+# for apio to download. Schema 8, which this module emits, ships them in
+# the package: first in chipdb/ with the file named in the index and on the
+# command line, now in the engine's share directory with neither. The
+# validator accepts only what this module emits.
 PER_BASE_PART_SCHEMA = 6
-PER_DIE_SCHEMAS = (7, 8, SCHEMA)
+PER_DIE_SCHEMAS = (7, SCHEMA)
 
 # Where the engine opens ``chipdb-<die>.bin`` when it is not told: the
 # executable's ../share/nextpnr/ plus himbaechel/xilinx/ (init_share_dirname
@@ -89,11 +93,11 @@ NOTE = (
     "database supports that this package does not build: supported, not "
     "built (this includes the speed grades the engine's --device pattern "
     "rejects). family is the prjxray database directory the part lives in "
-    "($PRJXRAY_DB_DIR/<family>/<part>/part.yaml). schema 9 is the "
-    "contract: command line nextpnr-xilinx --device <part> -o xdc= -o "
-    "fasm= --report. A package carries one engine, so the schema number "
-    "is what a reader asserts. chipdb-id is the identity stamp of the "
-    "set (share/nextpnr/himbaechel/xilinx/chipdb-id.txt)."
+    "($PRJXRAY_DB_DIR/<family>/<part>/part.yaml). Command line: "
+    "nextpnr-xilinx --device <part> -o xdc= -o fasm= --report, no "
+    "--chipdb. A package carries one engine, so the schema number is what "
+    "a reader asserts. chipdb-id is the identity stamp of the set "
+    "(share/nextpnr/himbaechel/xilinx/chipdb-id.txt)."
 )
 
 # The one name the document travels under, at the root of every package
@@ -189,9 +193,9 @@ def _check_entry(part: str, entry: dict, _date: str) -> None:
     if not isinstance(entry, dict):
         raise ValueError(f"XILINX-PARTS-INDEX entry for {part} must be an object")
     # The index is a contract: a key this schema does not define (the
-    # chipdb file name of schema 8, the asset fields of schema 7, the engine
-    # field the schema 6 draft carried) is refused, not ignored. apio asserts the schema number and reads these
-    # keys only.
+    # chipdb file name of the chipdb/ layout, the asset fields of schema 7,
+    # the engine field the schema 6 draft carried) is refused, not ignored.
+    # apio asserts the schema number and reads these keys only.
     unknown = sorted(key for key in entry if key not in ENTRY_KEYS)
     if unknown:
         kind = "key" if len(unknown) == 1 else "keys"
@@ -227,6 +231,11 @@ def validate_document(info: dict, expect_tag: str | None = None) -> dict:
     if info.get("schema") != SCHEMA:
         raise ValueError(
             f"XILINX-PARTS-INDEX schema is {info.get('schema')!r}, expected {SCHEMA}")
+    if names_chipdb_files(info):
+        raise ValueError(
+            "XILINX-PARTS-INDEX names its chipdb files: the chipdb/ layout "
+            "of the releases up to 2026-10-01, not the share-directory one "
+            "this module emits")
     date = info.get("date")
     if not isinstance(date, str):
         raise ValueError("XILINX-PARTS-INDEX has no date")
@@ -304,9 +313,10 @@ def validate_package_info(info_path: Path, chipdb: Path) -> dict:
 
 
 def _described_files(info: dict) -> dict:
-    """{base part: chipdb file} a schema 7 or 8 document names for built parts.
+    """{base part: chipdb file} the document names for its built parts.
 
-    Schema 9 names none: the engine finds its own file from --device.
+    Empty for the layout this module emits: the engine finds its own file
+    from --device.
     """
     parts = info.get("parts") or {}
     files = {}
@@ -322,12 +332,13 @@ def package_schema(info: dict | None) -> tuple:
     """(schema, {base part: chipdb file}) of a package, from its index.
 
     No document: the schema this repository emits. Schemas 5 and 6 name
-    one chipdb file per base part; schemas 7 and 8 name one per die;
-    schema 9 names none. The validator accepts only the schema this module
-    emits. The reader still reports 5 to 8 so a harness can open an older
-    package. Any other
-    number is refused rather than guessed at. The files are the ones the
-    document names for its built parts, read the way apio reads them.
+    one chipdb file per base part; schema 7 and the first schema 8
+    packages name one per die; the schema 8 this module emits names none
+    (names_chipdb_files() tells the two 8s apart). The validator accepts
+    only what this module emits. The reader still reports 5 to 7 so a
+    harness can open an older package. Any other number is refused rather
+    than guessed at. The files are the ones the document names for its
+    built parts, read the way apio reads them.
     """
     if info is None:
         return SCHEMA, {}
@@ -335,16 +346,40 @@ def package_schema(info: dict | None) -> tuple:
     if schema not in (5, 6, *PER_DIE_SCHEMAS):
         raise ValueError(
             f"XILINX-PARTS-INDEX schema {schema!r} is not one of "
-            f"5, 6, 7, 8, {SCHEMA}")
+            f"5, 6, 7, {SCHEMA}")
     return schema, _described_files(info)
+
+
+def names_chipdb_files(info: dict | None) -> bool:
+    """Whether a package's index names its chipdb files.
+
+    The one test that tells the two package layouts apart, since both
+    carry schema 8. True: the bins are in ``chipdb/`` at the package root
+    (or downloaded next to it, schema 7) and the command line passes the
+    file with ``--chipdb`` -- every release up to 2026-10-01, and schemas
+    5 to 7. False: the bins are in ``CHIPDB_SUBDIR`` and the engine opens
+    its own from ``--device`` -- what this module emits. No document reads
+    as the layout this module emits.
+    """
+    return bool(info) and bool(_described_files(info))
+
+
+def chipdb_subdir(info: dict | None) -> str:
+    """Where a package keeps its chipdb files, relative to its root."""
+    return "chipdb" if names_chipdb_files(info) else CHIPDB_SUBDIR
+
+
+def read_package_index(package: Path) -> dict | None:
+    """The index document of the package tree at *package*, if it has one."""
+    index = Path(package) / PACKAGE_FILE
+    if not index.is_file():
+        return None
+    return json.loads(index.read_text(encoding="utf-8"))
 
 
 def read_package_schema(package: Path) -> tuple:
     """package_schema() of the package tree at *package*."""
-    index = Path(package) / PACKAGE_FILE
-    if not index.is_file():
-        return package_schema(None)
-    return package_schema(json.loads(index.read_text(encoding="utf-8")))
+    return package_schema(read_package_index(package))
 
 
 def main() -> None:

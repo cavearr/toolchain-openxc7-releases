@@ -5,8 +5,9 @@ The flow is exactly the one apio runs — yosys → nextpnr-xilinx (with the
 truncated at whatever stage the test asked for. The place-and-route step speaks
 the command line of the package's schema: schema 7 and 8 are the himbaechel
 xilinx uarch (the part in --device, the XDC and FASM as uarch options, one
-chipdb per die; schema 8 ships that file in the package and names it with
---chipdb, schema 9 leaves it where the engine looks and passes no --chipdb);
+chipdb per die; a package whose index names that file keeps it in chipdb/
+and passes it with --chipdb, one whose index names none keeps it where the
+engine looks and passes no --chipdb);
 schema 6 and 5 are the earlier engine.
 
 Nothing here decides whether a test passed: the runner only reports what
@@ -156,9 +157,9 @@ def _pnr_command(spec, pkg, part: str, xdc: Path, netlist: Path, fasm: Path,
         ]
     # The himbaechel uarch: the part goes in --device (the full name apio
     # knows, speed grade included), the XDC and FASM are uarch options, and
-    # the chipdb is the one of the part's die: named with --chipdb up to
-    # schema 8, found by the engine itself from schema 9.
-    chipdb = [] if pkg.schema >= 9 else ["--chipdb", str(pkg.chipdb(part))]
+    # the chipdb is the one of the part's die: named with --chipdb when the
+    # index names the files, found by the engine itself when it does not.
+    chipdb = ["--chipdb", str(pkg.chipdb(part))] if pkg.names_chipdb else []
     return [
         *pkg.cmd("nextpnr-xilinx"),
         "--device", pkg.device(part, strict=False),

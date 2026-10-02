@@ -12,7 +12,7 @@
 #
 # There is ONE chipdb source: the bins that job generates. Each package
 # ships them in share/nextpnr/himbaechel/xilinx/, where the engine
-# looks for them (schema 9), and embeds that job's
+# looks for them, and embeds that job's
 # XILINX-PARTS-INDEX.json. The release publishes the three tarballs, that
 # index, BUILD-INFO.json and SHA256SUMS — no per-die chipdb asset. Each
 # platform carries its own gate. The platform workflows are
