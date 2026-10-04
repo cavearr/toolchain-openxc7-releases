@@ -104,7 +104,9 @@ if [ -n "${E2E_JSON:-}" ]; then
   cp "$E2E_JSON" blinky.json
 else
   echo "== synth (host yosys, part-agnostic) =="
-  yosys -q -p "synth_xilinx -arch xc7 -top blinky; write_json blinky.json" \
+  # apio's synthesis script (apio/scons/plugin_xilinx.py at FPGAwars/apio
+  # 532e0b67): simplemap turns the $buf yosys >= 0.69+59 can leave into wires
+  yosys -q -p "synth_xilinx -arch xc7 -top blinky; simplemap t:\$buf; write_json blinky.json" \
         "$REPO/e2e/blinky.v"
 fi
 

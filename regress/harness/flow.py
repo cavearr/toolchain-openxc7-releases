@@ -196,10 +196,14 @@ def run(spec, pkg, part: str, workdir: Path, repo: Path) -> FlowResult:
             f"chparam -set {name} {value} {spec.top}; "
             for name, value in spec.parameters.items()
         )
+        # The synthesis script is apio's (apio/scons/plugin_xilinx.py at
+        # FPGAwars/apio 532e0b67): yosys >= 0.69+59 can leave a $buf cell
+        # with z bits that nextpnr cannot place, and simplemap turns it
+        # into wires.
         session.step("yosys", [
             "yosys", "-p",
             f"{chparams}synth_xilinx -arch xc7 -top {spec.top} {spec.synth_opts}; "
-            f"write_json {netlist}",
+            f"simplemap t:$buf; write_json {netlist}",
             *[str(source) for source in spec.sources],
         ])
         result.artifacts["netlist"] = netlist
