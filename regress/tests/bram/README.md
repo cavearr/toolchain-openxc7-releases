@@ -23,6 +23,19 @@ The design writes and reads on the same clock and feeds the read data into
 `led`, so the memory cannot be optimised away — an unread memory would simply
 vanish during synthesis and the test would silently stop testing anything.
 
+## Known gap (expected to fail today)
+
+With yosys 0.69 (oss-cad-suite 2026-09-27) nextpnr stops on hold errors on
+the block's data inputs (`hold -0.67 … Source mem.0.0.DIADI4`) and exits 1.
+The hold is false: nextpnr checks the RAMB data-in hold with the NO_CHANGE
+value for every WRITE_MODE (openXC7/nextpnr#64), this block is READ_FIRST
+(same parameters with 0.63 and 0.69), and the 0.69 netlist places with data
+paths short enough to trip it. The fix is openXC7/nextpnr#65. Until the
+engine carries it the test is a guard: it expects this flow to fail with
+exactly that hold error, so any other failure, or a pass, is reported.
+When it passes, flip `expect` back to the positive test below and record
+the baseline.
+
 ## Expected result
 
 One RAMB18E1 in the netlist, a routed bitstream, and a high reported fmax
