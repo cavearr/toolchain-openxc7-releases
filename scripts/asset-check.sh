@@ -15,13 +15,16 @@
 # it recomputes each URL by the rule and checks what is actually there.
 #
 # A schema 8 release publishes six assets (apio#1070): the three platform
-# tarballs, SHA256SUMS, XILINX-PARTS-INDEX.json and BUILD-INFO.json. The
+# tarballs, SHA256SUMS, XILINX-PARTS-INVENTORY.json and BUILD-INFO.json. The
 # chipdb files travel inside each tarball, in the engine's share directory
 # (share/nextpnr/himbaechel/xilinx/chipdb-<die>.bin); the index names no
 # file, the die of each built part says which are needed. There is no
 # apio-xilinx-chipdb-*.bin.tgz asset. --full downloads each platform package
 # and checks that the bins inside it are exactly the dies of the built parts,
 # with the index's chipdb-id.
+# The releases before the rename publish the same document as
+# XILINX-PARTS-INDEX.json: it is read and checked the same way, and the
+# report says it carries the legacy name.
 # A release whose index is not this contract -- absent under every name it
 # has been published with, another schema, or a schema 8 index that names
 # its chipdb files (the chipdb/ layout of the releases up to 2026-10-01,
@@ -60,7 +63,7 @@ while [ $# -gt 0 ]; do
         --expect-dir) EXPECT_DIR="$2"; shift 2 ;;
         --full) FULL=1; shift ;;
         --platform) PLATFORMS+=("$2"); shift 2 ;;
-        -h|--help) sed -n '3,52p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '3,55p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) echo "unknown option: $1" >&2; exit 2 ;;
         *) TAG="$1"; shift ;;
     esac
@@ -80,8 +83,9 @@ platforms = sys.argv[5:]
 # used by L1 on a package and here on a release).
 sys.path.insert(0, repo_root)
 from pack.parts_index import (CHIPDB_SUBDIR, INDEX_ASSET, SCHEMA,  # noqa: E402
-                              STAMP_FILE, chipdb_name, names_chipdb_files,
-                              previous_index_asset_names, validate_document)
+                              STAMP_FILE, chipdb_name, is_legacy_name,
+                              names_chipdb_files, previous_index_asset_names,
+                              validate_document)
 from pack.release_tags import split_tag  # noqa: E402
 
 repo = os.environ.get("ASSET_CHECK_REPO", "cavearr/toolchain-openxc7-releases")
@@ -392,12 +396,12 @@ def check_package_chipdb(asset, blob, info, described):
 def fetch_index():
     """The published index document: (asset name, bytes), or (None, None).
 
-    Published as XILINX-PARTS-INDEX.json since the apio#1002 rename -- the
-    name it also has inside every package, because which release it belongs
-    to is written in the document, not in its file name. Earlier releases
-    carry it as PARTS-INDEX.json (apio#990) and, up to 2026-08-31, under
-    the dated name; apio's loader accepts every one, so this gate reads
-    them all rather than calling those releases legacy.
+    Published as INDEX_ASSET -- the name it also has inside every package,
+    because which release it belongs to is written in the document, not in
+    its file name. Earlier releases carry it as XILINX-PARTS-INDEX.json
+    (same content), PARTS-INDEX.json (apio#990) and, up to 2026-08-31,
+    under the dated name; consumers have read every one, so this gate reads
+    them all and checks the document, saying when the name is a legacy one.
     """
     for asset in [INDEX_ASSET, *previous_index_asset_names(date)]:
         try:
@@ -466,6 +470,8 @@ def check_chipdb_release():
             f" schema {info['schema']} · release-tag {info['release-tag']}"
             f" · chipdb-id {info['chipdb-id']} · {info['generated-count']}"
             f" of {info['part-count']} parts built")
+    if is_legacy_name(index_asset):
+        line += f" · legacy name (now {INDEX_ASSET})"
     # These bytes are already here: hashing them is free, and it is the
     # one asset whose SHA256SUMS line nothing else can vouch for.
     if covers_everything:

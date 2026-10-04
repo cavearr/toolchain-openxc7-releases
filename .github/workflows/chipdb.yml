@@ -1,4 +1,4 @@
-# Generate (or restore) the chipdb and write XILINX-PARTS-INDEX.json.
+# Generate (or restore) the chipdb and write XILINX-PARTS-INVENTORY.json.
 #
 # One chipdb file per die, chipdb-<die>.bin: the himbaechel xilinx uarch
 # reads the same file for every part (package, speed grade) of a die. Each
@@ -46,7 +46,7 @@ on:
         description: "How the bins were obtained in this run: generated | restored-from-cache (recorded in every package's BUILD-INFO)"
         value: ${{ jobs.chipdb.outputs.mode }}
       parts_index:
-        description: "Filename of the XILINX-PARTS-INDEX document in the parts-index artifact"
+        description: "Filename of the XILINX-PARTS-INVENTORY document in the parts-index artifact"
         value: ${{ jobs.chipdb.outputs.parts_index }}
 
 jobs:
@@ -168,7 +168,7 @@ jobs:
           PYEOF
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Write the XILINX-PARTS-INDEX document
+      - name: Write the XILINX-PARTS-INVENTORY document
         id: index
         run: |
           rm -rf parts-index
@@ -178,11 +178,11 @@ jobs:
             dist/share/nextpnr/external/prjxray-db
           echo "index written in $((SECONDS - START))s"
           # The published index carries the same name as the file inside
-          # every package, XILINX-PARTS-INDEX.json: the release it belongs
-          # to is written inside it, so its name does not repeat the date
-          # (PARTS-INDEX.json before the apio#1002 rename). No per-die
-          # asset is published next to it.
-          INDEX="XILINX-PARTS-INDEX.json"
+          # every package (pack.parts_index.PACKAGE_FILE): the release it
+          # belongs to is written inside it, so its name does not repeat
+          # the date (XILINX-PARTS-INDEX.json and PARTS-INDEX.json before).
+          # No per-die asset is published next to it.
+          INDEX=$(python3 -c 'from pack.parts_index import PACKAGE_FILE; print(PACKAGE_FILE)')
           test -f "parts-index/$INDEX"
           # The writer produces the document and nothing else.
           COUNT=$(find parts-index -type f | wc -l)
@@ -190,9 +190,9 @@ jobs:
           echo "index=$INDEX" >> "$GITHUB_OUTPUT"
           python3 - "parts-index/$INDEX" >> "$GITHUB_STEP_SUMMARY" <<'PYEOF'
           import json, sys
-          from pack.parts_index import chipdb_name
+          from pack.parts_index import PACKAGE_FILE, chipdb_name
           data = json.load(open(sys.argv[1]))
-          print("### parts index (XILINX-PARTS-INDEX.json)")
+          print(f"### parts inventory ({PACKAGE_FILE})")
           print(f"schema: **{data['schema']}** · release-tag: "
                 f"`{data['release-tag']}` · date: `{data['date']}`")
           print(f"built: **{data['generated-count']}** of {data['part-count']} parts "
@@ -235,12 +235,12 @@ jobs:
           if-no-files-found: error
 
       # The index (~50 kB), for the three package jobs and for the release:
-      # each package embeds it as XILINX-PARTS-INDEX.json, and the
-      # pre-release job publishes the same bytes. No chipdb asset beside it.
-      - name: Publish the XILINX-PARTS-INDEX document for the platform jobs
+      # each package embeds it under the same name, and the pre-release
+      # job publishes the same bytes. No chipdb asset beside it.
+      - name: Publish the XILINX-PARTS-INVENTORY document for the platform jobs
         uses: actions/upload-artifact@v7
         with:
           name: parts-index
-          path: parts-index/XILINX-PARTS-INDEX.json
+          path: parts-index/${{ steps.index.outputs.index }}
           retention-days: 7
           if-no-files-found: error

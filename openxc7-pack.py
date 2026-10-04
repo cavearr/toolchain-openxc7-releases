@@ -43,7 +43,7 @@ CHIPDB_ONLY = "--chipdb-only" in sys.argv[1:]
 # -- The chipdb directory ships a README.txt and no bins. That tree is not a release
 # -- package. The release pack is the default: the bins are generated, or
 # -- seeded from OPENXC7_CHIPDB_SEED (what CI points at the chipdb job),
-# -- and travel inside the tarball next to XILINX-PARTS-INDEX.json.
+# -- and travel inside the tarball next to XILINX-PARTS-INVENTORY.json.
 NO_CHIPDB = ("--no-chipdb" in sys.argv[1:]
              or os.environ.get("OPENXC7_NO_CHIPDB") == "1")
 if NO_CHIPDB and CHIPDB_ONLY:

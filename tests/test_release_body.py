@@ -161,9 +161,11 @@ class ComposedBodyTests(unittest.TestCase):
         for asset in ("openxc7-toolchain-linux-x86-64-20260930.tgz",
                       "openxc7-toolchain-darwin-arm64-20260930.tgz",
                       "openxc7-toolchain-windows-amd64-20260930.tgz",
-                      "XILINX-PARTS-INDEX.json", "BUILD-INFO.json",
+                      "XILINX-PARTS-INVENTORY.json", "BUILD-INFO.json",
                       "SHA256SUMS"):
             self.assertIn(f"| `{asset}` |", body)
+        # The name the document had before the rename is not the asset.
+        self.assertNotIn("XILINX-PARTS-INDEX", body)
 
     def test_the_manual_install_has_no_chipdb_option(self):
         """The engine finds its chipdb from --device; the index names none."""

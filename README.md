@@ -38,7 +38,7 @@ One tarball per platform, `openxc7-toolchain-<platform>-<YYYYMMDD>.tgz`:
 | `xc7pll` | this repository | PLL parameter calculator (PLLE2_BASE): a ready-to-instantiate Verilog module, or the table with `--report` |
 | `share/nextpnr/himbaechel/xilinx/` | built here | The device databases nextpnr reads, where it looks for them: one `chipdb-<die>.bin` per die, plus the identity stamp `chipdb-id.txt` |
 | `share/nextpnr/external/prjxray-db` | [openXC7/prjxray-db](https://github.com/openXC7/prjxray-db) | Part data (`part.yaml`, `package_pins.csv`, …) and the segbits `fasm2frames` writes; every chipdb is generated from it |
-| `XILINX-PARTS-INDEX.json` | built here | Every part the database supports, and which of them this release built |
+| `XILINX-PARTS-INVENTORY.json` | built here | Every part the database supports, and which of them this release built |
 | `BUILD-INFO.json` | built here | What this package is and how it was built: revisions, the yosys it was validated with, chipdb identity, commit and run |
 
 | Platform | Built on | Notes |
@@ -72,7 +72,7 @@ Zynq support is **PL only**: the toolchain produces the fabric bitstream
 (loaded over JTAG); the ARM PS boots on its own. Kintex-7 is work in
 progress upstream. `chipdb-parts.json` is the single source of truth for
 this list: the packer, the Windows build and the CI assertions all read it.
-The parts index of a release counts what that gives today: 202 parts
+The parts inventory of a release counts what that gives today: 202 parts
 (device, package and speed grade) supported by the packaged database, 122
 of them built, over 10 chipdb files.
 
@@ -134,9 +134,9 @@ xc7frames2bit --part_file $DB/xc7a35tcsg324-1/part.yaml \
 computes PLL parameters: `xc7pll -i 100 -o 25` prints a Verilog module,
 `--report` the table.
 
-### The parts index
+### The parts inventory
 
-`XILINX-PARTS-INDEX.json` sits at the root of every package and is
+`XILINX-PARTS-INVENTORY.json` sits at the root of every package and is
 published with each release under the same name. It is keyed by the full
 part (`xc7a200tfbg484-3`: device, package, speed grade); each entry gives
 its `family`, `base-part` and `speed`, whether this release built it
@@ -144,16 +144,20 @@ its `family`, `base-part` and `speed`, whether this release built it
 packaged database but not built: "not built" rather than "unknown part"
 (this includes the speed grades the engine's `--device` pattern rejects,
 such as `xc7s50csga324-1IL`). Which chipdb file serves a part is the
-engine's business and the index does not say. The top level carries the
+engine's business and the inventory does not say. The top level carries the
 `chipdb-id` and the counts. Its `schema` number is the contract with a
 reader: schema 8 is today's (the xilinx uarch installed as `nextpnr-xilinx`,
 one chipdb file per die inside the package). Since the chipdb lives in the
-engine's share directory, `share/nextpnr/himbaechel/xilinx/`, the index
+engine's share directory, `share/nextpnr/himbaechel/xilinx/`, the inventory
 names no file and the command line has no `--chipdb`; packages up to
-2026-10-01 kept the bins in `chipdb/`, named each file in the index and
+2026-10-01 kept the bins in `chipdb/`, named each file in it and
 passed it with `--chipdb`, under the same number. Any other change to its
 keys is a new schema. `pack/parts_index.py` is the only code that writes
 it and the validator every reader here goes through.
+
+Packages and releases published before the rename carry the same document,
+same content, as `XILINX-PARTS-INDEX.json`; the scripts here still read
+that name and say it is the legacy one.
 
 ## Building from source
 
@@ -192,7 +196,7 @@ reused:
 | `OPENXC7_CHIPDB_JOBS` | Dies generated at once (default 1) |
 | `OPENXC7_CHIPDB_MEM_GB` | Memory budget of those jobs (default 14: `xc7z045` and `xc7z100` never run together) |
 | `OPENXC7_NO_CHIPDB` | `1` packs a local tools-only tree (same as `--no-chipdb`) |
-| `OPENXC7_PARTS_INDEX` | The document to embed as `XILINX-PARTS-INDEX.json` |
+| `OPENXC7_PARTS_INDEX` | The document to embed as `XILINX-PARTS-INVENTORY.json` |
 | `OPENXC7_BUILD_INFO` | The `BUILD-INFO.json` to embed (`scripts/build-info.sh`) |
 
 > **Caveat:** when you change a toolchain revision, remove `dist/` before
@@ -213,8 +217,8 @@ nix build .#packages.x86_64-linux.openxc7-windows-amd64-tools
 ```
 
 The result is a **tools-only tree** without the chipdb. CI copies in the bins
-and `chipdb-id.txt` from the single `chipdb.yml` job, embeds the parts index
-that job wrote, writes `BUILD-INFO.json` and makes the tarball. To
+and `chipdb-id.txt` from the single `chipdb.yml` job, embeds the parts
+inventory that job wrote, writes `BUILD-INFO.json` and makes the tarball. To
 reproduce that assembly locally:
 
 ```bash
@@ -222,7 +226,7 @@ cp -aL result package-win && chmod -R u+w package-win
 CHIPDB=package-win/share/nextpnr/himbaechel/xilinx
 mkdir -p $CHIPDB
 cp /path/to/chipdb-bins/*.bin /path/to/chipdb-bins/chipdb-id.txt $CHIPDB/
-cp /path/to/XILINX-PARTS-INDEX.json package-win/XILINX-PARTS-INDEX.json
+cp /path/to/XILINX-PARTS-INVENTORY.json package-win/XILINX-PARTS-INVENTORY.json
 CHIPDB_SOURCE=restored-from-cache CHIPDB_ID="$(cat $CHIPDB/chipdb-id.txt)" \
   bash scripts/build-info.sh windows-amd64 YYYY-MM-DD \
   openxc7-toolchain-windows-amd64-YYYYMMDD.tgz package-win/BUILD-INFO.json
@@ -334,7 +338,7 @@ To bump yosys:
 | `test.yaml` | Per commit: compile nextpnr-xilinx, prjxray and fasm on linux and macos, nextpnr-xilinx and prjxray on windows-cross, plus the static gates |
 | `build-pre-release.yaml` | Daily (and on dispatch): the chipdb once, the three platforms in parallel, then the release |
 | `build-upstream-nightly.yaml` | Daily at 02:00 UTC (and on dispatch): the same graph over the HEAD of every openXC7 repository, L2 in report mode, then the `upstream-<date>` pre-release |
-| `chipdb.yml` | Generates or restores the chipdb, one file per die, three at a time under a memory budget; writes the identity stamp and the parts index |
+| `chipdb.yml` | Generates or restores the chipdb, one file per die, three at a time under a memory budget; writes the identity stamp and the parts inventory |
 | `linux-package.yml`, `darwin-package.yml`, `windows-package.yml` | Build one platform's package with those bins inside, then L1 and L2 (windows under wine) |
 | `make-pre-release-stable.yaml` | By hand: re-verifies a release (`scripts/asset-check.sh --full`) and marks it stable; `latest` on request |
 
@@ -345,7 +349,7 @@ of any branch is a dispatch of it on that branch.
 
 **Dated nightly (the stable line).** Every day `build-pre-release` publishes a **pre-release** whose
 tag is the UTC date (`2026-09-30`), only after every platform is green. It
-carries six assets: the three tarballs, `XILINX-PARTS-INDEX.json`,
+carries six assets: the three tarballs, `XILINX-PARTS-INVENTORY.json`,
 `BUILD-INFO.json` (what the three packages agree on, plus each one's file
 name and build time) and `SHA256SUMS` over the other five. The naming rule
 is the whole contract with a consumer: tag `YYYY-MM-DD` → asset

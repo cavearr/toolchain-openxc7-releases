@@ -5,7 +5,7 @@
 # on its own native runner (windows is cross-built from linux; nixpkgs cannot
 # cross Linux<->macOS, and Nix does not run on Windows):
 #
-#   chipdb.yml           ubuntu-22.04   bins + XILINX-PARTS-INDEX
+#   chipdb.yml           ubuntu-22.04   bins + XILINX-PARTS-INVENTORY
 #   linux-package.yml    ubuntu-22.04   native   (seeds the bins into the package)
 #   darwin-package.yml   macos-14        native   (seeds the bins into the package)
 #   windows-package.yml  ubuntu-22.04   cross    (copies the bins into the package; wine)
@@ -13,7 +13,7 @@
 # There is ONE chipdb source: the bins that job generates. Each package
 # ships them in share/nextpnr/himbaechel/xilinx/, where the engine
 # looks for them, and embeds that job's
-# XILINX-PARTS-INDEX.json. The release publishes the three tarballs, that
+# XILINX-PARTS-INVENTORY.json. The release publishes the three tarballs, that
 # index, BUILD-INFO.json and SHA256SUMS — no per-die chipdb asset. Each
 # platform carries its own gate. The platform workflows are
 # workflow_call-only, so this is the ONE entry point: a validated package
@@ -120,7 +120,7 @@ jobs:
           just-check: "true"
 
   # The chipdb is generated ONCE (platform-independent bins, revision-keyed
-  # cache). The same job writes the XILINX-PARTS-INDEX document every
+  # cache). The same job writes the XILINX-PARTS-INVENTORY document every
   # package embeds. The bins travel inside the packages.
   chipdb:
     needs: prepare
@@ -215,7 +215,7 @@ jobs:
             openxc7-toolchain-*.tgz
             SHA256SUMS
             BUILD-INFO.json
-            XILINX-PARTS-INDEX.json
+            XILINX-PARTS-INVENTORY.json
 
       # Close the loop: re-resolve every asset by the tag->date->name rule
       # against what GitHub actually serves, and require the published

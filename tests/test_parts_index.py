@@ -1,4 +1,4 @@
-"""Tests for XILINX-PARTS-INDEX.json: packaging it and validating it."""
+"""Tests for XILINX-PARTS-INVENTORY.json: packaging it and validating it."""
 
 import io
 import json
@@ -11,11 +11,13 @@ from unittest import mock
 
 from pack.assemble import write_env
 from pack.chipdb import write_placeholder
-from pack.parts_index import (CHIPDB_SUBDIR, ENTRY_KEYS, INDEX_ASSET, NOTE,
-                              PACKAGE_FILE, SCHEMA, STAMP_FILE, asset_name,
-                              chipdb_name, chipdb_subdir, engine_accepts,
-                              names_chipdb_files, package_schema,
-                              previous_index_asset_names, read_package_schema,
+from pack.parts_index import (CHIPDB_SUBDIR, ENTRY_KEYS, INDEX_ASSET,
+                              LEGACY_PACKAGE_FILE, NOTE, PACKAGE_FILE, SCHEMA,
+                              STAMP_FILE, asset_name, chipdb_name,
+                              chipdb_subdir, engine_accepts, is_legacy_name,
+                              names_chipdb_files, package_index_file,
+                              package_schema, previous_index_asset_names,
+                              read_package_index, read_package_schema,
                               validate_document, validate_package_info)
 
 BASE = "xc7a35tcpg236"
@@ -450,25 +452,49 @@ class PartsIndexTests(unittest.TestCase):
         """No date in the name: the document names its own release.
 
         Publishing it under the same fixed name it has inside every
-        package (XILINX-PARTS-INDEX.json since the apio#1002 rename,
-        PARTS-INDEX.json under apio#990) is what lets a reader ask for
-        the index of a release without deriving a date first.
+        package (XILINX-PARTS-INVENTORY.json; XILINX-PARTS-INDEX.json from
+        apio#1002, PARTS-INDEX.json under apio#990) is what lets a reader
+        ask for the document of a release without deriving a date first.
         """
-        self.assertEqual(INDEX_ASSET, "XILINX-PARTS-INDEX.json")
+        self.assertEqual(INDEX_ASSET, "XILINX-PARTS-INVENTORY.json")
         self.assertEqual(INDEX_ASSET, PACKAGE_FILE)
+        self.assertEqual(LEGACY_PACKAGE_FILE, "XILINX-PARTS-INDEX.json")
 
     def test_the_previous_asset_names_are_still_resolvable(self):
-        """Releases published before the apio#1002 rename are still
-        installed from: a reader must be able to name those files too.
+        """Releases published under an earlier name are still installed
+        from: a reader must be able to name those files too.
 
-        Newest first: PARTS-INDEX.json (apio#990, releases up to the
-        rename), then the dated name every release up to 2026-08-31 used.
+        Newest first: XILINX-PARTS-INDEX.json (apio#1002, releases up to
+        this rename), PARTS-INDEX.json (apio#990), then the dated name
+        every release up to 2026-08-31 used.
         """
         self.assertEqual(previous_index_asset_names("20260827"),
-                         ["PARTS-INDEX.json",
+                         ["XILINX-PARTS-INDEX.json", "PARTS-INDEX.json",
                           "apio-xilinx-parts-index-20260827.json"])
         with self.assertRaises(ValueError):
             previous_index_asset_names("2026-08-27")
+
+    def test_a_package_tree_is_read_under_either_name(self):
+        """A package published before the rename carries the document as
+        LEGACY_PACKAGE_FILE: the reader opens it and says which it found."""
+        self.assertIsNone(package_index_file(self.root))
+        self.assertIsNone(read_package_index(self.root))
+        _, _, info = self.make_die_index()
+        legacy = self.root / LEGACY_PACKAGE_FILE
+        legacy.write_text(json.dumps(info), encoding="utf-8")
+        self.assertEqual(package_index_file(self.root), legacy)
+        self.assertTrue(is_legacy_name(legacy))
+        self.assertEqual(read_package_index(self.root), info)
+        self.assertEqual(read_package_schema(self.root), (SCHEMA, {}))
+
+    def test_the_current_name_wins_over_the_legacy_one(self):
+        _, _, info = self.make_die_index()
+        (self.root / LEGACY_PACKAGE_FILE).write_text("{}", encoding="utf-8")
+        current = self.root / PACKAGE_FILE
+        current.write_text(json.dumps(info), encoding="utf-8")
+        self.assertEqual(package_index_file(self.root), current)
+        self.assertFalse(is_legacy_name(current))
+        self.assertEqual(read_package_index(self.root), info)
 
 
 if __name__ == "__main__":

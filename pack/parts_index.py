@@ -1,8 +1,9 @@
-"""XILINX-PARTS-INDEX.json: which parts a package supports and which it built.
+"""XILINX-PARTS-INVENTORY.json: which parts a package supports and which it built.
 
 Every package carries this document at its root, and the release
-publishes the same bytes under the same name. The package ships the
-chipdb files where the engine looks for them,
+publishes the same bytes under the same name (``PACKAGE_FILE``; packages
+and releases up to the rename carry it as ``LEGACY_PACKAGE_FILE``). The
+package ships the chipdb files where the engine looks for them,
 ``share/nextpnr/himbaechel/xilinx/``, so a part number is all the engine
 needs: an entry names no file.
 
@@ -103,20 +104,21 @@ NOTE = (
 # The one name the document travels under, at the root of every package
 # AND as the release asset: it says which release it belongs to inside
 # itself (release-tag), which is what a reader has to check anyway, so a
-# dated file name only repeated it less reliably. Renamed to
-# XILINX-PARTS-INDEX.json with apio#1002 (the sibling indices
-# ICE40/ECP5/GOWIN-PARTS-INDEX.json get the same shape); published as
-# PARTS-INDEX.json from apio#990 until then, like SHA256SUMS.
-# pack.chipdb_assets writes the file, and scripts/asset-check.sh fetches
-# a release by this same name.
-PACKAGE_FILE = "XILINX-PARTS-INDEX.json"
+# dated file name only repeated it less reliably. pack.chipdb_assets
+# writes the file, and scripts/asset-check.sh fetches a release by this
+# same name. Every message of this module names the document by it.
+PACKAGE_FILE = "XILINX-PARTS-INVENTORY.json"
 INDEX_ASSET = PACKAGE_FILE
 
-# The names published releases carried before the apio#1002 rename.
-# Releases published with either are still checked and installed from,
-# and apio's loader accepts every one, so the reader side keeps both:
-# the apio#990 name (releases up to the rename) and the dated name the
-# asset carried until the 2026-08-31 release.
+# The names published packages and releases carried before. A consumer
+# keeps its own parts index, with its own schema (apio#1106), so this
+# document was renamed from XILINX-PARTS-INDEX.json, the name it had
+# since apio#1002, keeping the same content. Before that it was
+# PARTS-INDEX.json (apio#990) and, as a release asset up to the
+# 2026-08-31 release, a dated name. Releases and package trees published
+# under any of them are still checked and opened, so the reader side
+# keeps them; what this module writes carries PACKAGE_FILE only.
+LEGACY_PACKAGE_FILE = "XILINX-PARTS-INDEX.json"
 PREVIOUS_PACKAGE_FILE = "PARTS-INDEX.json"
 LEGACY_INDEX_ASSET = "apio-xilinx-parts-index-{date}.json"
 
@@ -176,13 +178,15 @@ def chipdb_name(base_part: str, schema: int = SCHEMA) -> str:
 
 
 def previous_index_asset_names(date: str) -> list[str]:
-    """Names the document was published under before the apio#1002 rename.
+    """Names the document was published under before PACKAGE_FILE.
 
-    Newest first: the apio#990 name (PARTS-INDEX.json), then the dated
-    asset name of the releases up to 2026-08-31.
+    Newest first: LEGACY_PACKAGE_FILE (the releases before the rename), the
+    apio#990 name (PARTS-INDEX.json), then the dated asset name of the
+    releases up to 2026-08-31.
     """
     release_tag(date)          # rejects a date that is not YYYYMMDD
-    return [PREVIOUS_PACKAGE_FILE, LEGACY_INDEX_ASSET.format(date=date)]
+    return [LEGACY_PACKAGE_FILE, PREVIOUS_PACKAGE_FILE,
+            LEGACY_INDEX_ASSET.format(date=date)]
 
 
 def _check_entry(part: str, entry: dict, _date: str) -> None:
@@ -191,7 +195,7 @@ def _check_entry(part: str, entry: dict, _date: str) -> None:
     The date is a document-level check: an entry no longer names an asset.
     """
     if not isinstance(entry, dict):
-        raise ValueError(f"XILINX-PARTS-INDEX entry for {part} must be an object")
+        raise ValueError(f"{PACKAGE_FILE} entry for {part} must be an object")
     # The index is a contract: a key this schema does not define (the
     # chipdb file name of the chipdb/ layout, the asset fields of schema 7,
     # the engine field the schema 6 draft carried) is refused, not ignored.
@@ -200,23 +204,23 @@ def _check_entry(part: str, entry: dict, _date: str) -> None:
     if unknown:
         kind = "key" if len(unknown) == 1 else "keys"
         raise ValueError(
-            f"XILINX-PARTS-INDEX: {part} has unknown {kind} "
+            f"{PACKAGE_FILE}: {part} has unknown {kind} "
             f"{', '.join(unknown)}")
     base = entry.get("base-part")
     speed = entry.get("speed")
     if not isinstance(base, str) or not isinstance(speed, str):
         raise ValueError(
-            f"XILINX-PARTS-INDEX entry for {part} has no base-part/speed")
+            f"{PACKAGE_FILE} entry for {part} has no base-part/speed")
     if part != f"{base}-{speed}":
         raise ValueError(
-            f"XILINX-PARTS-INDEX: {part} is not {base}-{speed} (the key IS the part)")
+            f"{PACKAGE_FILE}: {part} is not {base}-{speed} (the key IS the part)")
     if entry.get("family") != family_of(base):
-        raise ValueError(f"XILINX-PARTS-INDEX entry for {part} has the wrong family")
+        raise ValueError(f"{PACKAGE_FILE} entry for {part} has the wrong family")
     if not isinstance(entry.get("generated"), bool):
-        raise ValueError(f"XILINX-PARTS-INDEX entry for {part} has no generated flag")
+        raise ValueError(f"{PACKAGE_FILE} entry for {part} has no generated flag")
     if entry["generated"] and not engine_accepts(part):
         raise ValueError(
-            f"XILINX-PARTS-INDEX: {part} is generated but the engine rejects "
+            f"{PACKAGE_FILE}: {part} is generated but the engine rejects "
             f"it as --device (Invalid device {part})")
 
 
@@ -230,33 +234,33 @@ def validate_document(info: dict, expect_tag: str | None = None) -> dict:
     """
     if info.get("schema") != SCHEMA:
         raise ValueError(
-            f"XILINX-PARTS-INDEX schema is {info.get('schema')!r}, expected {SCHEMA}")
+            f"{PACKAGE_FILE} schema is {info.get('schema')!r}, expected {SCHEMA}")
     if names_chipdb_files(info):
         raise ValueError(
-            "XILINX-PARTS-INDEX names its chipdb files: the chipdb/ layout "
+            f"{PACKAGE_FILE} names its chipdb files: the chipdb/ layout "
             "of the releases up to 2026-10-01, not the share-directory one "
             "this module emits")
     date = info.get("date")
     if not isinstance(date, str):
-        raise ValueError("XILINX-PARTS-INDEX has no date")
+        raise ValueError(f"{PACKAGE_FILE} has no date")
     try:
         expected_tag = release_tag(date)
     except ValueError as error:
-        raise ValueError(f"XILINX-PARTS-INDEX {error}") from error
+        raise ValueError(f"{PACKAGE_FILE} {error}") from error
     if info.get("release-tag") != expected_tag:
         raise ValueError(
-            f"XILINX-PARTS-INDEX release-tag {info.get('release-tag')!r} does not "
+            f"{PACKAGE_FILE} release-tag {info.get('release-tag')!r} does not "
             f"match date {date} (the asset date derives from the tag)")
     if expect_tag is not None and info["release-tag"] != expect_tag:
         raise ValueError(
-            f"XILINX-PARTS-INDEX release-tag {info['release-tag']!r} is not the "
+            f"{PACKAGE_FILE} release-tag {info['release-tag']!r} is not the "
             f"release it was published in ({expect_tag})")
     if not info.get("chipdb-id"):
-        raise ValueError("XILINX-PARTS-INDEX has no chipdb-id")
+        raise ValueError(f"{PACKAGE_FILE} has no chipdb-id")
 
     parts = info.get("parts")
     if not isinstance(parts, dict) or not parts:
-        raise ValueError("XILINX-PARTS-INDEX parts must be a non-empty object")
+        raise ValueError(f"{PACKAGE_FILE} parts must be a non-empty object")
 
     generated = {}
     for part, entry in parts.items():
@@ -270,7 +274,7 @@ def validate_document(info: dict, expect_tag: str | None = None) -> dict:
                           ("base-part-count", len(base_parts))):
         if info.get(key) != expected:
             raise ValueError(
-                f"XILINX-PARTS-INDEX {key} {info.get(key)!r} != {expected}")
+                f"{PACKAGE_FILE} {key} {info.get(key)!r} != {expected}")
     return generated
 
 
@@ -284,7 +288,7 @@ def validate_package_info(info_path: Path, chipdb: Path) -> dict:
     try:
         info = json.loads(info_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        raise ValueError(f"cannot read XILINX-PARTS-INDEX: {error}") from error
+        raise ValueError(f"cannot read {info_path}: {error}") from error
 
     generated = validate_document(info)
 
@@ -293,7 +297,7 @@ def validate_package_info(info_path: Path, chipdb: Path) -> dict:
         if stamp_path.is_file() else ""
     if stamp != info["chipdb-id"]:
         raise ValueError(
-            f"XILINX-PARTS-INDEX chipdb-id {info['chipdb-id']!r} does not match "
+            f"{PACKAGE_FILE} chipdb-id {info['chipdb-id']!r} does not match "
             f"{stamp_path} ({stamp or 'absent'})")
 
     described = {chipdb_name(entry["base-part"])
@@ -303,7 +307,7 @@ def validate_package_info(info_path: Path, chipdb: Path) -> dict:
     extra = sorted(present - described)
     if missing or extra:
         raise ValueError(
-            "XILINX-PARTS-INDEX chipdb files do not match the bins in "
+            f"{PACKAGE_FILE} chipdb files do not match the bins in "
             f"{chipdb}: missing {missing or 'none'}, "
             f"unexpected {extra or 'none'}")
     counts = {key: info[key] for key in ("part-count", "generated-count",
@@ -345,7 +349,7 @@ def package_schema(info: dict | None) -> tuple:
     schema = info.get("schema")
     if schema not in (5, 6, *PER_DIE_SCHEMAS):
         raise ValueError(
-            f"XILINX-PARTS-INDEX schema {schema!r} is not one of "
+            f"{PACKAGE_FILE} schema {schema!r} is not one of "
             f"5, 6, 7, {SCHEMA}")
     return schema, _described_files(info)
 
@@ -369,10 +373,28 @@ def chipdb_subdir(info: dict | None) -> str:
     return "chipdb" if names_chipdb_files(info) else CHIPDB_SUBDIR
 
 
+def package_index_file(package: Path) -> Path | None:
+    """Path of the document in the package tree at *package*, if it has one.
+
+    PACKAGE_FILE first; a package published before the rename carries
+    LEGACY_PACKAGE_FILE (is_legacy_name() says which one was found).
+    """
+    for name in (PACKAGE_FILE, LEGACY_PACKAGE_FILE):
+        path = Path(package) / name
+        if path.is_file():
+            return path
+    return None
+
+
+def is_legacy_name(path: Path | str) -> bool:
+    """Whether *path* is the document under a name from before PACKAGE_FILE."""
+    return Path(path).name != PACKAGE_FILE
+
+
 def read_package_index(package: Path) -> dict | None:
     """The index document of the package tree at *package*, if it has one."""
-    index = Path(package) / PACKAGE_FILE
-    if not index.is_file():
+    index = package_index_file(package)
+    if index is None:
         return None
     return json.loads(index.read_text(encoding="utf-8"))
 
@@ -391,7 +413,7 @@ def main() -> None:
         counts = validate_package_info(args.index, args.chipdb)
     except ValueError as error:
         parser.exit(1, f"error: {error}\n")
-    print(f"XILINX-PARTS-INDEX: {counts['part-count']} parts "
+    print(f"{args.index.name}: {counts['part-count']} parts "
           f"({counts['base-part-count']} base parts) of the packaged "
           f"database, {counts['generated-count']} of them built by this "
           f"release from {counts['chipdb-files']} chipdb files, which "

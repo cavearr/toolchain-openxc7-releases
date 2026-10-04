@@ -294,7 +294,7 @@ jobs:
             openxc7-toolchain-*.tgz
             SHA256SUMS
             BUILD-INFO.json
-            XILINX-PARTS-INDEX.json
+            XILINX-PARTS-INVENTORY.json
 
       - name: Verify the published assets the way a consumer will fetch them
         env:

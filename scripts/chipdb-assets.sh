@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# chipdb-assets.sh -- write XILINX-PARTS-INDEX.json from a stamped chipdb
+# chipdb-assets.sh -- write XILINX-PARTS-INVENTORY.json from a stamped chipdb
 # directory.
 #
 # The name is historical: schema 7 and earlier also built one
@@ -12,8 +12,9 @@
 #
 # The index keeps one name everywhere -- as a release asset and at the
 # root of every package -- because the release it belongs to is written
-# inside it (release-tag). Named XILINX-PARTS-INDEX.json since apio#1002
-# (PARTS-INDEX.json before it, apio#990).
+# inside it (release-tag). Named XILINX-PARTS-INVENTORY.json
+# (pack.parts_index.PACKAGE_FILE); XILINX-PARTS-INDEX.json before, from
+# apio#1002, and PARTS-INDEX.json before that (apio#990).
 #
 # Usage:
 #   scripts/chipdb-assets.sh <chipdb-dir> <out-dir> <YYYYMMDD> [prjxray-db]

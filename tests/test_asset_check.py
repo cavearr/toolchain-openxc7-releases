@@ -31,9 +31,10 @@ CHIPDB_DIR = "share/nextpnr/himbaechel/xilinx"   # where the engine looks
 STAMP = "fixture-id"
 # A name schema 7 published and a current release must not.
 ASSET = f"apio-xilinx-chipdb-xc7a50t-{DATE}.bin.tgz"
-INDEX = "XILINX-PARTS-INDEX.json"        # since the apio#1002 rename
+INDEX = "XILINX-PARTS-INVENTORY.json"    # what a release publishes now
 BUILD_INFO = "BUILD-INFO.json"           # the release-level one, apio#1009
-PREVIOUS_INDEX = "PARTS-INDEX.json"      # apio#990, up to the rename
+RENAMED_INDEX = "XILINX-PARTS-INDEX.json"   # apio#1002, up to the rename
+PREVIOUS_INDEX = "PARTS-INDEX.json"      # apio#990, up to apio#1002
 LEGACY_INDEX = f"apio-xilinx-parts-index-{DATE}.json"   # up to 2026-08-31
 BASE = f"https://github.com/{REPO_SLUG}/releases/download/{TAG}"
 BIN = b"chipdb bytes"
@@ -302,6 +303,28 @@ class AssetCheckTests(unittest.TestCase):
         self.assertIn("legacy release: no parts index under any of the names",
                       output)
         self.assertIn("asset-check: OK", output)
+
+    def test_the_index_name_before_the_rename_is_read_and_called_legacy(self):
+        """Releases up to the rename publish the same document as
+        XILINX-PARTS-INDEX.json: it is checked the same way, and the
+        report says the name is the legacy one."""
+        files = release()
+        files[f"{BASE}/{RENAMED_INDEX}"] = files.pop(f"{BASE}/{INDEX}")
+        calls = []
+        code, output = run(resum(files), "", "1", calls=calls)
+        self.assertEqual(code, 0, output)
+        self.assertIn(f"✅ {RENAMED_INDEX}", output)
+        self.assertIn(f"legacy name (now {INDEX})", output)
+        self.assertIn("match the index", output)
+        self.assertIn("asset-check: OK", output)
+        # The current name is asked for first.
+        self.assertLess(calls.index(f"{BASE}/{INDEX}"),
+                        calls.index(f"{BASE}/{RENAMED_INDEX}"))
+
+    def test_the_current_name_is_not_called_legacy(self):
+        code, output = run(release())
+        self.assertEqual(code, 0, output)
+        self.assertNotIn("legacy name", output)
 
     def test_the_previous_index_name_is_still_read(self):
         """Releases between apio#990 and the apio#1002 rename published

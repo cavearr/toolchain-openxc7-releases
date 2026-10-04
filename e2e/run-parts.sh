@@ -41,17 +41,23 @@ DB="$PKG/share/nextpnr/external/prjxray-db"
 PARTS=${E2E_PARTS:-$(python3 -c "import json;print(' '.join(p for ps in json.load(open('$REPO/chipdb-parts.json')).values() for p in ps))")}
 
 # The schema, the layout and the chipdb file of every part, from the
-# package's own XILINX-PARTS-INDEX.json: a "schema <number>" line, a
-# "names-chipdb <0|1>" line (pack.parts_index.names_chipdb_files), a
-# "chipdb-dir <dir>" line, then one "<part> <chipdb file>" line per part
+# package's own XILINX-PARTS-INVENTORY.json (XILINX-PARTS-INDEX.json in a
+# package published before the rename): an "index-file <name>" line, a
+# "schema <number>" line, a "names-chipdb <0|1>" line
+# (pack.parts_index.names_chipdb_files), a "chipdb-dir <dir>" line, then
+# one "<part> <chipdb file>" line per part
 # (the file is only passed to the engine when the index names it).
 # shellcheck disable=SC2086
 PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}" python3 -c '
 import sys
-from pack.parts_index import (chipdb_name, chipdb_subdir, names_chipdb_files,
+from pack.parts_index import (chipdb_name, chipdb_subdir, is_legacy_name,
+                              names_chipdb_files, package_index_file,
                               package_schema, read_package_index)
+found = package_index_file(sys.argv[1])
 index = read_package_index(sys.argv[1])
 schema, files = package_schema(index)
+print("index-file", found.name if found else "none",
+      "(legacy name)" if found and is_legacy_name(found) else "")
 print("schema", schema)
 print("names-chipdb", int(names_chipdb_files(index)))
 print("chipdb-dir", chipdb_subdir(index))
@@ -61,6 +67,7 @@ for part in sys.argv[2:]:
 SCHEMA_NUM=$(awk '$1 == "schema" {print $2}' parts-chipdb.txt)
 NAMES_CHIPDB=$(awk '$1 == "names-chipdb" {print $2}' parts-chipdb.txt)
 CHIPDB_REL=$(awk '$1 == "chipdb-dir" {print $2}' parts-chipdb.txt)
+echo "== parts document: $(awk '$1 == "index-file" {$1 = ""; sub(/^ /, ""); print}' parts-chipdb.txt) =="
 echo "== schema: $SCHEMA_NUM, chipdb in $CHIPDB_REL/, --chipdb on the command line: $NAMES_CHIPDB =="
 
 # part -> family, same prefix rule as pack/families.py

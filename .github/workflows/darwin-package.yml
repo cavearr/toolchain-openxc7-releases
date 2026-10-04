@@ -6,7 +6,7 @@
 # calls it after chipdb.yml. No push or dispatch trigger on purpose (packing
 # is a deliverable, not a guard; test.yaml is the per-commit guard).
 #
-# chipdb.yml owns generation, cache, identity and the XILINX-PARTS-INDEX
+# chipdb.yml owns generation, cache, identity and the XILINX-PARTS-INVENTORY
 # document. This job seeds the package from that job's bins, so the tarball
 # ships them in share/nextpnr/himbaechel/xilinx/, where the engine
 # looks for them. L1 and L2 validate that
@@ -35,7 +35,7 @@ on:
         required: true
         type: string
       parts_index:
-        description: "Filename of the XILINX-PARTS-INDEX document in the parts-index artifact"
+        description: "Filename of the XILINX-PARTS-INVENTORY document in the parts-index artifact"
         required: true
         type: string
       ref:
@@ -96,7 +96,7 @@ jobs:
           name: chipdb-bins
           path: chipdb-bins
 
-      - name: Download the XILINX-PARTS-INDEX document
+      - name: Download the XILINX-PARTS-INVENTORY document
         uses: actions/download-artifact@v8
         with:
           name: parts-index

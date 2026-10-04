@@ -36,6 +36,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
+from pack.parts_index import PACKAGE_FILE  # noqa: E402
 from pack.release_tags import split_tag  # noqa: E402
 
 PACKAGE = "openxc7-toolchain"
@@ -161,7 +162,7 @@ def body(info, per_package, main_revisions=None, reports=None):
         lines.append(f"| `{tarball}` | The toolchain for {platform}, "
                      "with every chipdb file where nextpnr-xilinx looks for it, " "`share/nextpnr/himbaechel/xilinx/` |")
     lines += [
-        "| `XILINX-PARTS-INDEX.json` | The parts index every package carries at "
+        f"| `{PACKAGE_FILE}` | The parts inventory every package carries at "
         "its root: each part of the packaged database and whether this release " "built it |",
         "| `BUILD-INFO.json` | What the three packages agree on (revisions, "
         "yosys tag, chipdb identity, commit, run), plus each package's file "
@@ -207,7 +208,7 @@ def body(info, per_package, main_revisions=None, reports=None):
         "part of that die; they only work with the packages of this same",
         "tag. They live in the package's `share/nextpnr/himbaechel/xilinx/`,",
         "where `nextpnr-xilinx` finds them from `--device` alone.",
-        "`XILINX-PARTS-INDEX.json` (schema 8) names no chipdb file; an entry",
+        f"`{PACKAGE_FILE}` (schema 8) names no chipdb file; an entry",
         "with `generated: false` is supported by the packaged prjxray",
         "database but not built by this release.",
         "",

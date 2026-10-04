@@ -84,18 +84,21 @@ def _index(names_files):
 
 
 class PackageChipdbByLayout(unittest.TestCase):
-    def open(self, root, names_files):
+    def open(self, root, names_files, name="XILINX-PARTS-INVENTORY.json"):
         (root / "libexec").mkdir(parents=True)
         (root / "libexec" / "nextpnr-xilinx").write_text("")
-        (root / "XILINX-PARTS-INDEX.json").write_text(
-            json.dumps(_index(names_files)))
+        (root / name).write_text(json.dumps(_index(names_files)))
         return Package.open(root)
 
     def test_the_chipdb_lives_where_the_layout_keeps_it(self):
         with tempfile.TemporaryDirectory() as scratch:
-            old = self.open(Path(scratch) / "old", names_files=True)
+            # The chipdb/ layout only ever shipped under the legacy name.
+            old = self.open(Path(scratch) / "old", names_files=True,
+                            name="XILINX-PARTS-INDEX.json")
             new = self.open(Path(scratch) / "new", names_files=False)
             self.assertEqual((old.schema, new.schema), (8, 8))
+            self.assertEqual(old.index_file, "XILINX-PARTS-INDEX.json")
+            self.assertEqual(new.index_file, "XILINX-PARTS-INVENTORY.json")
             self.assertTrue(old.names_chipdb)
             self.assertFalse(new.names_chipdb)
             self.assertEqual(old.chipdb("xc7a35tcsg324"),

@@ -1,8 +1,9 @@
-"""Write XILINX-PARTS-INDEX.json from a stamped chipdb directory.
+"""Write XILINX-PARTS-INVENTORY.json from a stamped chipdb directory.
 
 The document describes every part the packaged prjxray database knows
-about. It travels twice under one name, ``XILINX-PARTS-INDEX.json``: as a
-release asset and at the root of every platform package. The package
+about. It travels twice under one name, ``XILINX-PARTS-INVENTORY.json``
+(``pack.parts_index.PACKAGE_FILE``): as a release asset and at the root
+of every platform package. The package
 ships the chipdb files in the engine's share directory, so this module
 writes the index only. The per-die ``.bin.tgz`` assets
 belonged to schema 7 and earlier.
@@ -139,7 +140,7 @@ def build_index(repo: Path, chipdb: Path, output: Path, date: str,
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Write XILINX-PARTS-INDEX.json from a stamped chipdb directory.")
+        description=f"Write {INDEX_ASSET} from a stamped chipdb directory.")
     parser.add_argument("repo", type=Path)
     parser.add_argument("chipdb", type=Path)
     parser.add_argument("output", type=Path)

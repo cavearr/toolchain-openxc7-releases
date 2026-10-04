@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check that the packaged engine accepts every part the index says is built.
 
-    accept-parts.py <XILINX-PARTS-INDEX.json> [--jobs N] -- <nextpnr-xilinx command>
+    accept-parts.py <XILINX-PARTS-INVENTORY.json> [--jobs N] -- <nextpnr-xilinx command>
 
 For each part with generated=true the engine is run with ``--device <part>``
 and nothing else the chipdb would need: no ``--chipdb``, a design with an

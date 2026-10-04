@@ -7,7 +7,7 @@
 # build-pre-release.yaml).
 #
 # The .exe is the himbaechel xilinx uarch, installed as nextpnr-xilinx.exe
-# (the name apio runs; the engine is named in XILINX-PARTS-INDEX.json).
+# (the name apio runs; the engine is named in XILINX-PARTS-INVENTORY.json).
 # Metrics come from --report, so the binary is built without an embedded
 # Python interpreter: no cross CPython, no libpython, no stdlib next to the
 # exe. fasm2frames still runs under the Windows python apio already has

@@ -50,7 +50,7 @@ This directory is empty because this tree was packed with --no-chipdb.
 
 That is a local tools-only pack, not a release package. A release package
 carries the device databases here, where nextpnr-xilinx looks for them:
-one file per die, chipdb-<die>.bin. XILINX-PARTS-INDEX.json at the root
+one file per die, chipdb-<die>.bin. XILINX-PARTS-INVENTORY.json at the root
 of the package lists the parts this release built (generated=true);
 parts the packaged database supports that this release did not build are
 listed there with generated=false: supported, not built.

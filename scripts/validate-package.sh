@@ -18,7 +18,7 @@
 #
 # A release package ships its chipdb where the engine looks for it:
 # share/nextpnr/himbaechel/xilinx/ holds chipdb-<die>.bin and chipdb-id.txt
-# (one file per die), and XILINX-PARTS-INDEX.json at the root lists the
+# (one file per die), and XILINX-PARTS-INVENTORY.json at the root lists the
 # parts built from them. L1 checks that the set matches (a file for every
 # built part's die, no extra bin, stamp equal to chipdb-id), that the engine
 # accepts every built part from --device alone (no --chipdb), and then runs
@@ -29,13 +29,18 @@
 # bins the flag is ignored.
 #
 # Checks: package layout, chipdb completeness vs chipdb-parts.json (one file
-# per die for the himbaechel engine), XILINX-PARTS-INDEX.json and its
+# per die for the himbaechel engine), XILINX-PARTS-INVENTORY.json and its
 # agreement with the bins, the engine opening its chipdb for every built
 # part without --chipdb, --version == the rev recorded in
 # nix/, platform extras on darwin (ad-hoc codesign + zero residual
 # /nix/store references), and the multi-part E2E (e2e/run-parts.sh)
 # against the extracted package, whose --report JSON must carry fmax and
 # utilization (what `apio report` reads).
+#
+# A package published before the rename carries the same document as
+# XILINX-PARTS-INDEX.json: L1 reads it and says so ("legacy name"). With
+# --expect-date -- the release gate on a package being built -- only the
+# new name passes, and a package carrying both names never does.
 #
 # Requirements: yosys + python3 on PATH for the E2E (per the reproducibility
 # norm, from the required oss-cad-suite version); wine64 on PATH for --wine.
@@ -59,7 +64,7 @@ while [ $# -gt 0 ]; do
         --expect-date) EXPECT_DATE="$2"; shift ;;
         --skip-e2e) SKIP_E2E=1 ;;
         --keep) KEEP=1 ;;
-        -h|--help) sed -n '2,38p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) fail "unknown option: $1" ;;
         *) [ -z "$PKG_IN" ] && PKG_IN="$1" || fail "unexpected argument: $1" ;;
     esac
@@ -110,7 +115,7 @@ import sys
 from pack.parts_index import names_chipdb_files, read_package_index
 sys.exit(0 if names_chipdb_files(read_package_index(sys.argv[1])) else 1)
 ' "$PKG"; then
-    fail "XILINX-PARTS-INDEX.json names chipdb files: the chipdb/ layout of the releases up to 2026-10-01, not the $CHIPDB_REL/ one this branch packs"
+    fail "the parts document names chipdb files: the chipdb/ layout of the releases up to 2026-10-01, not the $CHIPDB_REL/ one this branch packs"
 fi
 if [ -z "$(find "$CHIPDB_PKG" -maxdepth 1 -name '*.bin' -print -quit 2>/dev/null)" ]; then
     TOOLS_ONLY=1
@@ -224,15 +229,34 @@ done < "$SCRATCH/parts.txt"
 NFILES=$(awk '{print $3}' "$SCRATCH/parts.txt" | sort -u | wc -l | tr -d ' ')
 ok "chipdb: all $NPARTS manifest parts present in $NFILES chipdb files (with their family dbs)"
 
-# --- XILINX-PARTS-INDEX.json, and the chipdb files it describes ----------
-INDEX="$PKG/XILINX-PARTS-INDEX.json"
-[ -f "$INDEX" ] || fail "XILINX-PARTS-INDEX.json missing from package root"
+# --- the parts document, and the chipdb files it describes -----------------
+# Its name comes from its one owner (pack.parts_index.PACKAGE_FILE); a
+# package published before the rename carries LEGACY_PACKAGE_FILE.
+INDEX_NAME=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    python3 -c 'from pack.parts_index import PACKAGE_FILE; print(PACKAGE_FILE)')
+LEGACY_NAME=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    python3 -c 'from pack.parts_index import LEGACY_PACKAGE_FILE; print(LEGACY_PACKAGE_FILE)')
+if [ -f "$PKG/$INDEX_NAME" ] && [ -e "$PKG/$LEGACY_NAME" ]; then
+    fail "both $INDEX_NAME and $LEGACY_NAME at the package root: a package carries one"
+elif [ -f "$PKG/$INDEX_NAME" ]; then
+    INDEX="$PKG/$INDEX_NAME"
+elif [ -f "$PKG/$LEGACY_NAME" ]; then
+    # The package being released (--expect-date) is written by this
+    # branch: the old name there is a packer that did not take the rename.
+    [ -z "$EXPECT_DATE" ] \
+        || fail "$LEGACY_NAME at the package root: a package built now carries $INDEX_NAME"
+    INDEX="$PKG/$LEGACY_NAME"
+    note "$LEGACY_NAME: legacy name of $INDEX_NAME (a package published before the rename)"
+else
+    fail "$INDEX_NAME missing from package root"
+fi
+INDEX_FILE=$(basename "$INDEX")
 if PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     python3 -m pack.parts_index "$INDEX" "$CHIPDB_SRC"
 then
-    ok "XILINX-PARTS-INDEX.json: valid schema, and every chipdb file matches what it records"
+    ok "$INDEX_FILE: valid schema, and every chipdb file matches what it records"
 else
-    fail "XILINX-PARTS-INDEX.json invalid"
+    fail "$INDEX_FILE invalid"
 fi
 # The index is dated with the release. If it disagreed with the package,
 # it would describe another release's chipdb (a run crossing midnight UTC
@@ -240,8 +264,8 @@ fi
 if [ -n "$EXPECT_DATE" ]; then
     INDEX_DATE=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['date'])" "$INDEX")
     [ "$INDEX_DATE" = "$EXPECT_DATE" ] \
-        || fail "XILINX-PARTS-INDEX.json is dated $INDEX_DATE, the package $EXPECT_DATE"
-    ok "XILINX-PARTS-INDEX.json dated $EXPECT_DATE, like the package"
+        || fail "$INDEX_FILE is dated $INDEX_DATE, the package $EXPECT_DATE"
+    ok "$INDEX_FILE dated $EXPECT_DATE, like the package"
 fi
 
 # --- copy the bins into a tools-only tree before the E2E --------------------

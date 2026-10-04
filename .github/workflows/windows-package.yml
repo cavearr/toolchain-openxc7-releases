@@ -1,7 +1,7 @@
 # Build + validate the Windows package. The flake produces only the tools
 # tree; this workflow copies the chipdb bins and chipdb-id.txt from the
 # chipdb.yml artifact into share/nextpnr/himbaechel/xilinx/ (where the
-# engine looks for them), embeds the XILINX-PARTS-INDEX document that job
+# engine looks for them), embeds the XILINX-PARTS-INVENTORY document that job
 # wrote, and validates the assembled tarball under Wine. The package
 # ships those bins inside it. The .exe is the
 # himbaechel xilinx uarch without an embedded Python: `apio report` reads
@@ -28,7 +28,7 @@ on:
         required: true
         type: string
       parts_index:
-        description: "Filename of the XILINX-PARTS-INDEX document in the parts-index artifact"
+        description: "Filename of the XILINX-PARTS-INVENTORY document in the parts-index artifact"
         required: true
         type: string
       ref:
@@ -77,7 +77,7 @@ jobs:
           name: chipdb-bins
           path: chipdb-bins
 
-      - name: Download the XILINX-PARTS-INDEX document
+      - name: Download the XILINX-PARTS-INVENTORY document
         uses: actions/download-artifact@v8
         with:
           name: parts-index
@@ -105,7 +105,7 @@ jobs:
           test -f result-win-tools/bin/xc7pll.cmd
           echo "tools tree shape OK; chipdb and embedded python absent"
 
-      - name: Assemble a writable package tree (chipdb + XILINX-PARTS-INDEX)
+      - name: Assemble a writable package tree (chipdb + XILINX-PARTS-INVENTORY)
         run: |
           cp -aL result-win-tools package-win
           chmod -R u+w package-win
@@ -142,11 +142,13 @@ jobs:
           echo "$ACTUAL chipdb bins copied into the package (identity $ARTIFACT_ID)"
 
           # The same index the linux and darwin packages embed, under the
-          # stable in-package name; L1 checks the packaged bins against it.
+          # in-package name (pack.parts_index.PACKAGE_FILE); L1 checks the
+          # packaged bins against it.
           INDEX="parts-index/${{ inputs.parts_index }}"
-          test -f "$INDEX" || { echo "::error::XILINX-PARTS-INDEX not in the artifact: $INDEX"; exit 1; }
-          cp "$INDEX" package-win/XILINX-PARTS-INDEX.json
-          echo "embedded $(basename "$INDEX") as XILINX-PARTS-INDEX.json"
+          NAME=$(python3 -c 'from pack.parts_index import PACKAGE_FILE; print(PACKAGE_FILE)')
+          test -f "$INDEX" || { echo "::error::$NAME not in the artifact: $INDEX"; exit 1; }
+          cp "$INDEX" "package-win/$NAME"
+          echo "embedded $(basename "$INDEX") as $NAME"
           df -h . | tail -1
 
       # Installed BEFORE the tar step: build-info.sh re-exports the

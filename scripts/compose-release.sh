@@ -5,7 +5,7 @@
 #   scripts/compose-release.sh <tag> [release-body.py options]
 #
 # Run in the directory that holds the three platform tarballs and
-# XILINX-PARTS-INDEX.json (the pre-release job of build-pre-release and of
+# XILINX-PARTS-INVENTORY.json (the pre-release job of build-pre-release and of
 # build-upstream-nightly, after downloading their artifacts). It checks
 # that every tarball carries the date of the tag, the same index bytes and
 # the bins that index names, and writes the other three things the release
@@ -30,8 +30,12 @@ export LC_ALL=C          # one collation for every listing below
 
 DATE_TAG=$(python3 -c 'import sys; from pack.release_tags import split_tag; print(split_tag(sys.argv[1])[1])' "$TAG")
 DATEID=${DATE_TAG//-/}
+# The name of the parts document, from its one owner; and the name it
+# had before, which a release composed here must not carry.
+INDEX=$(python3 -c 'from pack.parts_index import PACKAGE_FILE; print(PACKAGE_FILE)')
+LEGACY_INDEX=$(python3 -c 'from pack.parts_index import LEGACY_PACKAGE_FILE; print(LEGACY_PACKAGE_FILE)')
 
-ls -la openxc7-toolchain-*.tgz XILINX-PARTS-INDEX.json
+ls -la openxc7-toolchain-*.tgz "$INDEX"
 # every package a consumer resolves by name must carry the tag's
 # date, or it 404s at install time
 for f in openxc7-toolchain-*.tgz; do
@@ -42,10 +46,12 @@ for f in openxc7-toolchain-*.tgz; do
 done
 # The index is NOT dated: it names its own release inside
 # (release-tag), and travels under the same name it has at the
-# root of every package (XILINX-PARTS-INDEX.json since the
-# apio#1002 rename).
-test -f XILINX-PARTS-INDEX.json \
-    || { echo "::error::XILINX-PARTS-INDEX.json missing"; exit 1; }
+# root of every package ($INDEX).
+test -f "$INDEX" || { echo "::error::$INDEX missing"; exit 1; }
+if [ -e "$LEGACY_INDEX" ]; then
+    echo "::error::$LEGACY_INDEX is the name before $INDEX: it must not ride along"
+    exit 1
+fi
 # No per-die chipdb asset is published. A leftover from the
 # previous contract must not ride along.
 if compgen -G 'apio-xilinx-chipdb-*.bin.tgz' > /dev/null; then
@@ -60,7 +66,7 @@ fi
 python3 - "$DATE_TAG" <<'PYEOF'
 import json, sys, tarfile, tempfile
 from pathlib import Path
-from pack.parts_index import (CHIPDB_SUBDIR, PACKAGE_FILE,
+from pack.parts_index import (CHIPDB_SUBDIR, LEGACY_PACKAGE_FILE, PACKAGE_FILE,
                               validate_document, validate_package_info)
 tag = sys.argv[1]
 published = Path(PACKAGE_FILE)
@@ -75,6 +81,9 @@ for tarball in tarballs:
             members = []
             for member in archive.getmembers():
                 name = member.name[2:] if member.name.startswith("./") else member.name
+                if name == LEGACY_PACKAGE_FILE:
+                    sys.exit(f"::error::{tarball.name} carries {name}, the "
+                             f"name before {PACKAGE_FILE}")
                 if name == PACKAGE_FILE or name.startswith(f"{CHIPDB_SUBDIR}/"):
                     member.name = name
                     members.append(member)
@@ -142,7 +151,7 @@ PYEOF
 # HERE, in the job that uploads them, from the very bytes that
 # the upload sends — the manifest and the release cannot
 # describe different bytes.
-sha256sum openxc7-toolchain-*.tgz XILINX-PARTS-INDEX.json BUILD-INFO.json > SHA256SUMS
+sha256sum openxc7-toolchain-*.tgz "$INDEX" BUILD-INFO.json > SHA256SUMS
 cat SHA256SUMS
 # The release is six assets; SHA256SUMS lists the other five and not
 # itself. A sixth line would be a chipdb asset or a stray file,

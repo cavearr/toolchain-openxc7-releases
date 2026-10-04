@@ -4,8 +4,9 @@ Tools are taken from the package itself (its `bin/` wrappers), the same ones a
 user gets after `source start`, so the suite measures the artefact we ship and
 not whatever happens to be on PATH.
 
-A package carries ONE place-and-route engine, and its XILINX-PARTS-INDEX.json
-schema number says which. Schemas 7 and 8 are the himbaechel engine; schema 6
+A package carries ONE place-and-route engine, and the schema number of its
+XILINX-PARTS-INVENTORY.json (XILINX-PARTS-INDEX.json in a package published
+before the rename) says which. Schemas 7 and 8 are the himbaechel engine; schema 6
 and 5 are the earlier one. The number decides the command line and the
 baseline. Whether the index names its chipdb files decides where they live
 and whether the engine is given one: named, they are in chipdb/ and passed
@@ -29,7 +30,8 @@ from pathlib import Path
 from pack.families import family_of
 from pack.parts_index import (CHIPDB_SUBDIR, SCHEMA, chipdb_name,
                               chipdb_subdir, names_chipdb_files,
-                              package_schema, read_package_index)
+                              package_index_file, package_schema,
+                              read_package_index)
 
 
 def _windows_python() -> str:
@@ -55,6 +57,8 @@ class Package:
     # and go on the command line with --chipdb), and where they are.
     names_chipdb: bool = False
     chipdb_rel: str = CHIPDB_SUBDIR
+    # The name the parts document has at the package root ("" if none).
+    index_file: str = ""
     _tmp: object = field(default=None, repr=False)
 
     @classmethod
@@ -75,6 +79,8 @@ class Package:
             raise SystemExit(str(error))
         names_chipdb = names_chipdb_files(index)
         subdir = chipdb_subdir(index)
+        found = package_index_file(root)
+        index_file = found.name if found else ""
 
         # A release package ships its chipdb. A local --no-chipdb tree does
         # not: given a directory of bins, copy them into an extracted tree
@@ -93,7 +99,7 @@ class Package:
                        winpy=_windows_python(), chipdb_dir=chipdb_dir,
                        schema=schema, chipdb_files=chipdb_files,
                        names_chipdb=names_chipdb, chipdb_rel=subdir,
-                       _tmp=tmp)
+                       index_file=index_file, _tmp=tmp)
         if not (root / "libexec" / "nextpnr-xilinx").exists():
             raise SystemExit(f"unrecognised package layout at {root}")
 
@@ -103,7 +109,8 @@ class Package:
             raise SystemExit(f"unsupported host: {host}")
         return cls(root=root, platform=platform, chipdb_dir=chipdb_dir,
                    schema=schema, chipdb_files=chipdb_files,
-                   names_chipdb=names_chipdb, chipdb_rel=subdir, _tmp=tmp)
+                   names_chipdb=names_chipdb, chipdb_rel=subdir,
+                   index_file=index_file, _tmp=tmp)
 
     def tool(self, name: str) -> str:
         candidate = self.root / "bin" / name
