@@ -88,6 +88,15 @@ class TestDieOf(unittest.TestCase):
         self.assertEqual(device_of("xc7s100fgga676"), "xc7s100")
         self.assertEqual(device_of("xc7z020clg400"), "xc7z020")
 
+    def test_the_s_of_a_zynq_device_is_not_the_s_of_a_package(self):
+        """xc7z007s, xc7z012s and xc7z014s are devices with an 's'
+        (prjxray-db zynq7/mapping/devices.yaml, the engine's device
+        pattern); in xc7z030sbg485 the s starts the package."""
+        self.assertEqual(device_of("xc7z007sclg225"), "xc7z007s")
+        self.assertEqual(device_of("xc7z012sclg485"), "xc7z012s")
+        self.assertEqual(device_of("xc7z014sclg484"), "xc7z014s")
+        self.assertEqual(device_of("xc7z030sbg485"), "xc7z030")
+
     def test_a_name_without_a_device_raises(self):
         for part in ("xc6slx9", "xczu3eg", "ice40hx8k", "xc7a", ""):
             with self.subTest(part=part):

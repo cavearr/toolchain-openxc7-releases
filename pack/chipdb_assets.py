@@ -20,7 +20,8 @@ from pathlib import Path
 
 from .families import die_of, family_of
 from .parts_index import (ENTRY_KEYS, INDEX_ASSET, NOTE, SCHEMA,
-                          chipdb_name, engine_accepts, release_tag)
+                          chipdb_name, engine_accepts, part_num,
+                          release_tag)
 
 # Name of the identity stamp inside a chipdb directory (pack.chipdb owns it;
 # repeated here to keep this module importable on its own).
@@ -113,6 +114,7 @@ def build_index(repo: Path, chipdb: Path, output: Path, date: str,
         entry = dict(meta)
         entry["generated"] = (meta["base-part"] in manifest_base_parts
                               and engine_accepts(part))
+        entry["part-num"] = part_num(part)
         parts_doc[part] = {key: entry[key] for key in ENTRY_KEYS}
 
     info = {

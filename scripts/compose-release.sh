@@ -95,8 +95,9 @@ for tarball in tarballs:
             sys.exit(f"::error::{tarball.name} carries a different {PACKAGE_FILE}")
         try:
             info = json.loads(raw)
-            validate_document(info, expect_tag=tag)
-            counts = validate_package_info(index, root / CHIPDB_SUBDIR)
+            validate_document(info, expect_tag=tag, require_part_num=True)
+            counts = validate_package_info(index, root / CHIPDB_SUBDIR,
+                                           require_part_num=True)
         except ValueError as error:
             sys.exit(f"::error::{tarball.name}: {error}")
     print(f"{tarball.name}: {counts['chipdb-files']} chipdb files, "

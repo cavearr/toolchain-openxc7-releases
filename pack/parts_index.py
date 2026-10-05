@@ -15,6 +15,9 @@ the engine (apio#947): one file serves every part of a die -- every
 package and speed grade of the device, and of the devices that are the
 same die (an xc7a35t is an xc7a50t).
 
+Each entry also carries ``part-num``, the part in the form of apio's fpga
+definitions (``XC7A35T-1CSG324``), for information only (apio#1106).
+
 This module owns the format (schema, note, validation):
 ``pack.chipdb_assets`` writes the document, L1 checks a package against
 the bins it describes, and scripts/asset-check.sh checks a published
@@ -39,7 +42,7 @@ import json
 import re
 from pathlib import Path
 
-from .families import die_of, family_of
+from .families import device_of, die_of, family_of
 
 SCHEMA = 8
 
@@ -78,7 +81,10 @@ def engine_accepts(part: str) -> bool:
 
 # An entry has the four keys every part has; whether the part is built is
 # the ``generated`` flag, and nothing else about the chipdb is recorded.
-ENTRY_KEYS = ("family", "base-part", "speed", "generated")
+# ``part-num`` is informational (apio#1106): the part in the form of
+# apio's fpga definitions. Documents written before it carry the first
+# four only, and a reader must not need it.
+ENTRY_KEYS = ("family", "base-part", "speed", "generated", "part-num")
 
 # On-disk name of the identity stamp, next to the bins. pack.chipdb writes
 # it; repeated here so this module does not import the generator.
@@ -189,6 +195,26 @@ def previous_index_asset_names(date: str) -> list[str]:
             LEGACY_INDEX_ASSET.format(date=date)]
 
 
+def part_num(part: str) -> str:
+    """The part in the form of apio's fpga definitions, upper case.
+
+    Device, a dash, the speed grade and the package:
+    xc7a35tcsg324-1 -> XC7A35T-1CSG324, xc7a200tfbv484-2L ->
+    XC7A200T-2LFBV484, xc7z007sclg225-1 -> XC7Z007S-1CLG225. The
+    temperature letter of the ordering code (the C, E, I in
+    XC7A200T-2FBG676C) is not in the part name, so it is not here. The
+    device is split off by ``pack.families.device_of``; the rest of the
+    base part is the package. For information only: the key of an entry
+    stays the part, the name the tools read.
+    """
+    if "-" not in part:
+        raise ValueError(f"part has no speed grade: '{part}'")
+    base_part, speed = part.rsplit("-", 1)
+    device = device_of(base_part)
+    package = base_part[len(device):]
+    return f"{device}-{speed}{package}".upper()
+
+
 def _check_entry(part: str, entry: dict, _date: str) -> None:
     """Check one part entry on its own.
 
@@ -218,14 +244,24 @@ def _check_entry(part: str, entry: dict, _date: str) -> None:
         raise ValueError(f"{PACKAGE_FILE} entry for {part} has the wrong family")
     if not isinstance(entry.get("generated"), bool):
         raise ValueError(f"{PACKAGE_FILE} entry for {part} has no generated flag")
+    if "part-num" in entry and entry["part-num"] != part_num(part):
+        raise ValueError(
+            f"{PACKAGE_FILE}: {part} has part-num {entry['part-num']!r}, "
+            f"expected {part_num(part)!r}")
     if entry["generated"] and not engine_accepts(part):
         raise ValueError(
             f"{PACKAGE_FILE}: {part} is generated but the engine rejects "
             f"it as --device (Invalid device {part})")
 
 
-def validate_document(info: dict, expect_tag: str | None = None) -> dict:
+def validate_document(info: dict, expect_tag: str | None = None,
+                      require_part_num: bool = False) -> dict:
     """Check the document on its own; return the generated entries by part.
+
+    ``part-num`` is checked wherever an entry carries it. A document
+    published before the key existed has none and stays valid;
+    *require_part_num* is the gate on a document written now: every
+    entry carries it.
 
     *expect_tag* is the release the document was actually found in. A
     document naming another tag describes a different package than the one
@@ -265,6 +301,8 @@ def validate_document(info: dict, expect_tag: str | None = None) -> dict:
     generated = {}
     for part, entry in parts.items():
         _check_entry(part, entry, date)
+        if require_part_num and "part-num" not in entry:
+            raise ValueError(f"{PACKAGE_FILE}: {part} has no part-num")
         if entry["generated"]:
             generated[part] = entry
 
@@ -278,7 +316,8 @@ def validate_document(info: dict, expect_tag: str | None = None) -> dict:
     return generated
 
 
-def validate_package_info(info_path: Path, chipdb: Path) -> dict:
+def validate_package_info(info_path: Path, chipdb: Path,
+                          require_part_num: bool = False) -> dict:
     """Validate the document and the chipdb files it describes.
 
     *chipdb* is the directory that holds exactly the chipdb files of the
@@ -290,7 +329,7 @@ def validate_package_info(info_path: Path, chipdb: Path) -> dict:
     except (OSError, json.JSONDecodeError) as error:
         raise ValueError(f"cannot read {info_path}: {error}") from error
 
-    generated = validate_document(info)
+    generated = validate_document(info, require_part_num=require_part_num)
 
     stamp_path = chipdb / STAMP_FILE
     stamp = stamp_path.read_text(encoding="utf-8").strip() \
@@ -408,9 +447,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("index", type=Path)
     parser.add_argument("chipdb", type=Path)
+    parser.add_argument("--require-part-num", action="store_true",
+                        help="refuse an entry without part-num (a document "
+                             "written now, not a published one)")
     args = parser.parse_args()
     try:
-        counts = validate_package_info(args.index, args.chipdb)
+        counts = validate_package_info(args.index, args.chipdb,
+                                       args.require_part_num)
     except ValueError as error:
         parser.exit(1, f"error: {error}\n")
     print(f"{args.index.name}: {counts['part-count']} parts "

@@ -251,8 +251,12 @@ else
     fail "$INDEX_NAME missing from package root"
 fi
 INDEX_FILE=$(basename "$INDEX")
+# A package built now (--expect-date) carries part-num in every entry;
+# a published one may predate the key.
+REQUIRE_PART_NUM=()
+[ -z "$EXPECT_DATE" ] || REQUIRE_PART_NUM=(--require-part-num)
 if PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
-    python3 -m pack.parts_index "$INDEX" "$CHIPDB_SRC"
+    python3 -m pack.parts_index "$INDEX" "$CHIPDB_SRC" ${REQUIRE_PART_NUM[@]+"${REQUIRE_PART_NUM[@]}"}
 then
     ok "$INDEX_FILE: valid schema, and every chipdb file matches what it records"
 else

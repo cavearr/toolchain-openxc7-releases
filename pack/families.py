@@ -15,8 +15,14 @@ CHIPDB_PARTS_FILE = "chipdb-parts.json"
 
 # -- The device at the start of a 7-series part name: xc7a100t, xc7vx485t,
 # -- xc7s25, xc7z010. Artix, Kintex and Virtex devices end in 't';
-# -- Spartan-7 and Zynq-7000 ones do not.
-_DEVICE = re.compile(r"^(xc7(?:a|k|vx|v)\d+t|xc7[sz]\d+)")
+# -- Spartan-7 and Zynq-7000 ones do not, except the three Zynq devices
+# -- whose name carries an 's' (xc7z007s, xc7z012s, xc7z014s: the engine's
+# -- device pattern lists them the same way, and prjxray-db's
+# -- zynq7/mapping/devices.yaml has xc7z007s). They go first: in
+# -- xc7z007sclg225 the 's' is the device's, in xc7z030sbg485 it is the
+# -- package's.
+_DEVICE = re.compile(
+    r"^(xc7z007s|xc7z012s|xc7z014s|xc7(?:a|k|vx|v)\d+t|xc7[sz]\d+)")
 
 # -- Devices that are another device's die, as prjxray-db's
 # -- <family>/mapping/devices.yaml maps them to a fabric: an xc7a35t is an
@@ -51,7 +57,10 @@ def family_of(part: str) -> str:
 
 
 def device_of(part: str) -> str:
-    """Device of a 7-series part: xc7a35tcsg324 -> xc7a35t."""
+    """Device of a 7-series part: xc7a35tcsg324 -> xc7a35t.
+
+    xc7z007sclg225 -> xc7z007s, but xc7z030sbg485 -> xc7z030.
+    """
     match = _DEVICE.match(part)
     if not match:
         raise ValueError(f"no 7-series device in part name '{part}'")

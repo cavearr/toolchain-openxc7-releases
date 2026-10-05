@@ -15,7 +15,7 @@ from pack.parts_index import (CHIPDB_SUBDIR, ENTRY_KEYS, INDEX_ASSET,
                               LEGACY_PACKAGE_FILE, NOTE, PACKAGE_FILE, SCHEMA,
                               STAMP_FILE, asset_name, chipdb_name,
                               chipdb_subdir, engine_accepts, is_legacy_name,
-                              names_chipdb_files, package_index_file,
+                              names_chipdb_files, package_index_file, part_num,
                               package_schema, previous_index_asset_names,
                               read_package_index, read_package_schema,
                               validate_document, validate_package_info)
@@ -196,7 +196,9 @@ class PartsIndexTests(unittest.TestCase):
         self.assertEqual(info["schema"], SCHEMA)
         self.assertEqual(SCHEMA, 8)
         for entry in info["parts"].values():
-            self.assertEqual(list(entry), list(ENTRY_KEYS))
+            # part-num is informational: a document without it (every one
+            # published before it existed) is still valid.
+            self.assertEqual(list(entry), list(ENTRY_KEYS[:-1]))
             self.assertNotIn("chipdb", entry)
             self.assertFalse(
                 {"chipdb-size", "chipdb-sha256", "asset", "asset-size",
@@ -499,3 +501,94 @@ class PartsIndexTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+APIO_PART_NUMS = (Path(__file__).resolve().parent / "data" /
+                  "apio-xilinx-part-nums.json")
+
+
+class PartNumTests(unittest.TestCase):
+    """part-num: the part in the form of apio's fpga definitions (apio#1106)."""
+
+    def test_the_cases_of_the_request(self):
+        for part, expected in (
+                ("xc7a35tcsg324-1", "XC7A35T-1CSG324"),
+                ("xc7a200tfbv484-2L", "XC7A200T-2LFBV484"),
+                ("xc7s50csga324-1IL", "XC7S50-1ILCSGA324"),
+                ("xc7z007sclg225-1", "XC7Z007S-1CLG225"),
+                ("xc7vx485tffg1761-2", "XC7VX485T-2FFG1761"),
+                ("xc7k325tffg900-1Q", "XC7K325T-1QFFG900")):
+            with self.subTest(part=part):
+                self.assertEqual(part_num(part), expected)
+
+    def test_the_s_of_a_zynq_device_or_of_its_package(self):
+        """xc7z007s: the s is the device's. xc7z030sbg485: the package's."""
+        self.assertEqual(part_num("xc7z007sclg400-2"), "XC7Z007S-2CLG400")
+        self.assertEqual(part_num("xc7z030sbg485-1"), "XC7Z030-1SBG485")
+        self.assertEqual(part_num("xc7z012sclg485-1"), "XC7Z012S-1CLG485")
+        self.assertEqual(part_num("xc7z014sclg484-1"), "XC7Z014S-1CLG484")
+
+    def test_a_part_without_a_speed_grade_or_a_device_raises(self):
+        for part in ("xc7a35tcsg324", "xc6slx9csg324-2"):
+            with self.subTest(part=part):
+                with self.assertRaises(ValueError):
+                    part_num(part)
+
+    def test_every_part_of_the_published_database(self):
+        """The 202 parts of the 2026-09-15 document: all different, upper
+        case, the device then the grade then the package."""
+        parts = json.loads(PUBLISHED_SCHEMA_5.read_text(
+            encoding="utf-8"))["parts"]
+        self.assertEqual(len(parts), 202)
+        numbers = {part: part_num(part) for part in parts}
+        self.assertEqual(len(set(numbers.values())), 202)
+        for part, number in numbers.items():
+            base_part, speed = part.rsplit("-", 1)
+            device = number.split("-")[0]
+            with self.subTest(part=part):
+                self.assertEqual(number, number.upper())
+                self.assertTrue(base_part.upper().startswith(device))
+                self.assertEqual(number, f"{device}-{speed}"
+                                 f"{base_part[len(device):]}".upper())
+
+    def test_apio_definitions_agree(self):
+        """Every Xilinx part-num of apio's fpga definitions (a copy of the
+        17 entries of fpgas.jsonc, key = part) is what the rule gives."""
+        table = json.loads(APIO_PART_NUMS.read_text(encoding="utf-8"))
+        self.assertEqual(len(table), 17)
+        for part, expected in table.items():
+            with self.subTest(part=part):
+                self.assertEqual(part_num(part), expected)
+
+    def _document(self):
+        part = "xc7a35tcsg324-1"
+        return {
+            "schema": SCHEMA, "date": "20261005", "release-tag": "2026-10-05",
+            "chipdb-id": STAMP, "part-count": 1, "generated-count": 1,
+            "base-part-count": 1, "note": "fixture",
+            "parts": {part: {"family": "artix7", "base-part": "xc7a35tcsg324",
+                             "speed": "1", "generated": True,
+                             "part-num": part_num(part)}},
+        }
+
+    def test_the_validator_accepts_the_right_part_num(self):
+        info = self._document()
+        self.assertEqual(sorted(validate_document(info, require_part_num=True)),
+                         ["xc7a35tcsg324-1"])
+
+    def test_the_validator_refuses_another_part_num(self):
+        for wrong in ("XC7A35T-1CSG325", "xc7a35t-1csg324", "", None):
+            with self.subTest(part_num=wrong):
+                info = self._document()
+                info["parts"]["xc7a35tcsg324-1"]["part-num"] = wrong
+                with self.assertRaisesRegex(
+                        ValueError, "has part-num .*expected 'XC7A35T-1CSG324'"):
+                    validate_document(info)
+
+    def test_a_document_before_the_key_is_valid_unless_one_is_required(self):
+        info = self._document()
+        del info["parts"]["xc7a35tcsg324-1"]["part-num"]
+        validate_document(info)
+        with self.assertRaisesRegex(
+                ValueError, "xc7a35tcsg324-1 has no part-num"):
+            validate_document(info, require_part_num=True)

@@ -133,15 +133,18 @@ class ChipdbAssetsTests(unittest.TestCase):
 
         entry = info["parts"][f"{part}-1"]
         self.assertEqual(list(entry), ["family", "base-part", "speed",
-                                       "generated"])
+                                       "generated", "part-num"])
+        self.assertEqual(entry["part-num"], "XC7A35T-1CPG236")
         self.assertTrue(entry["generated"])
         self.assertEqual(entry["family"], "artix7")
         self.assertEqual(entry["base-part"], part)
         self.assertEqual(entry["speed"], "1")
-        self.assertEqual(info["parts"][f"{part}-2"] | {"speed": "1"}, entry)
+        self.assertEqual(info["parts"][f"{part}-2"],
+                         entry | {"speed": "2", "part-num": "XC7A35T-2CPG236"})
         self.assertEqual(info["parts"][f"{other}-1"],
                          {"family": "artix7", "base-part": other,
-                          "speed": "1", "generated": False})
+                          "speed": "1", "generated": False,
+                          "part-num": "XC7A50T-1CSG324"})
 
     def test_every_entry_follows_entry_keys_and_validates(self):
         """Keys in ENTRY_KEYS order, generated or not, and the document
