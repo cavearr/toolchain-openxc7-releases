@@ -5,9 +5,10 @@ user gets after `source start`, so the suite measures the artefact we ship and
 not whatever happens to be on PATH.
 
 A package carries ONE place-and-route engine, and the schema number of its
-XILINX-PARTS-INVENTORY.json (XILINX-PARTS-INDEX.json in a package published
-before the rename) says which. Schemas 7 and 8 are the himbaechel engine; schema 6
-and 5 are the earlier one. The number decides the command line and the
+XILINX-PARTS-INVENTORY.json (in its chipdb directory; at the root of a
+package published before, under that name or as XILINX-PARTS-INDEX.json)
+says which. Schemas 7 and 8 are the himbaechel engine; schema 6 and 5 are
+the earlier one. The number decides the command line and the
 baseline. Whether the index names its chipdb files decides where they live
 and whether the engine is given one: named, they are in chipdb/ and passed
 with --chipdb (every package up to the 2026-10-01 release); not named, the
@@ -30,7 +31,7 @@ from pathlib import Path
 from pack.families import family_of
 from pack.parts_index import (CHIPDB_SUBDIR, SCHEMA, chipdb_name,
                               chipdb_subdir, names_chipdb_files,
-                              package_index_file, package_schema,
+                              package_index_files, package_schema,
                               read_package_index)
 
 
@@ -57,7 +58,7 @@ class Package:
     # and go on the command line with --chipdb), and where they are.
     names_chipdb: bool = False
     chipdb_rel: str = CHIPDB_SUBDIR
-    # The name the parts document has at the package root ("" if none).
+    # Where the parts document is, relative to the package root ("" if none).
     index_file: str = ""
     _tmp: object = field(default=None, repr=False)
 
@@ -79,8 +80,8 @@ class Package:
             raise SystemExit(str(error))
         names_chipdb = names_chipdb_files(index)
         subdir = chipdb_subdir(index)
-        found = package_index_file(root)
-        index_file = found.name if found else ""
+        found = package_index_files(root)
+        index_file = found[0] if found else ""
 
         # A release package ships its chipdb. A local --no-chipdb tree does
         # not: given a directory of bins, copy them into an extracted tree

@@ -18,15 +18,16 @@
 #
 # A release package ships its chipdb where the engine looks for it:
 # share/nextpnr/himbaechel/xilinx/ holds chipdb-<die>.bin and chipdb-id.txt
-# (one file per die), and XILINX-PARTS-INVENTORY.json at the root lists the
+# (one file per die), and XILINX-PARTS-INVENTORY.json next to them lists the
 # parts built from them. L1 checks that the set matches (a file for every
 # built part's die, no extra bin, stamp equal to chipdb-id), that the engine
 # accepts every built part from --device alone (no --chipdb), and then runs
 # the E2E on that tree.
 # --chipdb-dir remains for a local --no-chipdb pack, whose chipdb directory
-# holds only the placeholder: the bins are checked the same way and then
-# copied in, so the E2E still has them. When the package already ships its
-# bins the flag is ignored.
+# holds only the placeholder (and the parts document, when the pack embedded
+# one): the bins are checked the same way and then copied in, so the E2E
+# still has them; the document stays as it is. When the package already
+# ships its bins the flag is ignored.
 #
 # Checks: package layout, chipdb completeness vs chipdb-parts.json (one file
 # per die for the himbaechel engine), XILINX-PARTS-INVENTORY.json and its
@@ -37,10 +38,12 @@
 # against the extracted package, whose --report JSON must carry fmax and
 # utilization (what `apio report` reads).
 #
-# A package published before the rename carries the same document as
-# XILINX-PARTS-INDEX.json: L1 reads it and says so ("legacy name"). With
-# --expect-date -- the release gate on a package being built -- only the
-# new name passes, and a package carrying both names never does.
+# A package published before carries the same document at its root: as
+# XILINX-PARTS-INVENTORY.json from the 2026-10-05 release ("legacy
+# location"), as XILINX-PARTS-INDEX.json before ("legacy name"). L1 reads
+# it and says which. With --expect-date -- the release gate on a package
+# being built -- only the chipdb directory passes, and a package carrying
+# the document in more than one place never does.
 #
 # Requirements: yosys + python3 on PATH for the E2E (per the reproducibility
 # norm, from the required oss-cad-suite version); wine64 on PATH for --wine.
@@ -64,7 +67,7 @@ while [ $# -gt 0 ]; do
         --expect-date) EXPECT_DATE="$2"; shift ;;
         --skip-e2e) SKIP_E2E=1 ;;
         --keep) KEEP=1 ;;
-        -h|--help) sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,46p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) fail "unknown option: $1" ;;
         *) [ -z "$PKG_IN" ] && PKG_IN="$1" || fail "unexpected argument: $1" ;;
     esac
@@ -123,12 +126,15 @@ fi
 if [ "$TOOLS_ONLY" = 1 ]; then
     [ -f "$CHIPDB_PKG/README.txt" ] \
         || fail "$CHIPDB_REL/ has neither bins nor the --no-chipdb README.txt placeholder"
-    STRAY=$(cd "$CHIPDB_PKG" && ls -A | grep -vx 'README.txt' | tr '\n' ' ' || true)
-    [ -z "$STRAY" ] || fail "$CHIPDB_REL/ must hold README.txt only, it also has: $STRAY"
+    # The parts document lives in that directory too (PACKAGE_FILE).
+    INDEX_NAME=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+        python3 -c 'from pack.parts_index import PACKAGE_FILE; print(PACKAGE_FILE)')
+    STRAY=$(cd "$CHIPDB_PKG" && ls -A | grep -vx -e 'README.txt' -e "$INDEX_NAME" | tr '\n' ' ' || true)
+    [ -z "$STRAY" ] || fail "$CHIPDB_REL/ must hold README.txt and $INDEX_NAME only, it also has: $STRAY"
     [ ! -e "$PKG/chipdb" ] || fail "chipdb/ at the package root: the bins live in $CHIPDB_REL/ only"
     [ -n "$CHIPDB_DIR" ] \
         || fail "this package ships no chipdb: pass --chipdb-dir <dir with the bins>"
-    note "tools-only pack: $CHIPDB_REL/ holds only README.txt; bins from $CHIPDB_DIR"
+    note "tools-only pack: $CHIPDB_REL/ holds no bins (README.txt placeholder); bins from $CHIPDB_DIR"
     if [ -z "$TARBALL" ]; then
         # A directory the caller owns: validate a copy of it, so the
         # injection never leaves 1.1 GB of bins in someone else's tree.
@@ -230,27 +236,33 @@ NFILES=$(awk '{print $3}' "$SCRATCH/parts.txt" | sort -u | wc -l | tr -d ' ')
 ok "chipdb: all $NPARTS manifest parts present in $NFILES chipdb files (with their family dbs)"
 
 # --- the parts document, and the chipdb files it describes -----------------
-# Its name comes from its one owner (pack.parts_index.PACKAGE_FILE); a
-# package published before the rename carries LEGACY_PACKAGE_FILE.
-INDEX_NAME=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
-    python3 -c 'from pack.parts_index import PACKAGE_FILE; print(PACKAGE_FILE)')
-LEGACY_NAME=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
-    python3 -c 'from pack.parts_index import LEGACY_PACKAGE_FILE; print(LEGACY_PACKAGE_FILE)')
-if [ -f "$PKG/$INDEX_NAME" ] && [ -e "$PKG/$LEGACY_NAME" ]; then
-    fail "both $INDEX_NAME and $LEGACY_NAME at the package root: a package carries one"
-elif [ -f "$PKG/$INDEX_NAME" ]; then
-    INDEX="$PKG/$INDEX_NAME"
-elif [ -f "$PKG/$LEGACY_NAME" ]; then
+# Its places come from its one owner (pack.parts_index.PACKAGE_INDEX_PATHS,
+# in the order a reader looks): the chipdb directory, then the package root
+# of the packages published before, under the current name and the old one.
+# One "<path>\t<note>" line per place the package has it.
+PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -c '
+import sys
+from pack.parts_index import PACKAGE_PATH, index_note, package_index_files
+print(PACKAGE_PATH)
+for path in package_index_files(sys.argv[1]):
+    print(f"{path}\t{index_note(path)}")
+' "$PKG" > "$SCRATCH/index-places.txt"
+INDEX_PATH=$(head -1 "$SCRATCH/index-places.txt")
+FOUND=$(tail -n +2 "$SCRATCH/index-places.txt" | cut -f1 | tr '\n' ' ' | sed 's/ $//')
+NFOUND=$(tail -n +2 "$SCRATCH/index-places.txt" | wc -l | tr -d ' ')
+[ "$NFOUND" -gt 0 ] || fail "$INDEX_PATH missing from the package"
+[ "$NFOUND" -eq 1 ] || fail "the parts document in $NFOUND places ($FOUND): a package carries one, $INDEX_PATH"
+INDEX_REL=$(sed -n '2p' "$SCRATCH/index-places.txt" | cut -f1)
+INDEX_NOTE=$(sed -n '2p' "$SCRATCH/index-places.txt" | cut -f2)
+INDEX="$PKG/$INDEX_REL"
+if [ -n "$INDEX_NOTE" ]; then
     # The package being released (--expect-date) is written by this
-    # branch: the old name there is a packer that did not take the rename.
+    # branch: any other place is a packer that did not take the move.
     [ -z "$EXPECT_DATE" ] \
-        || fail "$LEGACY_NAME at the package root: a package built now carries $INDEX_NAME"
-    INDEX="$PKG/$LEGACY_NAME"
-    note "$LEGACY_NAME: legacy name of $INDEX_NAME (a package published before the rename)"
-else
-    fail "$INDEX_NAME missing from package root"
+        || fail "$INDEX_REL ($INDEX_NOTE): a package built now carries $INDEX_PATH"
+    note "$INDEX_REL: $INDEX_NOTE of $INDEX_PATH (a package published before)"
 fi
-INDEX_FILE=$(basename "$INDEX")
+INDEX_FILE=$INDEX_REL
 # A package built now (--expect-date) carries part-num in every entry;
 # a published one may predate the key.
 REQUIRE_PART_NUM=()

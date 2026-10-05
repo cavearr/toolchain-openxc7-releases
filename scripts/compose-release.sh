@@ -7,9 +7,9 @@
 # Run in the directory that holds the three platform tarballs and
 # XILINX-PARTS-INVENTORY.json (the pre-release job of build-pre-release and of
 # build-upstream-nightly, after downloading their artifacts). It checks
-# that every tarball carries the date of the tag, the same index bytes and
-# the bins that index names, and writes the other three things the release
-# publishes or shows:
+# that every tarball carries the date of the tag, the same index bytes in
+# its chipdb directory and the bins that index names, and writes the other
+# three things the release publishes or shows:
 #   BUILD-INFO.json   the release-level build info (scripts/release-build-info.py)
 #   SHA256SUMS        of the five other assets
 #   RELEASE-BODY.md   the release text (scripts/release-body.py; the options
@@ -31,7 +31,8 @@ export LC_ALL=C          # one collation for every listing below
 DATE_TAG=$(python3 -c 'import sys; from pack.release_tags import split_tag; print(split_tag(sys.argv[1])[1])' "$TAG")
 DATEID=${DATE_TAG//-/}
 # The name of the parts document, from its one owner; and the name it
-# had before, which a release composed here must not carry.
+# had before, which a release composed here must not carry. Inside each
+# package it lives at PACKAGE_PATH, checked below.
 INDEX=$(python3 -c 'from pack.parts_index import PACKAGE_FILE; print(PACKAGE_FILE)')
 LEGACY_INDEX=$(python3 -c 'from pack.parts_index import LEGACY_PACKAGE_FILE; print(LEGACY_PACKAGE_FILE)')
 
@@ -45,8 +46,8 @@ for f in openxc7-toolchain-*.tgz; do
     esac
 done
 # The index is NOT dated: it names its own release inside
-# (release-tag), and travels under the same name it has at the
-# root of every package ($INDEX).
+# (release-tag), and travels under the same name it has in the
+# chipdb directory of every package ($INDEX).
 test -f "$INDEX" || { echo "::error::$INDEX missing"; exit 1; }
 if [ -e "$LEGACY_INDEX" ]; then
     echo "::error::$LEGACY_INDEX is the name before $INDEX: it must not ride along"
@@ -60,14 +61,16 @@ if compgen -G 'apio-xilinx-chipdb-*.bin.tgz' > /dev/null; then
 fi
 
 # Each tarball carries the bins the index names, the same index
-# bytes, and the identity stamp. The document is read only after
-# the packer's own validator (pack/parts_index.py, the one owner
-# of the format) accepted it for the date of this tag.
+# bytes next to them (and nowhere else), and the identity stamp.
+# The document is read only after the packer's own validator
+# (pack/parts_index.py, the one owner of the format) accepted it
+# for the date of this tag.
 python3 - "$DATE_TAG" <<'PYEOF'
 import json, sys, tarfile, tempfile
 from pathlib import Path
-from pack.parts_index import (CHIPDB_SUBDIR, LEGACY_PACKAGE_FILE, PACKAGE_FILE,
-                              validate_document, validate_package_info)
+from pack.parts_index import (CHIPDB_SUBDIR, PACKAGE_FILE, PACKAGE_PATH,
+                              index_members, index_note, validate_document,
+                              validate_package_info)
 tag = sys.argv[1]
 published = Path(PACKAGE_FILE)
 raw = published.read_bytes()
@@ -79,20 +82,27 @@ for tarball in tarballs:
         root = Path(scratch)
         with tarfile.open(tarball) as archive:
             members = []
+            names = []
             for member in archive.getmembers():
                 name = member.name[2:] if member.name.startswith("./") else member.name
-                if name == LEGACY_PACKAGE_FILE:
-                    sys.exit(f"::error::{tarball.name} carries {name}, the "
-                             f"name before {PACKAGE_FILE}")
-                if name == PACKAGE_FILE or name.startswith(f"{CHIPDB_SUBDIR}/"):
+                if member.isfile():
+                    names.append(name)
+                if name.startswith(f"{CHIPDB_SUBDIR}/"):
                     member.name = name
                     members.append(member)
+            # The places a reader looks for the document: a package composed
+            # here carries it in the chipdb directory and nowhere else.
+            for place in index_members(names):
+                if place != PACKAGE_PATH:
+                    sys.exit(f"::error::{tarball.name} carries {place} "
+                             f"({index_note(place)}): a package built now "
+                             f"carries {PACKAGE_PATH} only")
             archive.extractall(root, members=members)
-        index = root / PACKAGE_FILE
+        index = root / PACKAGE_PATH
         if not index.is_file():
-            sys.exit(f"::error::{tarball.name} carries no {PACKAGE_FILE}")
+            sys.exit(f"::error::{tarball.name} carries no {PACKAGE_PATH}")
         if index.read_bytes() != raw:
-            sys.exit(f"::error::{tarball.name} carries a different {PACKAGE_FILE}")
+            sys.exit(f"::error::{tarball.name} carries a different {PACKAGE_PATH}")
         try:
             info = json.loads(raw)
             validate_document(info, expect_tag=tag, require_part_num=True)

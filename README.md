@@ -36,9 +36,9 @@ One tarball per platform, `openxc7-toolchain-<platform>-<YYYYMMDD>.tgz`:
 | `xc7frames2bit`, `bitread`, `xc7patch` | [openXC7/prjxray](https://github.com/openXC7/prjxray) | Frames → bitstream, and bitstream inspection |
 | `fasm2frames` + the `fasm` Python library | [openxc7/fasm](https://github.com/openxc7/fasm) | FASM → configuration frames |
 | `xc7pll` | this repository | PLL parameter calculator (PLLE2_BASE): a ready-to-instantiate Verilog module, or the table with `--report` |
-| `share/nextpnr/himbaechel/xilinx/` | built here | The device databases nextpnr reads, where it looks for them: one `chipdb-<die>.bin` per die, plus the identity stamp `chipdb-id.txt` |
+| `share/nextpnr/himbaechel/xilinx/` | built here | The device databases nextpnr reads, where it looks for them: one `chipdb-<die>.bin` per die, plus the identity stamp `chipdb-id.txt` and the parts inventory |
 | `share/nextpnr/external/prjxray-db` | [openXC7/prjxray-db](https://github.com/openXC7/prjxray-db) | Part data (`part.yaml`, `package_pins.csv`, …) and the segbits `fasm2frames` writes; every chipdb is generated from it |
-| `XILINX-PARTS-INVENTORY.json` | built here | Every part the database supports, and which of them this release built |
+| `share/nextpnr/himbaechel/xilinx/XILINX-PARTS-INVENTORY.json` | built here | Every part the database supports, and which of them this release built |
 | `BUILD-INFO.json` | built here | What this package is and how it was built: revisions, the yosys it was validated with, chipdb identity, commit and run |
 
 | Platform | Built on | Notes |
@@ -138,8 +138,9 @@ computes PLL parameters: `xc7pll -i 100 -o 25` prints a Verilog module,
 
 ### The parts inventory
 
-`XILINX-PARTS-INVENTORY.json` sits at the root of every package and is
-published with each release under the same name. It is keyed by the full
+`XILINX-PARTS-INVENTORY.json` sits in the chipdb directory of every
+package, `share/nextpnr/himbaechel/xilinx/`, next to the chipdb files it
+describes, and is published with each release under the same name. It is keyed by the full
 part (`xc7a200tfbg484-3`: device, package, speed grade); each entry gives
 its `family`, `base-part` and `speed`, whether this release built it
 (`generated`) and, for information only, its `part-num`: the part in the
@@ -161,9 +162,12 @@ passed it with `--chipdb`, under the same number. Any other change to its
 keys is a new schema. `pack/parts_index.py` is the only code that writes
 it and the validator every reader here goes through.
 
-Packages and releases published before the rename carry the same document,
-same content, as `XILINX-PARTS-INDEX.json`; the scripts here still read
-that name and say it is the legacy one.
+Packages published before carry the same document at their root: as
+`XILINX-PARTS-INVENTORY.json` from the 2026-10-05 release, and, same
+content, as `XILINX-PARTS-INDEX.json` before (the releases up to then
+publish it under that name too). The scripts here still read both places,
+in that order after the chipdb directory, and say which one they found
+("legacy location", "legacy name").
 
 ## Building from source
 
@@ -182,8 +186,9 @@ python3.12 openxc7-pack.py --no-chipdb    # local tools-only tree, no chipdb
 The default pack is the release pack: it generates the chipdb of every die
 of the manifest, or copies one already generated (`OPENXC7_CHIPDB_SEED`,
 which must carry this toolchain's `chipdb-id.txt`), and ships those files in
-`share/nextpnr/himbaechel/xilinx/`. `--no-chipdb` (or `OPENXC7_NO_CHIPDB=1`) leaves a `README.txt`
-there and no bins, for local iteration. The first `nix develop` builds the
+`share/nextpnr/himbaechel/xilinx/`, next to the parts inventory.
+`--no-chipdb` (or `OPENXC7_NO_CHIPDB=1`) leaves a `README.txt` there and
+no bins, for local iteration. The first `nix develop` builds the
 whole toolchain (tens of minutes); later ones take seconds.
 
 Generating the chipdb is the slow part: one run of the uarch's generator
@@ -202,7 +207,7 @@ reused:
 | `OPENXC7_CHIPDB_JOBS` | Dies generated at once (default 1) |
 | `OPENXC7_CHIPDB_MEM_GB` | Memory budget of those jobs (default 14: `xc7z045` and `xc7z100` never run together) |
 | `OPENXC7_NO_CHIPDB` | `1` packs a local tools-only tree (same as `--no-chipdb`) |
-| `OPENXC7_PARTS_INDEX` | The document to embed as `XILINX-PARTS-INVENTORY.json` |
+| `OPENXC7_PARTS_INDEX` | The document to embed as `share/nextpnr/himbaechel/xilinx/XILINX-PARTS-INVENTORY.json` |
 | `OPENXC7_BUILD_INFO` | The `BUILD-INFO.json` to embed (`scripts/build-info.sh`) |
 
 > **Caveat:** when you change a toolchain revision, remove `dist/` before
@@ -232,7 +237,7 @@ cp -aL result package-win && chmod -R u+w package-win
 CHIPDB=package-win/share/nextpnr/himbaechel/xilinx
 mkdir -p $CHIPDB
 cp /path/to/chipdb-bins/*.bin /path/to/chipdb-bins/chipdb-id.txt $CHIPDB/
-cp /path/to/XILINX-PARTS-INVENTORY.json package-win/XILINX-PARTS-INVENTORY.json
+cp /path/to/XILINX-PARTS-INVENTORY.json $CHIPDB/
 CHIPDB_SOURCE=restored-from-cache CHIPDB_ID="$(cat $CHIPDB/chipdb-id.txt)" \
   bash scripts/build-info.sh windows-amd64 YYYY-MM-DD \
   openxc7-toolchain-windows-amd64-YYYYMMDD.tgz package-win/BUILD-INFO.json
@@ -258,8 +263,9 @@ scripts/validate-package.sh <tools-only-tree-or-tarball> --chipdb-dir <bins>
 ```
 
 - the layout; the chipdb of every built part's die is in
-  `share/nextpnr/himbaechel/xilinx/`, no extra `.bin` is there, and
-  `chipdb-id.txt` matches the index's `chipdb-id`;
+  `share/nextpnr/himbaechel/xilinx/`, no extra `.bin` is there,
+  `chipdb-id.txt` matches the index's `chipdb-id`, and the parts inventory
+  is next to them and nowhere else;
 - that the engine opens its chipdb for every part the index says is built,
   from `--device` alone and with no `--chipdb` (`e2e/accept-parts.py`);
 - `--version` of the *packaged* binary against the nextpnr revision in

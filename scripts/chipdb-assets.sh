@@ -10,9 +10,11 @@
 # format is pack/parts_index.py; pack/chipdb_assets.py inventories the
 # packaged prjxray database and fills the document.
 #
-# The index keeps one name everywhere -- as a release asset and at the
-# root of every package -- because the release it belongs to is written
-# inside it (release-tag). Named XILINX-PARTS-INVENTORY.json
+# The index keeps one name everywhere -- as a release asset and in the
+# chipdb directory of every package (pack.parts_index.PACKAGE_PATH; at the
+# root of the packages published before) -- because the release it
+# belongs to is written inside it (release-tag). Named
+# XILINX-PARTS-INVENTORY.json
 # (pack.parts_index.PACKAGE_FILE); XILINX-PARTS-INDEX.json before, from
 # apio#1002, and PARTS-INDEX.json before that (apio#990).
 #

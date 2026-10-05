@@ -12,10 +12,12 @@ from unittest import mock
 from pack.assemble import write_env
 from pack.chipdb import write_placeholder
 from pack.parts_index import (CHIPDB_SUBDIR, ENTRY_KEYS, INDEX_ASSET,
-                              LEGACY_PACKAGE_FILE, NOTE, PACKAGE_FILE, SCHEMA,
-                              STAMP_FILE, asset_name, chipdb_name,
-                              chipdb_subdir, engine_accepts, is_legacy_name,
-                              names_chipdb_files, package_index_file, part_num,
+                              LEGACY_PACKAGE_FILE, NOTE, PACKAGE_FILE,
+                              PACKAGE_PATH, SCHEMA, STAMP_FILE, asset_name,
+                              chipdb_name, chipdb_subdir, engine_accepts,
+                              index_members, index_note, is_legacy_name,
+                              names_chipdb_files, package_index_file,
+                              package_index_files, part_num,
                               package_schema, previous_index_asset_names,
                               read_package_index, read_package_schema,
                               validate_document, validate_package_info)
@@ -109,7 +111,7 @@ class PartsIndexTests(unittest.TestCase):
         path.write_text(json.dumps(info), encoding="utf-8")
         return path, chipdb, info
 
-    def test_write_env_copies_the_document_under_the_fixed_name(self):
+    def test_write_env_puts_the_document_in_the_chipdb_directory(self):
         index_path, _, _ = self.make_index()
         (self.root / "config").mkdir()
         (self.root / "config" / "environment").write_text(
@@ -127,8 +129,11 @@ class PartsIndexTests(unittest.TestCase):
         finally:
             os.chdir(old_cwd)
 
-        packaged = self.root / "dist" / PACKAGE_FILE
+        packaged = self.root / "dist" / PACKAGE_PATH
         self.assertEqual(packaged.read_bytes(), index_path.read_bytes())
+        # next to the chipdb files, and not at the root any more
+        self.assertEqual(PACKAGE_PATH, f"{CHIPDB_SUBDIR}/{PACKAGE_FILE}")
+        self.assertFalse((self.root / "dist" / PACKAGE_FILE).exists())
 
     def test_accepts_the_chipdb_files_it_describes(self):
         index_path, chipdb, _ = self.make_index()
@@ -310,7 +315,9 @@ class PartsIndexTests(unittest.TestCase):
     def test_a_schema_8_package_is_still_read_with_its_file_names(self):
         info = {"schema": 8, "parts": {PART: {
             "base-part": BASE, "generated": True, "chipdb": DIE_FILE}}}
-        (self.root / PACKAGE_FILE).write_text(json.dumps(info), encoding="utf-8")
+        # The chipdb/ layout only ever shipped the document at the root.
+        (self.root / LEGACY_PACKAGE_FILE).write_text(json.dumps(info),
+                                                     encoding="utf-8")
         self.assertEqual(read_package_schema(self.root),
                          (8, {BASE: DIE_FILE}))
 
@@ -497,6 +504,36 @@ class PartsIndexTests(unittest.TestCase):
         self.assertEqual(package_index_file(self.root), current)
         self.assertFalse(is_legacy_name(current))
         self.assertEqual(read_package_index(self.root), info)
+
+    def test_the_chipdb_directory_wins_over_the_root(self):
+        """What this repository packs carries the document next to the
+        chipdb files (apio#1106); a reader looks there first, then at the
+        root of the packages published before, under each name."""
+        _, _, info = self.make_die_index()
+        (self.root / LEGACY_PACKAGE_FILE).write_text("{}", encoding="utf-8")
+        (self.root / PACKAGE_FILE).write_text("[]", encoding="utf-8")
+        current = self.root / PACKAGE_PATH
+        current.parent.mkdir(parents=True, exist_ok=True)
+        current.write_text(json.dumps(info), encoding="utf-8")
+        self.assertEqual(package_index_file(self.root), current)
+        self.assertEqual(read_package_index(self.root), info)
+        self.assertEqual(package_index_files(self.root),
+                         [PACKAGE_PATH, PACKAGE_FILE, LEGACY_PACKAGE_FILE])
+
+    def test_each_place_says_what_it_is(self):
+        self.assertEqual(index_note(PACKAGE_PATH), "")
+        self.assertEqual(index_note(Path(PACKAGE_PATH)), "")
+        self.assertEqual(index_note(PACKAGE_FILE), "legacy location")
+        self.assertEqual(index_note(LEGACY_PACKAGE_FILE), "legacy name")
+        with self.assertRaisesRegex(ValueError, "not a place"):
+            index_note(f"chipdb/{PACKAGE_FILE}")
+
+    def test_the_places_of_a_tarball_listing(self):
+        """The release gates read a tarball's member names, not a tree."""
+        names = ["bin/nextpnr-xilinx", f"{CHIPDB_SUBDIR}/{DIE_FILE}",
+                 PACKAGE_FILE, PACKAGE_PATH]
+        self.assertEqual(index_members(names), [PACKAGE_PATH, PACKAGE_FILE])
+        self.assertEqual(index_members(["BUILD-INFO.json"]), [])
 
 
 if __name__ == "__main__":

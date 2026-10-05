@@ -1,11 +1,13 @@
 """XILINX-PARTS-INVENTORY.json: which parts a package supports and which it built.
 
-Every package carries this document at its root, and the release
-publishes the same bytes under the same name (``PACKAGE_FILE``; packages
-and releases up to the rename carry it as ``LEGACY_PACKAGE_FILE``). The
-package ships the chipdb files where the engine looks for them,
-``share/nextpnr/himbaechel/xilinx/``, so a part number is all the engine
-needs: an entry names no file.
+Every package carries this document in its chipdb directory,
+``share/nextpnr/himbaechel/xilinx/`` (``PACKAGE_PATH``), next to the
+chipdb files it describes, and the release publishes the same bytes as a
+loose asset under the same name (``PACKAGE_FILE``). Packages published
+before carry it at their root: as ``PACKAGE_FILE`` from the 2026-10-05
+release, as ``LEGACY_PACKAGE_FILE`` before (``PACKAGE_INDEX_PATHS``). The
+package ships the chipdb files where the engine looks for them, so a part
+number is all the engine needs: an entry names no file.
 
 The naming is Vivado's. ``xc7a200t`` is the device, ``fbg484`` the
 package and ``3`` the speed grade; ``xc7a200tfbg484-3`` is the **part**
@@ -18,8 +20,9 @@ same die (an xc7a35t is an xc7a50t).
 Each entry also carries ``part-num``, the part in the form of apio's fpga
 definitions (``XC7A35T-1CSG324``), for information only (apio#1106).
 
-This module owns the format (schema, note, validation):
-``pack.chipdb_assets`` writes the document, L1 checks a package against
+This module owns the format (schema, note, validation) and where the
+document lives, in a package and in a release. ``pack.chipdb_assets``
+writes the document, L1 checks a package against
 the bins it describes, and scripts/asset-check.sh checks a published
 release against it -- one validator, three callers.
 
@@ -107,7 +110,7 @@ NOTE = (
     "(share/nextpnr/himbaechel/xilinx/chipdb-id.txt)."
 )
 
-# The one name the document travels under, at the root of every package
+# The one name the document travels under, in every package (PACKAGE_PATH)
 # AND as the release asset: it says which release it belongs to inside
 # itself (release-tag), which is what a reader has to check anyway, so a
 # dated file name only repeated it less reliably. pack.chipdb_assets
@@ -127,6 +130,21 @@ INDEX_ASSET = PACKAGE_FILE
 LEGACY_PACKAGE_FILE = "XILINX-PARTS-INDEX.json"
 PREVIOUS_PACKAGE_FILE = "PARTS-INDEX.json"
 LEGACY_INDEX_ASSET = "apio-xilinx-parts-index-{date}.json"
+
+# Where the document lives inside a package: in the chipdb directory, next
+# to the files it describes (apio#1106: a consumer that takes the chipdb
+# directory takes the inventory with it). Relative to the package root.
+PACKAGE_PATH = f"{CHIPDB_SUBDIR}/{PACKAGE_FILE}"
+
+# Where a reader looks for it in a package tree, in this order, and what
+# it says about each place. Published packages carry it at the root: under
+# PACKAGE_FILE from the 2026-10-05 release, under LEGACY_PACKAGE_FILE
+# before. What this repository packs carries PACKAGE_PATH only.
+PACKAGE_INDEX_PATHS = (
+    (PACKAGE_PATH, ""),
+    (PACKAGE_FILE, "legacy location"),
+    (LEGACY_PACKAGE_FILE, "legacy name"),
+)
 
 
 def release_tag(date: str) -> str:
@@ -412,17 +430,46 @@ def chipdb_subdir(info: dict | None) -> str:
     return "chipdb" if names_chipdb_files(info) else CHIPDB_SUBDIR
 
 
+def index_members(names) -> list[str]:
+    """The places of PACKAGE_INDEX_PATHS present in *names*, in reader order.
+
+    *names* are paths relative to a package root (a tarball's member
+    names without the leading ./, or the files of a tree). A package
+    carries one; more than one is a packaging error the gates name.
+    """
+    present = set(names)
+    return [path for path, _ in PACKAGE_INDEX_PATHS if path in present]
+
+
+def package_index_files(package: Path) -> list[str]:
+    """index_members() of the package tree at *package*."""
+    return [path for path, _ in PACKAGE_INDEX_PATHS
+            if (Path(package) / path).is_file()]
+
+
 def package_index_file(package: Path) -> Path | None:
     """Path of the document in the package tree at *package*, if it has one.
 
-    PACKAGE_FILE first; a package published before the rename carries
-    LEGACY_PACKAGE_FILE (is_legacy_name() says which one was found).
+    PACKAGE_PATH first, then the root under PACKAGE_FILE and under
+    LEGACY_PACKAGE_FILE, the places of the packages published before
+    (index_note() says which one was found).
     """
-    for name in (PACKAGE_FILE, LEGACY_PACKAGE_FILE):
-        path = Path(package) / name
-        if path.is_file():
-            return path
-    return None
+    found = package_index_files(package)
+    return Path(package) / found[0] if found else None
+
+
+def index_note(path: Path | str) -> str:
+    """What a reader says about the document found at *path*.
+
+    *path* is relative to the package root. "" for PACKAGE_PATH, "legacy
+    location" for PACKAGE_FILE at the root, "legacy name" for
+    LEGACY_PACKAGE_FILE.
+    """
+    relative = Path(path).as_posix()
+    for place, note in PACKAGE_INDEX_PATHS:
+        if relative == place:
+            return note
+    raise ValueError(f"{relative} is not a place a package carries {PACKAGE_FILE}")
 
 
 def is_legacy_name(path: Path | str) -> bool:

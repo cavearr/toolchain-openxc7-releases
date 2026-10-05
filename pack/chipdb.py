@@ -9,7 +9,8 @@ identity stamp so that bins from another toolchain are never reused.
 A release package carries those bins in share/nextpnr/himbaechel/xilinx/
 (CHIPDB_SUBDIR), where the engine looks for them, next to chipdb-id.txt.
 ``--no-chipdb`` is a local tools-only pack: that directory gets the README
-this module writes and no bins, and that tree is not a release package.
+this module writes and no bins (the parts document, when the pack embeds
+one, sits next to it), and that tree is not a release package.
 Run as a script to write that placeholder into a directory:
 
     python3 -m pack.chipdb <package>/share/nextpnr/himbaechel/xilinx
@@ -50,8 +51,8 @@ This directory is empty because this tree was packed with --no-chipdb.
 
 That is a local tools-only pack, not a release package. A release package
 carries the device databases here, where nextpnr-xilinx looks for them:
-one file per die, chipdb-<die>.bin. XILINX-PARTS-INVENTORY.json at the root
-of the package lists the parts this release built (generated=true);
+one file per die, chipdb-<die>.bin. XILINX-PARTS-INVENTORY.json, in this
+same directory, lists the parts this release built (generated=true);
 parts the packaged database supports that this release did not build are
 listed there with generated=false: supported, not built.
 

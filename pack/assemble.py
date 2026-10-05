@@ -9,7 +9,7 @@ from pathlib import Path
 import ansi
 
 from .components import copy_file
-from .parts_index import CHIPDB_SUBDIR, PACKAGE_FILE
+from .parts_index import CHIPDB_SUBDIR, PACKAGE_PATH
 from .platform import plat_token
 
 
@@ -56,6 +56,9 @@ def distribution_init():
         subprocess.run(["chmod", "-R", "+w", str(base_dir)],
                        check=True, capture_output=True, text=True)
         _clean_keeping(base_dir, Path(CHIPDB_SUBDIR))
+        # -- The parts document shares that directory with the bins, but it
+        # -- belongs to one run: write_env() embeds this run's, or none.
+        (base_dir / PACKAGE_PATH).unlink(missing_ok=True)
 
     # -- Create the structure
     (base_dir / "bin").mkdir(parents=True, exist_ok=True)
@@ -97,14 +100,17 @@ def write_env():
         print()
 
     # -- The index of the parts: which ones the packaged database supports,
-    # -- which of them this release built. The chipdb files travel in the
-    # -- engine's share directory, where nextpnr-xilinx finds them. The release
-    # -- publishes the same document; inside every package its name is
-    # -- fixed, so apio locates it without deriving the release date.
+    # -- which of them this release built. It goes into the engine's share
+    # -- directory, next to the chipdb files it describes (PACKAGE_PATH), so
+    # -- a consumer that takes that directory takes the document with it.
+    # -- The release publishes the same document; inside every package its
+    # -- place is fixed, so a consumer locates it without deriving the date.
     parts_index = os.environ.get("OPENXC7_PARTS_INDEX")
     if parts_index:
-        shutil.copy(parts_index, dst / PACKAGE_FILE)
-        print(f"🔵 ✅{PACKAGE_FILE} ({parts_index})")
+        target = dst / PACKAGE_PATH
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(parts_index, target)
+        print(f"🔵 ✅{PACKAGE_PATH} ({parts_index})")
         print()
 
 

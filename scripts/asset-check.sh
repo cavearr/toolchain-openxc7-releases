@@ -21,7 +21,10 @@
 # file, the die of each built part says which are needed. There is no
 # apio-xilinx-chipdb-*.bin.tgz asset. --full downloads each platform package
 # and checks that the bins inside it are exactly the dies of the built parts,
-# with the index's chipdb-id.
+# with the index's chipdb-id, and that the package carries the same document
+# bytes, next to those bins (share/nextpnr/himbaechel/xilinx/
+# XILINX-PARTS-INVENTORY.json). Packages published before carry it at their
+# root ("legacy location"; "legacy name" as XILINX-PARTS-INDEX.json).
 # The releases before the rename publish the same document as
 # XILINX-PARTS-INDEX.json: it is read and checked the same way, and the
 # report says it carries the legacy name.
@@ -63,7 +66,7 @@ while [ $# -gt 0 ]; do
         --expect-dir) EXPECT_DIR="$2"; shift 2 ;;
         --full) FULL=1; shift ;;
         --platform) PLATFORMS+=("$2"); shift 2 ;;
-        -h|--help) sed -n '3,55p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '3,58p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*) echo "unknown option: $1" >&2; exit 2 ;;
         *) TAG="$1"; shift ;;
     esac
@@ -83,9 +86,9 @@ platforms = sys.argv[5:]
 # used by L1 on a package and here on a release).
 sys.path.insert(0, repo_root)
 from pack.parts_index import (CHIPDB_SUBDIR, INDEX_ASSET, SCHEMA,  # noqa: E402
-                              STAMP_FILE, chipdb_name, is_legacy_name,
-                              names_chipdb_files, previous_index_asset_names,
-                              validate_document)
+                              STAMP_FILE, chipdb_name, index_members,
+                              index_note, is_legacy_name, names_chipdb_files,
+                              previous_index_asset_names, validate_document)
 from pack.release_tags import split_tag  # noqa: E402
 
 repo = os.environ.get("ASSET_CHECK_REPO", "cavearr/toolchain-openxc7-releases")
@@ -347,31 +350,41 @@ has_build_info = check_build_info()
 # package; the release publishes no separate chipdb asset.
 # ---------------------------------------------------------------------------
 def chipdb_members(blob):
-    """(set of chipdb *.bin names, chipdb-id.txt text) inside a package.
+    """(chipdb *.bin names, chipdb-id.txt text, {place: bytes}) of a package.
 
     The chipdb directory is where the engine looks for them (CHIPDB_SUBDIR).
+    The last item holds the parts document at every place a reader looks
+    for it (pack.parts_index.PACKAGE_INDEX_PATHS).
     """
     bins = set()
     stamp = ""
+    documents = {}
     with tarfile.open(fileobj=io.BytesIO(blob), mode="r:*") as archive:
         for member in archive.getmembers():
             if not member.isfile():
                 continue
             name = member.name[2:] if member.name.startswith("./") else member.name
-            if name == f"{CHIPDB_SUBDIR}/{STAMP_FILE}":
+            if index_members([name]):
+                extracted = archive.extractfile(member)
+                documents[name] = extracted.read() if extracted else b""
+            elif name == f"{CHIPDB_SUBDIR}/{STAMP_FILE}":
                 extracted = archive.extractfile(member)
                 stamp = extracted.read().decode().strip() if extracted else ""
             elif (name.startswith(f"{CHIPDB_SUBDIR}/")
                     and name.endswith(".bin")
                     and name.count("/") == CHIPDB_SUBDIR.count("/") + 1):
                 bins.add(name.rsplit("/", 1)[1])
-    return bins, stamp
+    return bins, stamp, documents
 
 
-def check_package_chipdb(asset, blob, info, described):
-    """--full: the bins inside one platform package match the index."""
+def check_package_chipdb(asset, blob, info, described, raw):
+    """--full: the bins and the document inside one package match the index.
+
+    *raw* is the published document: the package carries the same bytes,
+    in one place.
+    """
     try:
-        bins, stamp = chipdb_members(blob)
+        bins, stamp, documents = chipdb_members(blob)
     except tarfile.TarError as error:
         print(f"❌ {asset}: not a tarball ({error})")
         failed.append(asset)
@@ -389,8 +402,21 @@ def check_package_chipdb(asset, blob, info, described):
               f"index chipdb-id is {info.get('chipdb-id')!r}")
         failed.append(asset)
         return
+    places = index_members(documents)
+    if len(places) != 1:
+        print(f"❌ {asset}: the parts document in {len(places)} places "
+              f"({', '.join(places) or 'none'}): a package carries one")
+        failed.append(asset)
+        return
+    place = places[0]
+    if documents[place] != raw:
+        print(f"❌ {asset}: {place} is not the published {INDEX_ASSET}")
+        failed.append(asset)
+        return
+    note = index_note(place)
     print(f"✅ {asset}: {len(bins)} chipdb files inside match the index "
-          f"(chipdb-id {stamp})")
+          f"(chipdb-id {stamp}); {place} == the published document"
+          + (f" · {note}" if note else ""))
 
 
 def fetch_index():
@@ -501,7 +527,7 @@ def check_chipdb_release():
             blob = package_blobs.get(asset)
             if blob is None:
                 continue
-            check_package_chipdb(asset, blob, info, described)
+            check_package_chipdb(asset, blob, info, described, raw)
     return True
 
 

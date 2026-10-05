@@ -8,7 +8,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from pack.assemble import _clean_keeping, distribution_init
-from pack.parts_index import CHIPDB_SUBDIR
+from pack.parts_index import CHIPDB_SUBDIR, PACKAGE_PATH
 
 
 class DistributionInitTests(unittest.TestCase):
@@ -46,6 +46,16 @@ class DistributionInitTests(unittest.TestCase):
         self.assertFalse((self.dist / "stale-file").exists())
         self.assertFalse((self.dist / "share/nextpnr/external").exists())
         self.assertFalse((self.dist / "share/nextpnr/himbaechel/other").exists())
+
+    def test_the_parts_document_of_a_previous_run_does_not_survive(self):
+        """It shares the chipdb directory with the bins, but belongs to one
+        run: write_env() embeds this run's, or the package has none."""
+        self.populate()
+        (self.dist / PACKAGE_PATH).write_text("{}")
+        with redirect_stdout(io.StringIO()):
+            distribution_init()
+        self.assertFalse((self.dist / PACKAGE_PATH).exists())
+        self.assertTrue((self.chipdb / "chipdb-xc7a50t.bin").exists())
 
     def test_the_old_chipdb_directory_is_not_created_nor_kept(self):
         self.populate()

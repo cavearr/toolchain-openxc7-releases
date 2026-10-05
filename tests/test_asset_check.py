@@ -53,12 +53,18 @@ def _tgz(payload: bytes, arcname: str) -> bytes:
 
 
 def _package(payload: bytes = BIN, stamp: str = STAMP,
-             extra=()) -> bytes:
-    """A platform package carrying the chipdb file and chipdb-id.txt."""
+             extra=(), document=None,
+             document_at=f"{CHIPDB_DIR}/{INDEX}") -> bytes:
+    """A platform package carrying the chipdb file and chipdb-id.txt.
+
+    *document*, when given, is the parts document, at *document_at*.
+    """
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
         members = [(f"{CHIPDB_DIR}/{CHIPDB}", payload),
                    (f"{CHIPDB_DIR}/chipdb-id.txt", (stamp + "\n").encode())]
+        if document is not None:
+            members.append((document_at, document))
         members.extend(extra)
         for name, data in members:
             if data is None:
@@ -110,12 +116,8 @@ def release(**overrides) -> dict:
     """A healthy release: three packages, the index, BUILD-INFO.
 
     Six assets once SHA256SUMS is added. No chipdb release asset: the bin
-    travels inside each platform package.
+    travels inside each platform package, next to the same document.
     """
-    tarballs = {
-        f"openxc7-toolchain-{platform}-{DATE}.tgz": _package()
-        for platform in ("linux-x86-64", "darwin-arm64", "windows-amd64")
-    }
     built = {"generated": True}
     info = {
         "schema": 8,
@@ -131,6 +133,11 @@ def release(**overrides) -> dict:
                    "speed": part.rsplit("-", 1)[1], **built}
             for part in PARTS
         },
+    }
+    tarballs = {
+        f"openxc7-toolchain-{platform}-{DATE}.tgz":
+            _package(document=json.dumps(info).encode())
+        for platform in ("linux-x86-64", "darwin-arm64", "windows-amd64")
     }
     build_info = {
         "package-name": "openxc7-toolchain",
@@ -309,13 +316,20 @@ class AssetCheckTests(unittest.TestCase):
         XILINX-PARTS-INDEX.json: it is checked the same way, and the
         report says the name is the legacy one."""
         files = release()
-        files[f"{BASE}/{RENAMED_INDEX}"] = files.pop(f"{BASE}/{INDEX}")
+        document = files.pop(f"{BASE}/{INDEX}")
+        files[f"{BASE}/{RENAMED_INDEX}"] = document
+        # Their packages carry it at the root, under the same old name.
+        for platform in ("linux-x86-64", "darwin-arm64", "windows-amd64"):
+            files[f"{BASE}/openxc7-toolchain-{platform}-{DATE}.tgz"] = \
+                _package(document=document, document_at=RENAMED_INDEX)
         calls = []
         code, output = run(resum(files), "", "1", calls=calls)
         self.assertEqual(code, 0, output)
         self.assertIn(f"✅ {RENAMED_INDEX}", output)
         self.assertIn(f"legacy name (now {INDEX})", output)
         self.assertIn("match the index", output)
+        self.assertEqual(output.count(
+            f"{RENAMED_INDEX} == the published document · legacy name"), 3)
         self.assertIn("asset-check: OK", output)
         # The current name is asked for first.
         self.assertLess(calls.index(f"{BASE}/{INDEX}"),
@@ -487,6 +501,56 @@ class AssetCheckTests(unittest.TestCase):
         self.assertEqual(code, 0, output)
         self.assertIn("and match the index", output)
         self.assertEqual(output.count("chipdb files inside match the index"), 3)
+        self.assertEqual(
+            output.count(f"{CHIPDB_DIR}/{INDEX} == the published document"), 3)
+        self.assertNotIn("legacy location", output)
+
+    def _with_linux(self, files, package):
+        linux = f"openxc7-toolchain-linux-x86-64-{DATE}.tgz"
+        files[f"{BASE}/{linux}"] = package
+        return resum(files)
+
+    def test_full_reads_a_package_with_the_document_at_its_root(self):
+        """Packages published before the move carry the document at their
+        root, under the current name or the old one: --full finds it there
+        and says so."""
+        for name, note in ((INDEX, "legacy location"),
+                           (RENAMED_INDEX, "legacy name")):
+            with self.subTest(name=name):
+                files = release()
+                document = files[f"{BASE}/{INDEX}"]
+                files = self._with_linux(files, _package(
+                    document=document, document_at=name))
+                code, output = run(files, "", "1")
+                self.assertEqual(code, 0, output)
+                self.assertIn(f"{name} == the published document · {note}",
+                              output)
+
+    def test_full_rejects_a_package_without_the_document(self):
+        files = self._with_linux(release(), _package())
+        code, output = run(files, "", "1")
+        self.assertEqual(code, 1, output)
+        self.assertIn("the parts document in 0 places (none)", output)
+
+    def test_full_rejects_the_document_in_two_places(self):
+        files = release()
+        document = files[f"{BASE}/{INDEX}"]
+        files = self._with_linux(files, _package(
+            document=document, extra=[(INDEX, document)]))
+        code, output = run(files, "", "1")
+        self.assertEqual(code, 1, output)
+        self.assertIn(f"in 2 places ({CHIPDB_DIR}/{INDEX}, {INDEX})", output)
+
+    def test_full_rejects_a_document_that_is_not_the_published_one(self):
+        files = release()
+        other = json.loads(files[f"{BASE}/{INDEX}"])
+        other["note"] = "another document"
+        files = self._with_linux(files, _package(
+            document=json.dumps(other).encode()))
+        code, output = run(files, "", "1")
+        self.assertEqual(code, 1, output)
+        self.assertIn(f"{CHIPDB_DIR}/{INDEX} is not the published {INDEX}",
+                      output)
 
     def test_a_dropped_connection_is_retried_not_reported_as_missing(self):
         """A flaky link must not read as 'the release is broken'."""

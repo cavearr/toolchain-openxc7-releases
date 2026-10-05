@@ -25,7 +25,7 @@ import reporting       # noqa: E402
 import spec as spec_module        # noqa: E402
 from flow import run as run_flow  # noqa: E402
 from pkg import Package           # noqa: E402
-from pack.parts_index import SCHEMA, is_legacy_name  # noqa: E402
+from pack.parts_index import SCHEMA, index_note  # noqa: E402
 
 HARNESS_DIR = Path(__file__).resolve().parent
 REGRESS_DIR = HARNESS_DIR.parent
@@ -112,8 +112,8 @@ def main() -> int:
     print(f"platform : {package.platform}")
     print(f"schema   : {package.schema}")
     if package.index_file:
-        legacy = " (legacy name)" if is_legacy_name(package.index_file) else ""
-        print(f"parts doc: {package.index_file}{legacy}")
+        note = index_note(package.index_file)
+        print(f"parts doc: {package.index_file}{f' ({note})' if note else ''}")
     print(f"yosys    : {versions['yosys']}")
     print(f"nextpnr  : {versions['nextpnr']}")
     print(f"tests    : {len(specs)}\n")

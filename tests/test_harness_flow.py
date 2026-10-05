@@ -17,6 +17,7 @@ sys.path.insert(0, str(REPO / "regress" / "harness"))
 
 import flow  # noqa: E402
 from pkg import Package  # noqa: E402
+from pack.parts_index import PACKAGE_FILE, PACKAGE_PATH, index_note  # noqa: E402
 
 
 class _FakePackage:
@@ -84,9 +85,10 @@ def _index(names_files):
 
 
 class PackageChipdbByLayout(unittest.TestCase):
-    def open(self, root, names_files, name="XILINX-PARTS-INVENTORY.json"):
+    def open(self, root, names_files, name=PACKAGE_PATH):
         (root / "libexec").mkdir(parents=True)
         (root / "libexec" / "nextpnr-xilinx").write_text("")
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
         (root / name).write_text(json.dumps(_index(names_files)))
         return Package.open(root)
 
@@ -98,7 +100,7 @@ class PackageChipdbByLayout(unittest.TestCase):
             new = self.open(Path(scratch) / "new", names_files=False)
             self.assertEqual((old.schema, new.schema), (8, 8))
             self.assertEqual(old.index_file, "XILINX-PARTS-INDEX.json")
-            self.assertEqual(new.index_file, "XILINX-PARTS-INVENTORY.json")
+            self.assertEqual(new.index_file, PACKAGE_PATH)
             self.assertTrue(old.names_chipdb)
             self.assertFalse(new.names_chipdb)
             self.assertEqual(old.chipdb("xc7a35tcsg324"),
@@ -106,6 +108,17 @@ class PackageChipdbByLayout(unittest.TestCase):
             self.assertEqual(
                 new.chipdb("xc7a35tcsg324"),
                 new.root / "share/nextpnr/himbaechel/xilinx/chipdb-xc7a50t.bin")
+
+    def test_a_document_at_the_root_is_a_legacy_location(self):
+        """The packages published from 2026-10-05 until the move carry the
+        document at their root, under the current name."""
+        with tempfile.TemporaryDirectory() as scratch:
+            package = self.open(Path(scratch) / "pkg", names_files=False,
+                                name=PACKAGE_FILE)
+            self.assertEqual(package.index_file, PACKAGE_FILE)
+            self.assertEqual(index_note(package.index_file), "legacy location")
+            self.assertEqual(package.schema, 8)
+            self.assertFalse(package.names_chipdb)
 
     def test_an_external_chipdb_dir_is_used_when_the_package_lacks_the_file(self):
         with tempfile.TemporaryDirectory() as scratch:

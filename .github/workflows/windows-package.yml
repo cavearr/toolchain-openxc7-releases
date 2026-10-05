@@ -1,7 +1,7 @@
 # Build + validate the Windows package. The flake produces only the tools
 # tree; this workflow copies the chipdb bins and chipdb-id.txt from the
 # chipdb.yml artifact into share/nextpnr/himbaechel/xilinx/ (where the
-# engine looks for them), embeds the XILINX-PARTS-INVENTORY document that job
+# engine looks for them), embeds next to them the XILINX-PARTS-INVENTORY document that job
 # wrote, and validates the assembled tarball under Wine. The package
 # ships those bins inside it. The .exe is the
 # himbaechel xilinx uarch without an embedded Python: `apio report` reads
@@ -141,14 +141,15 @@ jobs:
           test ! -e package-win/chipdb
           echo "$ACTUAL chipdb bins copied into the package (identity $ARTIFACT_ID)"
 
-          # The same index the linux and darwin packages embed, under the
-          # in-package name (pack.parts_index.PACKAGE_FILE); L1 checks the
-          # packaged bins against it.
+          # The same index the linux and darwin packages embed, in the
+          # same place: the chipdb directory, next to the bins
+          # (pack.parts_index.PACKAGE_PATH); L1 checks the packaged bins
+          # against it.
           INDEX="parts-index/${{ inputs.parts_index }}"
-          NAME=$(python3 -c 'from pack.parts_index import PACKAGE_FILE; print(PACKAGE_FILE)')
-          test -f "$INDEX" || { echo "::error::$NAME not in the artifact: $INDEX"; exit 1; }
-          cp "$INDEX" "package-win/$NAME"
-          echo "embedded $(basename "$INDEX") as $NAME"
+          TARGET=$(python3 -c 'from pack.parts_index import PACKAGE_PATH; print(PACKAGE_PATH)')
+          test -f "$INDEX" || { echo "::error::$TARGET not in the artifact: $INDEX"; exit 1; }
+          cp "$INDEX" "package-win/$TARGET"
+          echo "embedded $(basename "$INDEX") as $TARGET"
           df -h . | tail -1
 
       # Installed BEFORE the tar step: build-info.sh re-exports the

@@ -36,7 +36,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
-from pack.parts_index import PACKAGE_FILE  # noqa: E402
+from pack.parts_index import PACKAGE_FILE, PACKAGE_PATH  # noqa: E402
 from pack.release_tags import split_tag  # noqa: E402
 
 PACKAGE = "openxc7-toolchain"
@@ -162,8 +162,9 @@ def body(info, per_package, main_revisions=None, reports=None):
         lines.append(f"| `{tarball}` | The toolchain for {platform}, "
                      "with every chipdb file where nextpnr-xilinx looks for it, " "`share/nextpnr/himbaechel/xilinx/` |")
     lines += [
-        f"| `{PACKAGE_FILE}` | The parts inventory every package carries at "
-        "its root: each part of the packaged database and whether this release " "built it |",
+        f"| `{PACKAGE_FILE}` | The parts inventory every package carries as "
+        f"`{PACKAGE_PATH}`: each part of the packaged database and whether "
+        "this release built it |",
         "| `BUILD-INFO.json` | What the three packages agree on (revisions, "
         "yosys tag, chipdb identity, commit, run), plus each package's file "
         "and build time |",

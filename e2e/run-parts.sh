@@ -41,8 +41,9 @@ DB="$PKG/share/nextpnr/external/prjxray-db"
 PARTS=${E2E_PARTS:-$(python3 -c "import json;print(' '.join(p for ps in json.load(open('$REPO/chipdb-parts.json')).values() for p in ps))")}
 
 # The schema, the layout and the chipdb file of every part, from the
-# package's own XILINX-PARTS-INVENTORY.json (XILINX-PARTS-INDEX.json in a
-# package published before the rename): an "index-file <name>" line, a
+# package's own XILINX-PARTS-INVENTORY.json (in its chipdb directory; at the
+# root of a package published before, under that name or as
+# XILINX-PARTS-INDEX.json): an "index-file <path> [(<note>)]" line, a
 # "schema <number>" line, a "names-chipdb <0|1>" line
 # (pack.parts_index.names_chipdb_files), a "chipdb-dir <dir>" line, then
 # one "<part> <chipdb file>" line per part
@@ -50,14 +51,15 @@ PARTS=${E2E_PARTS:-$(python3 -c "import json;print(' '.join(p for ps in json.loa
 # shellcheck disable=SC2086
 PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}" python3 -c '
 import sys
-from pack.parts_index import (chipdb_name, chipdb_subdir, is_legacy_name,
-                              names_chipdb_files, package_index_file,
+from pack.parts_index import (chipdb_name, chipdb_subdir, index_note,
+                              names_chipdb_files, package_index_files,
                               package_schema, read_package_index)
-found = package_index_file(sys.argv[1])
+found = package_index_files(sys.argv[1])
 index = read_package_index(sys.argv[1])
 schema, files = package_schema(index)
-print("index-file", found.name if found else "none",
-      "(legacy name)" if found and is_legacy_name(found) else "")
+note = index_note(found[0]) if found else ""
+print("index-file", found[0] if found else "none",
+      f"({note})" if note else "")
 print("schema", schema)
 print("names-chipdb", int(names_chipdb_files(index)))
 print("chipdb-dir", chipdb_subdir(index))
