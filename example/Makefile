@@ -89,8 +89,10 @@ ${TOP}.json: ${TOP}.v
 	@echo -e ${BLUE}"─────────────────────────────────────"${RESET}
 	@echo -e ${BLUE}"➡️  Synthesizing..."${RESET}
 	@echo -e ${BLUE}"─────────────────────────────────────"${RESET}
+	@# apio's synthesis line (apio/scons/plugin_xilinx.py): simplemap turns the
+	@# $$buf cell that yosys >= 0.69+59 can leave into wires
 	yosys -p "synth_xilinx -arch xc7 -top ${TOP}; \
-	          write_json ${TOP}.json" \
+	          simplemap t:\$$buf; write_json ${TOP}.json" \
 	          ${TOP}.v ${DEPS} -q
 	@echo
 
