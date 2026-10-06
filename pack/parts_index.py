@@ -18,7 +18,8 @@ package and speed grade of the device, and of the devices that are the
 same die (an xc7a35t is an xc7a50t).
 
 Each entry also carries ``part-num``, the part in the form of apio's fpga
-definitions (``XC7A35T-1CSG324``), for information only (apio#1106).
+definitions (``XC7A35T-1CSG324``), and ``size``, the size of its device in
+the same form (``35k``), both for information only (apio#1106).
 
 This module owns the format (schema, note, validation) and where the
 document lives, in a package and in a release. ``pack.chipdb_assets``
@@ -84,10 +85,13 @@ def engine_accepts(part: str) -> bool:
 
 # An entry has the four keys every part has; whether the part is built is
 # the ``generated`` flag, and nothing else about the chipdb is recorded.
-# ``part-num`` is informational (apio#1106): the part in the form of
-# apio's fpga definitions. Documents written before it carry the first
-# four only, and a reader must not need it.
-ENTRY_KEYS = ("family", "base-part", "speed", "generated", "part-num")
+# ``part-num`` and ``size`` are informational (apio#1106): the part and
+# its device size in the form of apio's fpga definitions. Documents
+# written before them carry the first four only, and a reader must not
+# need them.
+ENTRY_KEYS = ("family", "base-part", "speed", "generated", "part-num",
+              "size")
+NEW_KEYS = ("part-num", "size")
 
 # On-disk name of the identity stamp, next to the bins. pack.chipdb writes
 # it; repeated here so this module does not import the generator.
@@ -233,6 +237,36 @@ def part_num(part: str) -> str:
     return f"{device}-{speed}{package}".upper()
 
 
+# Programmable Logic Cells of the Zynq-7000 devices, whose number is not a
+# size: DS190 (v1.11.1, July 2, 2018) "Zynq-7000 SoC Data Sheet: Overview",
+# Table 1, row "Programmable Logic Cells". Every other 7-series device
+# names its size (xc7a35t: 35k).
+ZYNQ_SIZES = {
+    "xc7z007s": "23k", "xc7z012s": "55k", "xc7z014s": "65k",
+    "xc7z010": "28k", "xc7z015": "74k", "xc7z020": "85k",
+    "xc7z030": "125k", "xc7z035": "275k", "xc7z045": "350k",
+    "xc7z100": "444k",
+}
+_NAMED_SIZE = re.compile(r"xc7(?:a|k|s|vx|v)(\d+)t?")
+
+
+def size(part: str) -> str:
+    """Size of the device of *part*, as apio's fpga definitions write it.
+
+    xc7a35tcsg324-1 -> 35k, xc7s6ftgb196-1 -> 6k, xc7z020clg400-1 -> 85k.
+    A property of the device, not of the package or the speed grade. A
+    Zynq device is looked up in ZYNQ_SIZES, any other one names its size.
+    A device neither rule covers is an error, never a guess.
+    """
+    device = device_of(part.rsplit("-", 1)[0])
+    if device in ZYNQ_SIZES:
+        return ZYNQ_SIZES[device]
+    named = _NAMED_SIZE.fullmatch(device)
+    if named and not device.startswith("xc7z"):
+        return f"{named.group(1)}k"
+    raise ValueError(f"no size known for device {device} (part '{part}')")
+
+
 def _check_entry(part: str, entry: dict, _date: str) -> None:
     """Check one part entry on its own.
 
@@ -266,6 +300,10 @@ def _check_entry(part: str, entry: dict, _date: str) -> None:
         raise ValueError(
             f"{PACKAGE_FILE}: {part} has part-num {entry['part-num']!r}, "
             f"expected {part_num(part)!r}")
+    if "size" in entry and entry["size"] != size(part):
+        raise ValueError(
+            f"{PACKAGE_FILE}: {part} has size {entry['size']!r}, "
+            f"expected {size(part)!r}")
     if entry["generated"] and not engine_accepts(part):
         raise ValueError(
             f"{PACKAGE_FILE}: {part} is generated but the engine rejects "
@@ -273,13 +311,13 @@ def _check_entry(part: str, entry: dict, _date: str) -> None:
 
 
 def validate_document(info: dict, expect_tag: str | None = None,
-                      require_part_num: bool = False) -> dict:
+                      written_now: bool = False) -> dict:
     """Check the document on its own; return the generated entries by part.
 
-    ``part-num`` is checked wherever an entry carries it. A document
-    published before the key existed has none and stays valid;
-    *require_part_num* is the gate on a document written now: every
-    entry carries it.
+    ``part-num`` and ``size`` are checked wherever an entry carries them. A
+    document published before the keys existed has none and stays valid;
+    *written_now* is the gate on a document written now: every entry
+    carries NEW_KEYS.
 
     *expect_tag* is the release the document was actually found in. A
     document naming another tag describes a different package than the one
@@ -319,8 +357,10 @@ def validate_document(info: dict, expect_tag: str | None = None,
     generated = {}
     for part, entry in parts.items():
         _check_entry(part, entry, date)
-        if require_part_num and "part-num" not in entry:
-            raise ValueError(f"{PACKAGE_FILE}: {part} has no part-num")
+        if written_now:
+            for key in NEW_KEYS:
+                if key not in entry:
+                    raise ValueError(f"{PACKAGE_FILE}: {part} has no {key}")
         if entry["generated"]:
             generated[part] = entry
 
@@ -335,7 +375,7 @@ def validate_document(info: dict, expect_tag: str | None = None,
 
 
 def validate_package_info(info_path: Path, chipdb: Path,
-                          require_part_num: bool = False) -> dict:
+                          written_now: bool = False) -> dict:
     """Validate the document and the chipdb files it describes.
 
     *chipdb* is the directory that holds exactly the chipdb files of the
@@ -347,7 +387,7 @@ def validate_package_info(info_path: Path, chipdb: Path,
     except (OSError, json.JSONDecodeError) as error:
         raise ValueError(f"cannot read {info_path}: {error}") from error
 
-    generated = validate_document(info, require_part_num=require_part_num)
+    generated = validate_document(info, written_now=written_now)
 
     stamp_path = chipdb / STAMP_FILE
     stamp = stamp_path.read_text(encoding="utf-8").strip() \
@@ -494,13 +534,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("index", type=Path)
     parser.add_argument("chipdb", type=Path)
-    parser.add_argument("--require-part-num", action="store_true",
-                        help="refuse an entry without part-num (a document "
-                             "written now, not a published one)")
+    parser.add_argument("--written-now", action="store_true",
+                        help="refuse an entry without part-num or size (a "
+                             "document written now, not a published one)")
     args = parser.parse_args()
     try:
         counts = validate_package_info(args.index, args.chipdb,
-                                       args.require_part_num)
+                                       args.written_now)
     except ValueError as error:
         parser.exit(1, f"error: {error}\n")
     print(f"{args.index.name}: {counts['part-count']} parts "

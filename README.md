@@ -143,11 +143,15 @@ package, `share/nextpnr/himbaechel/xilinx/`, next to the chipdb files it
 describes, and is published with each release under the same name. It is keyed by the full
 part (`xc7a200tfbg484-3`: device, package, speed grade); each entry gives
 its `family`, `base-part` and `speed`, whether this release built it
-(`generated`) and, for information only, its `part-num`: the part in the
-form of apio's fpga definitions (`XC7A35T-1CSG324` for `xc7a35tcsg324-1`,
-`XC7A200T-2LFBV484` for `xc7a200tfbv484-2L`), upper case, without the
-temperature letter of the ordering code. The key stays the part name the
-tools read; documents published before `part-num` have none. A part with `"generated": false` is supported by the
+(`generated`) and, for information only, its `part-num` and `size`. The
+`part-num` is the part in the form of apio's fpga definitions
+(`XC7A35T-1CSG324` for `xc7a35tcsg324-1`, `XC7A200T-2LFBV484` for
+`xc7a200tfbv484-2L`), upper case, without the temperature letter of the
+ordering code. The `size` is the size of the device in the same form
+(`35k` for every xc7a35t part): the number of the device name for Artix-7
+and Spartan-7, the Programmable Logic Cells of DS190 for Zynq-7000
+(`xc7z020`: `85k`). The key stays the part name the tools read; documents
+published before `part-num` and `size` have none. A part with `"generated": false` is supported by the
 packaged database but not built: "not built" rather than "unknown part"
 (this includes the speed grades the engine's `--device` pattern rejects,
 such as `xc7s50csga324-1IL`). Which chipdb file serves a part is the

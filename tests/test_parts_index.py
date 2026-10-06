@@ -17,7 +17,7 @@ from pack.parts_index import (CHIPDB_SUBDIR, ENTRY_KEYS, INDEX_ASSET,
                               chipdb_name, chipdb_subdir, engine_accepts,
                               index_members, index_note, is_legacy_name,
                               names_chipdb_files, package_index_file,
-                              package_index_files, part_num,
+                              package_index_files, part_num, size,
                               package_schema, previous_index_asset_names,
                               read_package_index, read_package_schema,
                               validate_document, validate_package_info)
@@ -201,9 +201,9 @@ class PartsIndexTests(unittest.TestCase):
         self.assertEqual(info["schema"], SCHEMA)
         self.assertEqual(SCHEMA, 8)
         for entry in info["parts"].values():
-            # part-num is informational: a document without it (every one
-            # published before it existed) is still valid.
-            self.assertEqual(list(entry), list(ENTRY_KEYS[:-1]))
+            # part-num and size are informational: a document without
+            # them (every one published before) is still valid.
+            self.assertEqual(list(entry), list(ENTRY_KEYS[:-2]))
             self.assertNotIn("chipdb", entry)
             self.assertFalse(
                 {"chipdb-size", "chipdb-sha256", "asset", "asset-size",
@@ -536,10 +536,6 @@ class PartsIndexTests(unittest.TestCase):
         self.assertEqual(index_members(["BUILD-INFO.json"]), [])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 APIO_PART_NUMS = (Path(__file__).resolve().parent / "data" /
                   "apio-xilinx-part-nums.json")
 
@@ -605,12 +601,13 @@ class PartNumTests(unittest.TestCase):
             "base-part-count": 1, "note": "fixture",
             "parts": {part: {"family": "artix7", "base-part": "xc7a35tcsg324",
                              "speed": "1", "generated": True,
-                             "part-num": part_num(part)}},
+                             "part-num": part_num(part),
+                             "size": size(part)}},
         }
 
     def test_the_validator_accepts_the_right_part_num(self):
         info = self._document()
-        self.assertEqual(sorted(validate_document(info, require_part_num=True)),
+        self.assertEqual(sorted(validate_document(info, written_now=True)),
                          ["xc7a35tcsg324-1"])
 
     def test_the_validator_refuses_another_part_num(self):
@@ -625,7 +622,90 @@ class PartNumTests(unittest.TestCase):
     def test_a_document_before_the_key_is_valid_unless_one_is_required(self):
         info = self._document()
         del info["parts"]["xc7a35tcsg324-1"]["part-num"]
+        del info["parts"]["xc7a35tcsg324-1"]["size"]
         validate_document(info)
         with self.assertRaisesRegex(
                 ValueError, "xc7a35tcsg324-1 has no part-num"):
-            validate_document(info, require_part_num=True)
+            validate_document(info, written_now=True)
+
+    def test_a_document_with_part_num_and_no_size_is_not_written_now(self):
+        info = self._document()
+        del info["parts"]["xc7a35tcsg324-1"]["size"]
+        validate_document(info)
+        with self.assertRaisesRegex(
+                ValueError, "xc7a35tcsg324-1 has no size"):
+            validate_document(info, written_now=True)
+
+
+APIO_SIZES = (Path(__file__).resolve().parent / "data" /
+              "apio-xilinx-sizes.json")
+UPSTREAM_PARTS = (Path(__file__).resolve().parent / "data" /
+                  "parts-upstream-2026-10-06.json")
+DS190_ZYNQ = {
+    "xc7z007s": "23k", "xc7z012s": "55k", "xc7z014s": "65k",
+    "xc7z010": "28k", "xc7z015": "74k", "xc7z020": "85k",
+    "xc7z030": "125k", "xc7z035": "275k", "xc7z045": "350k",
+    "xc7z100": "444k",
+}
+
+
+class SizeTests(unittest.TestCase):
+    """size: the device size in the form of apio's fpga definitions."""
+
+    def test_the_named_devices(self):
+        for part, expected in (
+                ("xc7a35tcsg324-1", "35k"), ("xc7a200tfbg484-3", "200k"),
+                ("xc7s6ftgb196-1", "6k"), ("xc7s100fgga676-2", "100k"),
+                ("xc7k325tffg900-1Q", "325k"),
+                ("xc7vx485tffg1761-2", "485k")):
+            with self.subTest(part=part):
+                self.assertEqual(size(part), expected)
+
+    def test_the_ten_zynq_devices(self):
+        """DS190 v1.11.1, Table 1, Programmable Logic Cells."""
+        for device, expected in DS190_ZYNQ.items():
+            for tail in ("clg400-1", "sbg485-2"):
+                with self.subTest(device=device, tail=tail):
+                    # xc7z030sbg485: the s is the package's, not the device's.
+                    self.assertEqual(size(device + tail), expected)
+        self.assertEqual(size("xc7z030sbg485-1"), "125k")
+        self.assertEqual(size("xc7z007sclg225-1"), "23k")
+
+    def test_an_unknown_device_fails_naming_it(self):
+        for part, name in (("xc7z999clg400-1", "xc7z999"),
+                           ("xc7z050clg400-1", "xc7z050")):
+            with self.subTest(part=part):
+                with self.assertRaisesRegex(ValueError, name):
+                    size(part)
+        with self.assertRaises(ValueError):
+            size("xc6slx9csg324-2")
+
+    def test_apio_definitions_agree(self):
+        """The 17 Xilinx entries of apio's fpgas.jsonc (key = part)."""
+        table = json.loads(APIO_SIZES.read_text(encoding="utf-8"))
+        self.assertEqual(len(table), 17)
+        for part, expected in table.items():
+            with self.subTest(part=part):
+                self.assertEqual(size(part), expected)
+
+    def test_every_part_of_both_inventories(self):
+        published = list(json.loads(PUBLISHED_SCHEMA_5.read_text(
+            encoding="utf-8"))["parts"])
+        upstream = json.loads(UPSTREAM_PARTS.read_text(encoding="utf-8"))
+        self.assertEqual((len(published), len(upstream)), (202, 206))
+        for part in published + upstream:
+            with self.subTest(part=part):
+                self.assertRegex(size(part), r"^[1-9][0-9]*k$")
+
+    def test_the_validator_refuses_another_size(self):
+        for wrong in ("50k", "35K", "35", "", None):
+            with self.subTest(size=wrong):
+                info = PartNumTests._document(self)
+                info["parts"]["xc7a35tcsg324-1"]["size"] = wrong
+                with self.assertRaisesRegex(
+                        ValueError, "has size .*expected '35k'"):
+                    validate_document(info)
+
+
+if __name__ == "__main__":
+    unittest.main()

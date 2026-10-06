@@ -263,12 +263,12 @@ if [ -n "$INDEX_NOTE" ]; then
     note "$INDEX_REL: $INDEX_NOTE of $INDEX_PATH (a package published before)"
 fi
 INDEX_FILE=$INDEX_REL
-# A package built now (--expect-date) carries part-num in every entry;
-# a published one may predate the key.
-REQUIRE_PART_NUM=()
-[ -z "$EXPECT_DATE" ] || REQUIRE_PART_NUM=(--require-part-num)
+# A package built now (--expect-date) carries part-num and size in every entry;
+# a published one may predate the keys.
+WRITTEN_NOW=()
+[ -z "$EXPECT_DATE" ] || WRITTEN_NOW=(--written-now)
 if PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
-    python3 -m pack.parts_index "$INDEX" "$CHIPDB_SRC" ${REQUIRE_PART_NUM[@]+"${REQUIRE_PART_NUM[@]}"}
+    python3 -m pack.parts_index "$INDEX" "$CHIPDB_SRC" ${WRITTEN_NOW[@]+"${WRITTEN_NOW[@]}"}
 then
     ok "$INDEX_FILE: valid schema, and every chipdb file matches what it records"
 else
