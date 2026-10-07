@@ -66,6 +66,18 @@ let
       ++ [ cross.windows.mingw_w64_pthreads ];
   });
 
+  # The C++ runtime is linked into every .exe (-static), so the package
+  # carries no libstdc++-6.dll, libgcc_s_seh-1.dll, libwinpthread-1.dll or
+  # libmcfgthread-1.dll. apio puts the package's bin/ on the PATH ahead of
+  # oss-cad-suite, whose tools find their own runtime DLLs through the PATH:
+  # a copy of ours there was loaded in their place and, built by an older
+  # gcc, lacked symbols they import (apio#1110). Our .exe never needed
+  # the PATH for this: Windows looks next to the .exe first.
+  # This gcc uses the mcf thread model; nixpkgs builds mcfgthread with
+  # --disable-static, so -static needs its archive built as well.
+  mcfgthreadsStatic = cross.windows.mcfgthreads.overrideAttrs { dontDisableStatic = true; };
+  staticRuntime = "-DCMAKE_EXE_LINKER_FLAGS=-static";
+
   # Cross builds cannot run the bbasm they would compile. CMake includes a
   # native export unconditionally whenever CMAKE_CROSSCOMPILING is set
   # (cmake/../CMakeLists.txt, BBA_IMPORT), even when the device list is
@@ -103,10 +115,13 @@ let
     nativeBuildInputs = [ pkgs.cmake pkgs.git pkgs.pkg-config python ];
     # boost_iostreams is built against zlib, bzip2 and lzma. The embedded
     # interpreter used to pull those onto the link path; without it they
-    # have to be named.
+    # have to be named, and -static wants their archives (nixpkgs builds
+    # bzip2 and xz shared-only here; zlib keeps its archive in .static).
     buildInputs = [
-      boostWin cross.eigen cross.windows.mingw_w64_pthreads
-      cross.zlib cross.bzip2 cross.xz
+      boostWin cross.eigen cross.windows.mingw_w64_pthreads mcfgthreadsStatic
+      cross.zlib cross.zlib.static
+      (cross.bzip2.override { enableStatic = true; })
+      (cross.xz.override { enableStatic = true; })
     ];
     enableParallelBuilding = true;
     postPatch = ''
@@ -131,6 +146,7 @@ let
       # boost::wrapexcept's destructor once per translation unit as a
       # strong symbol. The native build keeps IPO. Windows does not.
       "-DUSE_IPO=OFF"
+      staticRuntime
     ];
     installPhase = ''
       mkdir -p $out/bin
@@ -148,7 +164,7 @@ let
     pname = "prjxray-win"; version = "9346969e";
     src = prjxraySrc;
     nativeBuildInputs = [ pkgs.cmake pkgs.git pkgs.pkg-config python ];
-    buildInputs = [ boostWin cross.eigen cross.windows.mingw_w64_pthreads ];
+    buildInputs = [ boostWin cross.eigen cross.windows.mingw_w64_pthreads mcfgthreadsStatic ];
     enableParallelBuilding = true;
     # The Win32 ports (MemoryMappedFile, Database segbits) and the ODR fix for
     # the Configuration explicit specializations used to be applied here; they
@@ -160,6 +176,7 @@ let
     cmakeFlags = [
       "-DCMAKE_BUILD_TYPE=Release" "-Wno-deprecated"
       "-DPython3_EXECUTABLE=${python.interpreter}"
+      staticRuntime
     ];
     installPhase = ''
       mkdir -p $out/bin
@@ -174,7 +191,7 @@ let
   # families and parts to ship, from the shared manifest (same list as pack/)
   chipdbManifest = builtins.fromJSON (builtins.readFile ../../chipdb-parts.json);
   chipdbFamilies = builtins.attrNames chipdbManifest;
-  gccLib = "${cross.stdenv.cc.cc.lib}/x86_64-w64-mingw32/lib";
+  objdump = "${cross.stdenv.cc.bintools.bintools}/bin/${cross.stdenv.cc.targetPrefix}objdump";
 
   # pure-python tool env (fasm pulls textx -> arpeggio; + prjxray's python deps).
   # withPackages keeps the *.dist-info metadata (textX needs version("textx")).
@@ -202,12 +219,16 @@ in pkgs.runCommand "openxc7-toolchain-windows-amd64-tools" {
   cp -L ${prjxrayWin}/bin/*.exe $out/bin/
   test -f $out/bin/nextpnr-xilinx.exe
 
-  # -- runtime DLLs next to the exes (Windows searches the app dir first).
+  # -- no DLL next to the exes: the C++ runtime is linked in (see
+  # -- mcfgthreadsStatic). Fail if an .exe still imports one of ours (a
+  # -- lib*.dll); what is left are Windows' own DLLs.
+  for exe in $out/bin/*.exe; do
+    if ${objdump} -p "$exe" | grep -i 'DLL Name: lib'; then
+      echo "$(basename "$exe") imports a runtime DLL the package does not carry"
+      exit 1
+    fi
+  done
   # No libpython: the exe does not embed an interpreter.
-  cp -L ${gccLib}/libstdc++-6.dll ${gccLib}/libgcc_s_seh-1.dll $out/bin/
-  cp -L ${cross.windows.mingw_w64_pthreads}/bin/libwinpthread-1.dll $out/bin/
-  cp -L ${cross.windows.mcfgthreads}/bin/libmcfgthread-1.dll $out/bin/
-  test ! -e $out/bin/libpython3.11.dll
   test ! -e $out/lib/python3.11
 
   # -- xc7pll (stdlib python). Shipped in libexec + .cmd launcher like
@@ -283,6 +304,10 @@ PYEOF
   ${cmdLauncher "fasm2frames"}
   ${cmdLauncher "bit2fasm"}
   ${cmdLauncher "xc7pll"}
+
+  # -- apio puts bin/ and lib/ on the PATH: no DLL anywhere in the tree
+  leftover=$(find $out -iname '*.dll' -print -quit)
+  [ -z "$leftover" ] || { echo "a DLL is in the package: $leftover"; exit 1; }
 
   chmod -R u+w $out
 ''

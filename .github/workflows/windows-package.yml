@@ -91,10 +91,10 @@ jobs:
           test ! -e result-win-tools/share/nextpnr/himbaechel
           test -f result-win-tools/bin/nextpnr-xilinx.exe
           test -f result-win-tools/bin/xc7frames2bit.exe
-          # the mingw runtime sits next to the .exe (no rpath on Windows)
-          for dll in libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll libmcfgthread-1.dll; do
-            test -f "result-win-tools/bin/$dll" || { echo "::error::tools tree lacks bin/$dll"; exit 1; }
-          done
+          # the mingw runtime is linked into the .exe: no DLL on the PATH
+          # apio builds, ahead of oss-cad-suite (apio#1110)
+          DLL=$(find result-win-tools/ -iname '*.dll' -print -quit)
+          [ -z "$DLL" ] || { echo "::error::tools tree carries $DLL"; exit 1; }
           # built with BUILD_PYTHON=OFF: no embedded interpreter, no stdlib
           # for it, and none of the python helpers the old engine installed
           test ! -e result-win-tools/bin/libpython3.11.dll

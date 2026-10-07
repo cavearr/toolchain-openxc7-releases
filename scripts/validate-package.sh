@@ -319,6 +319,12 @@ if [ "$PLAT" = "windows-amd64" ]; then
     # textX is the intended parser on windows, imported directly
     grep -q "INTENDED parser" "$PKG/lib/python3.12/site-packages/fasm/parser/__init__.py" \
         || fail "fasm parser __init__ not patched (apio#913 warning would fire)"
+    # apio puts bin/ and lib/ on the PATH ahead of oss-cad-suite: a DLL
+    # there is loaded by oss-cad-suite's tools in place of their own
+    # (apio#1110). The C++ runtime is linked into the .exe.
+    DLL=$(find "$PKG" -iname '*.dll' -print -quit)
+    [ -z "$DLL" ] || fail "the package carries a DLL: ${DLL#"$PKG"/}"
+    ok "no DLL in the package: nothing of ours on apio's PATH shadows oss-cad-suite"
     PLL_OUT=$(python3 "$PKG/libexec/xc7pll" -i 100 -o 65 --report 2>&1) || fail "xc7pll does not run: $PLL_OUT"
 else
     [ -f "$PKG/bin/xc7pll" ]       || fail "xc7pll missing from bin/"

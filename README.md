@@ -249,8 +249,11 @@ tar czhf openxc7-toolchain-windows-amd64-YYYYMMDD.tgz --mode=u+w -C package-win 
 ```
 
 `nextpnr-xilinx.exe` is the same uarch as the Linux and macOS binaries,
-built without an embedded Python. The hard-won parts of the cross build
-are explained in `nix/windows/default.nix`.
+built without an embedded Python. Every `.exe` carries the mingw C++
+runtime inside (`-static`), so the package ships no DLL: its `bin` and `lib`
+can come before oss-cad-suite's on the `PATH` without replacing the runtime
+DLLs that oss-cad-suite's tools look up there. The hard-won parts of the
+cross build are explained in `nix/windows/default.nix`.
 
 ## How a package is validated
 
