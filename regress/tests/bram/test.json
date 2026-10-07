@@ -1,14 +1,10 @@
 {
   "description": "1024x16 block RAM with a registered read port",
   "exercises": ["RAMB inference", "BRAM placement", "BRAM fasm features"],
-  "tags": ["primitive", "xfail"],
+  "tags": ["primitive"],
   "expect": {
     "primitives": { "RAMB18E1": ">=1" },
-    "status": "fail",
-    "log_contains": [
-      "ERROR: Hold/min time violation for clock '[^']*CLKARDCLK'",
-      "hold\\s+-[0-9.]+\\s+-?[0-9.]+\\s+Source \\S+\\.DIADI"
-    ]
-  },
-  "why": "KNOWN GAP since yosys 0.69 (oss-cad-suite 2026-09-27): nextpnr checks the RAMB data-in hold with the NO_CHANGE value for every WRITE_MODE (openXC7/nextpnr#64), and this READ_FIRST block, placed from the 0.69 netlist, ends with DIADI paths short enough to trip that false hold: nextpnr exits 1. Fixed by openXC7/nextpnr#65; when the engine carries it this flow passes, the guard trips, and the test goes back to a positive one."
+    "artifacts": ["bitstream"],
+    "metrics_present": ["fmax_mhz"]
+  }
 }

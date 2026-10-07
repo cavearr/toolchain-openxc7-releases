@@ -14,6 +14,12 @@
 # the Arty S7-25 are written into their own words), and the one of xc7s100
 # (a grid derived from the pristine one, db#17, and the same offset fix,
 # db#20). Neither xc7s100 nor xc7s75 is in the manifest.
+# master of 2026-10-06 (972bf272) adds the HCLK_L BUFRCLK enables and the
+# HCLK_IOI BUFIO rows of kintex7, spartan7 and zynq7 (db#22, db#23), the
+# CLK_PERF rows of both CMT columns (db#24) and the CLK_PERF0..3 /
+# PERFCLK0..3 rows with all their bits (db#30): the MMCM to BUFR/BUFIO
+# path. Also DSP48E1 AREG_1/BREG_1 (db#31), a virtex7 refresh (db#27,
+# db#28) and the xc7z007s parts (db#29).
 let
   source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
 in

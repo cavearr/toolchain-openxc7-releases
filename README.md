@@ -72,7 +72,7 @@ Zynq support is **PL only**: the toolchain produces the fabric bitstream
 (loaded over JTAG); the ARM PS boots on its own. Kintex-7 is work in
 progress upstream. `chipdb-parts.json` is the single source of truth for
 this list: the packer, the Windows build and the CI assertions all read it.
-The parts inventory of a release counts what that gives today: 202 parts
+The parts inventory of a release counts what that gives today: 206 parts
 (device, package and speed grade) supported by the packaged database, 122
 of them built, over 10 chipdb files.
 

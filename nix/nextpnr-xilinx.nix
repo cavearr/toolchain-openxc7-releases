@@ -17,20 +17,27 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-09-30";
+  version = "1.0.0-unstable-2026-10-07";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
   # nix/revisions.json is main after the tag 1.0.0 (e860c9c8), which has no
   # newer tag yet.
-  # Over 1.0.0 it brings a shared LUT that drives a CARRY4 S input placed
-  # at the carry site (#52), IFFDELMUXE3.P0 for an IDDR fed by an IDELAYE2
-  # (#58), ISERDES OFB_USED with the OFB pairs kept off the _SING tiles
-  # (#62), the BSCAN site found by JTAG chain (#29) and the -o preplaced /
-  # -o prerouted / -o holdbufs replay options (#30), besides the fixes
-  # merged before them (#45, #46, #47, #49). The chipdb generator and the
-  # constids do not change: the chipdb files are byte-identical to 1.0.0's.
-  # ZERO local patches.
+  # Over 1.0.0, up to c68c1358, it brought a shared LUT that drives a CARRY4
+  # S input placed at the carry site (#52), IFFDELMUXE3.P0 for an IDDR fed
+  # by an IDELAYE2 (#58), ISERDES OFB_USED with the OFB pairs kept off the
+  # _SING tiles (#62), the BSCAN site found by JTAG chain (#29) and the
+  # -o preplaced / -o prerouted / -o holdbufs replay options (#30).
+  # Since c68c1358 (26f5e17a): the RAMB data-in setup/hold follow each
+  # port's WRITE_MODE (#65), the ODDR on a pad's tristate path (#72), RAM32M
+  # / RAM64M contents and falling-edge SRLs (#70), RAMB INIT/SRVAL and the
+  # 72-bit SDP write width (#69), the MMCM/PLL counters and loop filter
+  # (#68), DSP48E1 inputs tied in the tile (#66), cascaded RAMB36 pairs
+  # (#67), no HP-bank OBUF glue under an OLOGIC cell (#78), TMDS_33 and
+  # LVDS_25 pairs, LVCMOS33 drive and IDDR Q3/Q4 init as Vivado writes them
+  # (#71), and named errors where it crashed or aborted (#53, #54, #55,
+  # #57). #65 changes the chipdb generator (the RAMB timing variants per
+  # write mode); the constids do not change. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it

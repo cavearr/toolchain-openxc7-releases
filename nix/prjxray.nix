@@ -18,6 +18,11 @@ stdenv.mkDerivation rec {
   # HP-bank template, XRAY_ALLOW_MISSING_FEATURES is an opt-in escape, and
   # bitread.cc is upstream's own rewrite of our PR #6 fix. The rest is
   # fuzzers, utils/ lab tooling and docs (our PRs #16 and #18).
+  # master 2026-10-07 (54fea88c) adds to the shipped surface: fasm2frames
+  # writes no HP-bank glue on a half whose OLOGIC holds a cell (#30),
+  # xc7frames2bit refuses frame addresses the part does not have (#27) and
+  # exits 1 when it cannot write the bitstream (#28), and the database grid
+  # is read once (#26). The rest is fuzzers and checkdb.
   src = fetchFromGitHub {
     inherit (source) owner repo rev hash;
     fetchSubmodules = source.submodules;
