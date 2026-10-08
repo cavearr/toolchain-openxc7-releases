@@ -6,11 +6,11 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 26,
-      "fmax_mhz": 475.28515625,
-      "luts": 30,
+      "fmax_mhz": 448.2294921875,
+      "luts": 31,
       "pnr_seconds": 6.82
     }
   },
@@ -21,11 +21,11 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 7,
-      "fmax_mhz": 385.3564453125,
-      "luts": 15,
+      "fmax_mhz": 407.1661071777344,
+      "luts": 22,
       "pnr_seconds": 8.34
     }
   },
@@ -36,10 +36,10 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 128,
-      "fmax_mhz": 235.12815856933594,
+      "fmax_mhz": 233.80874633789062,
       "luts": 257,
       "pnr_seconds": 8.6
     }
@@ -51,11 +51,11 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 12288,
-      "fmax_mhz": 460.8294677734375,
-      "luts": 12309,
+      "fmax_mhz": 449.8425598144531,
+      "luts": 12324,
       "pnr_seconds": 53.3
     }
   },
@@ -66,11 +66,11 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 12288,
-      "fmax_mhz": 444.24700927734375,
-      "luts": 12309,
+      "fmax_mhz": 423.908447265625,
+      "luts": 12324,
       "pnr_seconds": 117.84
     }
   },
@@ -81,7 +81,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -94,7 +94,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -107,7 +107,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -120,7 +120,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1024.5902099609375,
@@ -133,7 +133,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -146,7 +146,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -159,7 +159,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -172,7 +172,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -185,7 +185,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -198,7 +198,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -211,7 +211,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -224,7 +224,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -237,7 +237,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -250,7 +250,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -263,7 +263,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -276,7 +276,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -289,7 +289,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -302,7 +302,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -315,7 +315,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -328,7 +328,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -341,7 +341,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -354,7 +354,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -367,7 +367,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -380,7 +380,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -393,7 +393,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -406,7 +406,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1024.5902099609375,
@@ -419,7 +419,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -432,7 +432,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -445,7 +445,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1024.5902099609375,
@@ -458,7 +458,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1024.5902099609375,
@@ -471,7 +471,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1024.5902099609375,
@@ -484,7 +484,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1024.5902099609375,
@@ -497,7 +497,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1024.5902099609375,
@@ -510,7 +510,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -523,7 +523,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -536,7 +536,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -549,7 +549,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 1,
       "fmax_mhz": 1043.84130859375,
@@ -564,7 +564,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 25,
       "fmax_mhz": 408.16326904296875,
@@ -579,10 +579,10 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 25,
-      "fmax_mhz": 387.596923828125,
+      "fmax_mhz": 391.08331298828125,
       "luts": 56,
       "pnr_seconds": 8.24
     }
@@ -594,10 +594,10 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 25,
-      "fmax_mhz": 387.596923828125,
+      "fmax_mhz": 408.16326904296875,
       "luts": 56,
       "pnr_seconds": 7.39
     }
@@ -609,10 +609,10 @@
       "dsps": 1,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 36,
-      "fmax_mhz": 430.2926330566406,
+      "fmax_mhz": 429.1845703125,
       "luts": 81,
       "pnr_seconds": 8.53
     }
@@ -624,11 +624,11 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 257,
-      "fmax_mhz": 442.4778747558594,
-      "luts": 333,
+      "fmax_mhz": 346.5003662109375,
+      "luts": 393,
       "pnr_seconds": 9.02
     }
   },
@@ -639,11 +639,11 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 22,
-      "fmax_mhz": 483.3252868652344,
-      "luts": 9,
+      "fmax_mhz": 501.0019836425781,
+      "luts": 8,
       "pnr_seconds": 8.13
     }
   },
@@ -654,11 +654,11 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 28,
-      "fmax_mhz": 555.8643798828125,
-      "luts": 48,
+      "fmax_mhz": 599.1611938476562,
+      "luts": 49,
       "pnr_seconds": 8.25
     }
   },
@@ -669,7 +669,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 22,
       "fmax_mhz": 398.88311767578125,
@@ -684,11 +684,11 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 31,
-      "fmax_mhz": 384.76336669921875,
-      "luts": 64,
+      "fmax_mhz": 343.1708984375,
+      "luts": 66,
       "pnr_seconds": 8.27
     }
   },
@@ -699,10 +699,10 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 24,
-      "fmax_mhz": 420.6983337402344,
+      "fmax_mhz": 398.88311767578125,
       "luts": 48,
       "pnr_seconds": 8.29
     }
@@ -714,7 +714,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 0,
       "fmax_mhz": null,
@@ -729,7 +729,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 0,
       "fmax_mhz": null,
@@ -744,7 +744,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 0,
       "fmax_mhz": null,
@@ -759,10 +759,10 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 24,
-      "fmax_mhz": 398.88311767578125,
+      "fmax_mhz": 420.6983337402344,
       "luts": 49,
       "pnr_seconds": 8.24
     }
@@ -774,7 +774,7 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 24,
       "fmax_mhz": 420.6983337402344,
@@ -789,10 +789,10 @@
       "dsps": 0,
       "env": {
         "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 26f5e17a)",
-        "yosys": "Yosys 0.69+154 (git sha1 30d62572e-dirty, Release, Clang /usr/bin/clang++ 21.1.8)"
+        "yosys": "Yosys 0.63+173 (git sha1 66306a8ca, clang++ 18.1.8 -fPIC -O3)"
       },
       "ffs": 38,
-      "fmax_mhz": 457.03839111328125,
+      "fmax_mhz": 433.2755432128906,
       "luts": 26,
       "pnr_seconds": 8.33
     }
