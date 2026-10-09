@@ -47,6 +47,15 @@ One tarball per platform, `openxc7-toolchain-<platform>-<YYYYMMDD>.tgz`:
 | `darwin-arm64` | macOS on Apple Silicon, natively | Carries its own Python for `fasm2frames`; Mach-O libraries relocated and ad-hoc signed (`macpack.py`) |
 | `windows-amd64` | cross-compiled from Linux (mingw) | Validated under wine; `fasm2frames` runs with the oss-cad-suite Python |
 
+On Linux and macOS the shared libraries the tools load live in
+`lib/openxc7/`, not at the first level of `lib/`. `lib/` itself holds
+only directories (`lib/python3.12/` and `lib/openxc7/`), which is what
+keeps those names out of a PATH scan that looks at `lib/`
+([apio#1116](https://github.com/FPGAwars/apio/issues/1116)). The Linux
+wrappers run the bundled loader with `--library-path` pointed there; on
+macOS each Mach-O carries an `LC_RPATH` to that directory, at its own
+depth, and is ad-hoc signed after the relocation.
+
 The linux package is about 135 MB, most of it the ten chipdb files.
 
 ### Supported parts

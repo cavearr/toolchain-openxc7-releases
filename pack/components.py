@@ -12,7 +12,7 @@ from pathlib import Path
 
 import ansi
 
-from . import DIST, BIN, LIBEXEC, LIB
+from . import DIST, BIN, LIBEXEC, PRIVATE_LIB
 from .families import families
 from .platform import IS_DARWIN
 from .relocate import (
@@ -22,6 +22,7 @@ from .relocate import (
     copy_python_dep,
     copy_with_deps,
     is_elf,
+    linux_loader_exec,
     is_python_script,
     is_shell_script,
     python_ctypes,
@@ -92,11 +93,8 @@ export PATH="$release_bindir_abs:$PATH"
             self.shell += 'exec "$release_topdir_abs"/libexec/'\
                           f'{self.bin} "$@"\n'
             return
-        self.shell += 'exec "$release_topdir_abs"/lib/ld-linux-x86-64.so.2 '\
-                      '--inhibit-cache '\
-                      '--inhibit-rpath "" '\
-                      '--library-path "$release_topdir_abs"/lib '\
-                      f'"$release_topdir_abs"/libexec/{self.bin} "$@"\n'
+        self.shell += linux_loader_exec(
+            f'"$release_topdir_abs"/libexec/{self.bin}')
 
     # -- Return the full path of the wrapper
     def get_path(self) -> Path:
@@ -392,10 +390,16 @@ def run_phase3_fasm():
     # -- store, not of this flake (see the libuuid note below). On Linux:
     # -- .so (antlr/libuuid/libffi). On macOS: .dylib; libuuid comes from
     # -- libSystem.
-    dst = Path.cwd() / "dist" / "lib"
+    # -- PRIVATE_LIB, not lib/: these names (libffi, libiconv, liblzma, …)
+    # -- are exactly the ones oss-cad-suite also ships at the first level
+    # -- of lib/, and apio's scan reports them (apio#1116). On macOS the
+    # -- LC_RPATH macpack adds points here, at every Mach-O's own depth,
+    # -- which is how dlopen and LC_LOAD_DYLIB find them.
+    dst = Path.cwd() / DIST / PRIVATE_LIB
+    dst.mkdir(parents=True, exist_ok=True)
 
     # -- libffi: the copy the _ctypes extension of the shipped python3.12
-    # -- loads (looked up via @rpath -> dist/lib on macOS).
+    # -- loads (looked up via @rpath -> PRIVATE_LIB on macOS).
     src = resolve_needed(python_ctypes(), r"libffi\..*")
     msg = copy_file(src, dst)
     print(msg)
@@ -413,13 +417,13 @@ def run_phase3_fasm():
 
     if IS_DARWIN:
         # -- macOS: the LC_LOAD_DYLIB path already names the real file
-        # -- (looked up by libparse_fasm.dylib via @rpath -> dist/lib).
+        # -- (looked up by libparse_fasm.dylib via @rpath -> PRIVATE_LIB).
         msg = copy_file(antlr_lib, dst)
         print(msg)
     else:
-        # -- Linux: the loader looks the library up by soname in dist/lib,
-        # -- so every libantlr4-runtime.so.* of the resolved directory goes
-        # -- in (the soname link and the real file), as before.
+        # -- Linux: the loader looks the library up by soname in
+        # -- PRIVATE_LIB, so every libantlr4-runtime.so.* of the resolved
+        # -- directory goes in (the soname link and the real file), as before.
         lib_dir = antlr_lib.parent
         pattern = "libantlr4-runtime.so.*"
         files = sorted(lib_dir.glob(pattern))

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import ansi
 
+from . import PRIVATE_LIB
 from .components import copy_file
 from .parts_index import CHIPDB_SUBDIR, PACKAGE_PATH
 from .platform import plat_token
@@ -60,9 +61,11 @@ def distribution_init():
         # -- belongs to one run: write_env() embeds this run's, or none.
         (base_dir / PACKAGE_PATH).unlink(missing_ok=True)
 
-    # -- Create the structure
+    # -- Create the structure. Shared libraries go to PRIVATE_LIB so the
+    # -- first level of lib/ stays directories only (apio#1116).
     (base_dir / "bin").mkdir(parents=True, exist_ok=True)
     (base_dir / "lib").mkdir(parents=True, exist_ok=True)
+    (base_dir / PRIVATE_LIB).mkdir(parents=True, exist_ok=True)
     (base_dir / "libexec").mkdir(parents=True, exist_ok=True)
     (base_dir / CHIPDB_SUBDIR).mkdir(parents=True, exist_ok=True)
 

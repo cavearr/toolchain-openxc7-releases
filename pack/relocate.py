@@ -17,7 +17,7 @@ from pathlib import Path
 
 import ansi
 
-from . import DIST, BIN, LIBEXEC, LIB
+from . import DIST, BIN, LIBEXEC, LIB, PRIVATE_LIB
 from .platform import IS_DARWIN
 
 # -- The macOS (Mach-O) packaging backend. Only imported on Darwin; the
@@ -25,6 +25,37 @@ from .platform import IS_DARWIN
 # -- libraries and python files have been copied into dist/.
 if IS_DARWIN:
     import macpack  # noqa: F401  (darwin relocation backend, used by the shim)
+
+
+def linux_loader_exec(program: str) -> str:
+    """Shell text that execs *program* through the bundled Linux loader.
+
+    *program* is one shell word, quotes included when it has any. The
+    loader and its ``--library-path`` are both ``PRIVATE_LIB``: apio globs
+    the first-level files of ``lib/`` (apio#1116), so the closure cannot
+    live there. ``--library-path`` is the process search path, including
+    the later dlopen of libffi from ``_ctypes`` and of libantlr4.
+    """
+    lib = PRIVATE_LIB
+    return (
+        f'exec "$release_topdir_abs"/{lib}/ld-linux-x86-64.so.2 '
+        f"--inhibit-cache "
+        f'--inhibit-rpath "" '
+        f'--library-path "$release_topdir_abs"/{lib} '
+        f'{program} "$@"\n'
+    )
+
+
+def render_tabbypy3(template: str) -> str:
+    """Fill the ``store/tabbypy3`` marker with ``linux_loader_exec``."""
+    marker = "@LINUX_LOADER_EXEC@"
+    if marker not in template:
+        raise SystemExit(f"❌ store/tabbypy3 has no {marker} marker")
+    program = '"$release_topdir_abs"/libexec/python3.12'
+    rendered = template.replace(marker, linux_loader_exec(program).rstrip("\n"))
+    if marker in rendered:
+        raise SystemExit(f"❌ store/tabbypy3 still contains {marker}")
+    return rendered + ("" if rendered.endswith("\n") else "\n")
 
 
 # ------------------------------------------------------------------
@@ -137,8 +168,10 @@ def copy_with_deps(binary: str):
     # -- Read the libraries the executable depends on
     executable_deps = get_dependencies(binary)
 
-    # -- Target directory for the libraries
-    libs_target_dir = Path.cwd() / DIST / LIB
+    # -- Target directory for the libraries. PRIVATE_LIB, not LIB:
+    # -- a file at the first level of lib/ is on apio's PATH (apio#1116).
+    libs_target_dir = Path.cwd() / DIST / PRIVATE_LIB
+    libs_target_dir.mkdir(parents=True, exist_ok=True)
 
     # -- Mark indicating whether the file has been copied (✅)
     # -- or it was not necessary because it was already there (📌)
@@ -182,12 +215,14 @@ def copy_python():
     if not IS_DARWIN:
         src = Path.cwd() / "store" / "tabbypy3"
         dst = Path.cwd() / DIST / BIN / "tabbypy3"
-        if dst.exists():
-            mark = "📌"
-        else:
-            shutil.copy(src, dst)
-            mark = "✅"
-        print(f"➡️  Dep: {mark}bin/tabbypy3")
+        # -- Always rewrite: the loader line is filled from PRIVATE_LIB,
+        # -- and a tabbypy3 left over from an older dist/ would still
+        # -- point at lib/.
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(render_tabbypy3(src.read_text(encoding="utf-8")),
+                       encoding="utf-8")
+        dst.chmod(dst.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        print(f"➡️  Dep: ✅bin/tabbypy3")
 
     # -- Copy the python executable
     src = Path(str(shutil.which("python3.12")))
@@ -211,12 +246,14 @@ def copy_python():
     print(f"➡️  Dep: {mark}lib/{src.name}/")
 
     # The interpreter's own shared libraries. tabbypy3 runs it through
-    # the bundled loader with a library path of only lib/. nextpnr used
-    # to bring libpython along because it linked it; the package builds
-    # nextpnr without an embedded interpreter, so the closure has to be
-    # copied with the interpreter or fasm2frames cannot start.
+    # the bundled loader with a library path of only PRIVATE_LIB.
+    # nextpnr used to bring libpython along because it linked it; the
+    # package builds nextpnr without an embedded interpreter, so the
+    # closure has to be copied with the interpreter or fasm2frames
+    # cannot start.
     if not IS_DARWIN:
-        libs_target_dir = Path.cwd() / DIST / LIB
+        libs_target_dir = Path.cwd() / DIST / PRIVATE_LIB
+        libs_target_dir.mkdir(parents=True, exist_ok=True)
         for lib_name, libs_path in get_dependencies("python3.12").items():
             if libs_path == "":
                 continue
@@ -226,7 +263,7 @@ def copy_python():
             else:
                 shutil.copy(libs_path, libs_target_dir)
                 mark = "✅"
-            print(f"➡️  Dep: {mark}lib/{lib_target.name} ({lib_name})")
+            print(f"➡️  Dep: {mark}{PRIVATE_LIB}/{lib_target.name} ({lib_name})")
 
 
 # ------------------------------------------------------------------

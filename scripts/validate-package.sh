@@ -33,10 +33,12 @@
 # per die for the himbaechel engine), XILINX-PARTS-INVENTORY.json and its
 # agreement with the bins, the engine opening its chipdb for every built
 # part without --chipdb, --version == the rev recorded in
-# nix/, platform extras on darwin (ad-hoc codesign + zero residual
-# /nix/store references), and the multi-part E2E (e2e/run-parts.sh)
-# against the extracted package, whose --report JSON must carry fmax and
-# utilization (what `apio report` reads).
+# nix/, the PATH layout (apio#1116: no first-level file in lib/, no
+# shared library in bin/, private libraries in pack.PRIVATE_LIB),
+# platform extras on darwin (ad-hoc codesign of that directory + zero
+# residual /nix/store references), and the multi-part E2E
+# (e2e/run-parts.sh) against the extracted package, whose --report JSON
+# must carry fmax and utilization (what `apio report` reads).
 #
 # A package published before carries the same document at its root: as
 # XILINX-PARTS-INVENTORY.json from the 2026-10-05 release ("legacy
@@ -168,6 +170,65 @@ else
     fail "unrecognized layout: no bin/nextpnr-xilinx.exe nor libexec/nextpnr-xilinx"
 fi
 note "package platform: $PLAT"
+
+# --- first-level files on apio's PATH (apio#1116) ---------------------------
+# apio puts %p/bin and %p/lib on PATH. scan-path globs the first-level
+# files of each directory (not its subdirectories) and treats a shared
+# name with different bytes as a conflict. lib/ may contain only
+# directories. The shared libraries live in PRIVATE_LIB. bin/ carries
+# our executables and must not carry a shared library.
+PRIVATE_LIB=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    python3 -c 'from pack import PRIVATE_LIB; print(PRIVATE_LIB)')
+case "$PRIVATE_LIB" in
+    lib/*) ;;
+    *) fail "PRIVATE_LIB must stay under lib/ (apio#1116): $PRIVATE_LIB" ;;
+esac
+
+STRAY=$(find "$PKG/lib" -mindepth 1 -maxdepth 1 ! -type d -print || true)
+if [ -n "$STRAY" ]; then
+    shown=$(printf '%s\n' "$STRAY" | sed "s|$PKG/||" | tr '\n' ' ')
+    fail "lib/ has a first-level file (apio#1116): $shown"
+fi
+ok "lib/: no first-level file (apio#1116)"
+
+SHLIB=$(find "$PKG/bin" -maxdepth 1 \( -type f -o -type l \) \( \
+        -name '*.so' -o -name '*.so.*' -o -name '*.dylib' -o -name '*.dll' \
+        -o -name '*.DLL' \) -print || true)
+if [ -n "$SHLIB" ]; then
+    shown=$(printf '%s\n' "$SHLIB" | sed "s|$PKG/||" | tr '\n' ' ')
+    fail "bin/ carries a shared library (apio#1116): $shown"
+fi
+ok "bin/: only our executables (apio#1116)"
+
+if [ "$PLAT" != "windows-amd64" ]; then
+    [ -d "$PKG/$PRIVATE_LIB" ] \
+        || fail "private libraries missing: $PRIVATE_LIB (apio#1116)"
+    ok "private libraries live in $PRIVATE_LIB (apio#1116)"
+fi
+
+if [ "$PLAT" = "linux-x86-64" ]; then
+    [ -e "$PKG/$PRIVATE_LIB/ld-linux-x86-64.so.2" ] \
+        || fail "Linux loader is not in $PRIVATE_LIB (apio#1116)"
+    bad=0
+    while IFS= read -r w; do
+        [ -n "$w" ] || continue
+        if grep -q 'ld-linux' "$w"; then
+            if ! grep -q "/$PRIVATE_LIB/ld-linux-x86-64.so.2" "$w"; then
+                echo "loader not in $PRIVATE_LIB: ${w#"$PKG"/}" >&2
+                bad=1
+            fi
+            # The trailing space is the gap before the program path.
+            if ! grep -q -- "--library-path \"\$release_topdir_abs\"/$PRIVATE_LIB " "$w"; then
+                echo "library-path not $PRIVATE_LIB: ${w#"$PKG"/}" >&2
+                bad=1
+            fi
+        fi
+    done < <(find "$PKG/bin" -maxdepth 1 -type f -print)
+    [ "$bad" = 0 ] || fail "a Linux wrapper does not use $PRIVATE_LIB (apio#1116)"
+    grep -q "/$PRIVATE_LIB/ld-linux-x86-64.so.2" "$PKG/bin/tabbypy3" \
+        || fail "tabbypy3 does not use $PRIVATE_LIB (apio#1116)"
+    ok "Linux loader and --library-path use $PRIVATE_LIB (apio#1116)"
+fi
 
 # A native package must match the host (windows validates under wine anywhere
 # with wine64; a linux tarball cannot be validated on darwin or vice versa).
@@ -357,15 +418,37 @@ fi
 if [ "$PLAT" = "darwin-arm64" ]; then
     codesign -v "$NEXTPNR_BIN" 2>&1 || fail "codesign invalid: $NEXTPNR_BIN"
     BADSIG=0
+    NDYLIB=0
     while IFS= read -r dylib; do
+        [ -n "$dylib" ] || continue
+        NDYLIB=$((NDYLIB + 1))
         codesign -v "$dylib" 2>/dev/null || { echo "codesign invalid: $dylib" >&2; BADSIG=1; }
-    done < <(find "$PKG/lib" -maxdepth 1 -name '*.dylib' 2>/dev/null)
-    [ "$BADSIG" = 0 ] || fail "unsigned/invalid dylibs in lib/ (arm64 requires ad-hoc signatures)"
-    ok "codesign: nextpnr + lib/*.dylib verify"
+        id=$(otool -D "$dylib" | sed -n '2p')
+        [ "$id" = "@rpath/$(basename "$dylib")" ] \
+            || { echo "dylib id is '$id', wanted @rpath/$(basename "$dylib")" >&2; BADSIG=1; }
+        otool -l "$dylib" | grep -q 'path @loader_path (offset' \
+            || { echo "dylib rpath is not @loader_path: $dylib" >&2; BADSIG=1; }
+    done < <(find "$PKG/$PRIVATE_LIB" -maxdepth 1 -name '*.dylib' -print 2>/dev/null)
+    [ "$NDYLIB" -gt 0 ] || fail "no dylib in $PRIVATE_LIB (apio#1116)"
+    [ "$BADSIG" = 0 ] || fail "unsigned/invalid dylibs in $PRIVATE_LIB (arm64 requires ad-hoc signatures)"
+    ok "codesign: nextpnr + $PRIVATE_LIB/*.dylib verify (apio#1116)"
+    # Every Mach-O directly in libexec (the tools and the bundled python)
+    # must search the private directory. A C extension deeper in the
+    # python tree gets its own depth; macpack is what computes it, and
+    # the unit tests lock those relatives.
+    WANT_RPATH="@loader_path/../$PRIVATE_LIB"
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        file -b "$f" | grep -q 'Mach-O' || continue
+        otool -l "$f" | grep -q "path $WANT_RPATH (offset" \
+            || fail "$f missing LC_RPATH $WANT_RPATH (apio#1116)"
+    done < <(find "$PKG/libexec" -maxdepth 1 -type f -print)
+    ok "LC_RPATH of libexec Mach-O files is $WANT_RPATH (apio#1116)"
     # Relocation check: the Mach-O LOAD COMMANDS (linked dylibs + rpaths)
     # must never point at /nix/store. Inert strings inside binaries or stale
     # shebang lines in libexec python scripts are expected and harmless (the
-    # scripts are always invoked via an explicit python).
+    # scripts are always invoked via an explicit python). The private
+    # libraries sit under lib/, so the recursive find still sees them.
     BAD=0
     while IFS= read -r f; do
         file -b "$f" | grep -q 'Mach-O' || continue
@@ -374,7 +457,7 @@ if [ "$PLAT" = "darwin-arm64" ]; then
             echo "store-linked: $f" >&2
             BAD=1
         fi
-    done < <({ find "$PKG/bin" "$PKG/libexec" "$PKG/lib" -maxdepth 1 -type f
+    done < <({ find "$PKG/bin" "$PKG/libexec" "$PKG/$PRIVATE_LIB" -maxdepth 1 -type f
                find "$PKG/lib" -name '*.so' -o -name '*.dylib'; } 2>/dev/null | sort -u)
     [ "$BAD" = 0 ] || fail "Mach-O load commands still reference /nix/store (relocation incomplete)"
     ok "relocation: no /nix/store in any Mach-O load command"

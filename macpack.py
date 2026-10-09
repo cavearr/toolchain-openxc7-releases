@@ -22,7 +22,8 @@ Public entry point: ``relocate_dist(dist_dir)`` — call it once, after all
 binaries/libraries/python files have been copied into ``dist/``. It:
   1. scans dist/ for every Mach-O file,
   2. pulls the transitive closure of their /nix/store dylib deps into
-     dist/lib,
+     the private library directory (``pack.PRIVATE_LIB``, under ``lib/``
+     so a PATH scan of ``lib/`` does not see them: apio#1116),
   3. rewrites every absolute non-system reference to ``@rpath/<basename>``,
      sets each dylib id, adds the right LC_RPATH per file depth,
   4. ad-hoc re-signs everything.
@@ -34,6 +35,8 @@ import shutil
 import stat
 import subprocess
 from pathlib import Path
+
+from pack import PRIVATE_LIB
 
 # Library references provided by the OS itself (dyld shared cache); never
 # bundled or rewritten.
@@ -113,16 +116,28 @@ def _bundle_roots(dist_dir: Path) -> list:
     return [p for p in libexec.iterdir() if is_macho(p)] if libexec.is_dir() else []
 
 
+def bundled_lib_dir(dist_dir: Path) -> Path:
+    """Where the private dylib closure is copied.
+
+    ``PRIVATE_LIB`` is the single name (apio#1116). Callers pass it to
+    ``_rpath_to_lib``, which turns it into an ``LC_RPATH`` relative to
+    each Mach-O: ``../lib/openxc7`` from ``libexec/``, ``@loader_path``
+    for a dylib that already sits there, ``../../openxc7`` from
+    ``lib/python3.12/lib-dynload/``.
+    """
+    return dist_dir / PRIVATE_LIB
+
+
 def _collect_and_copy_libs(dist_dir: Path) -> None:
-    """Pull the transitive closure of /nix/store dylib deps into dist/lib.
+    """Pull the transitive closure of /nix/store dylib deps into PRIVATE_LIB.
 
     Iterates to a fixed point: newly copied libs may themselves pull in more.
     """
-    lib_dir = dist_dir / "lib"
+    lib_dir = bundled_lib_dir(dist_dir)
     lib_dir.mkdir(parents=True, exist_ok=True)
 
     seen = set()           # absolute source paths already processed
-    copied_names = set()   # basenames present in dist/lib
+    copied_names = set()   # basenames present in the private directory
 
     # Seed the worklist with the deps of the bundle roots only.
     work = []
@@ -150,7 +165,13 @@ def _collect_and_copy_libs(dist_dir: Path) -> None:
 
 
 def _rpath_to_lib(macho: Path, lib_dir: Path) -> str:
-    """LC_RPATH value so that @rpath resolves to dist/lib from *macho*."""
+    """LC_RPATH value so that @rpath resolves to *lib_dir* from *macho*.
+
+    Depth is the whole rule (``os.path.relpath``). A tool in ``libexec/``,
+    a dylib in the private directory, and a C extension several levels
+    under ``lib/python3.12/`` each get a different relative path to the
+    same directory.
+    """
     rel = os.path.relpath(lib_dir, macho.parent)
     if rel == ".":
         return "@loader_path"
@@ -182,7 +203,7 @@ def _relocate(dist_dir: Path) -> None:
     relative @loader_path rpath (how nixpkgs builds python C-extensions and
     libparse_fasm on darwin) and have no /nix/store rpath are left untouched.
     """
-    lib_dir = dist_dir / "lib"
+    lib_dir = bundled_lib_dir(dist_dir)
     changed = []
 
     for f in _iter_macho(dist_dir):
@@ -205,15 +226,17 @@ def _relocate(dist_dir: Path) -> None:
                 check=True, capture_output=True, text=True,
             )
 
-        # 2. A dylib living in dist/lib advertises itself as @rpath/<name>.
+        # 2. A dylib living in the private directory advertises itself as
+        #    @rpath/<name>.
         if is_bundled_dylib:
             subprocess.run(
                 ["install_name_tool", "-id", f"@rpath/{base}", str(f)],
                 check=True, capture_output=True, text=True,
             )
 
-        # 3. Ensure an LC_RPATH pointing at dist/lib for this file's depth, so
-        #    the @rpath deps resolve to the bundled libs. Adding a load command
+        # 3. Ensure an LC_RPATH pointing at the private directory for this
+        #    file's depth, so the @rpath deps resolve to the bundled libs.
+        #    Adding a load command
         #    needs header padding; if missing this is non-fatal (the nix-built
         #    tools/dylibs that need it have room -- validated by the spike).
         want = _rpath_to_lib(f, lib_dir)

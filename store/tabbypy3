@@ -7,4 +7,6 @@ export PYTHONEXECUTABLE="$release_topdir_abs/bin/tabbypy3"
 export PYTHONHOME="$release_topdir_abs"
 export PYTHONNOUSERSITE=1
 #export SSL_CERT_FILE="$release_topdir_abs"/etc/cacert.pem
-exec "$release_topdir_abs"/lib/ld-linux-x86-64.so.2 --inhibit-cache --inhibit-rpath "" --library-path "$release_topdir_abs"/lib "$release_topdir_abs"/libexec/python3.12 "$@"
+# The packer replaces this marker with the loader exec from
+# pack.relocate.linux_loader_exec (the directory is pack.PRIVATE_LIB).
+@LINUX_LOADER_EXEC@

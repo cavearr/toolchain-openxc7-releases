@@ -68,10 +68,12 @@ distribution_init()
 # -- Get the required binaries, libraries and data
 install_components()
 
-# -- On macOS: collect the dylib closure into dist/lib, relocate the
-# -- install names to @rpath/@loader_path and then sign (ad-hoc) -- in
-# -- that order: signing must come after the relocation. On Linux nothing
-# -- is done: the wrappers use the dynamic loader with --library-path.
+# -- On macOS: collect the dylib closure into the private library
+# -- directory (pack.PRIVATE_LIB), relocate the install names to
+# -- @rpath/@loader_path and then sign (ad-hoc) -- in that order: signing
+# -- must come after the relocation. On Linux nothing is rewritten: the
+# -- wrappers exec the bundled loader with --library-path of that same
+# -- directory.
 if IS_DARWIN:
     macpack.relocate_dist(Path.cwd() / DIST)
 
