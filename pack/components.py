@@ -80,9 +80,13 @@ export PATH="$release_bindir_abs:$PATH"
                           'exec "$release_topdir_abs"/libexec/python3.12 '\
                           f'"$release_topdir_abs"/libexec/{self.bin} "$@"\n'
             return
+        # Linux: tabbypy3 lives in libexec/. apio scans bin/ (apio#1116)
+        # and that name collides with oss-cad-suite. The wrapper is in
+        # bin/, so both the exec and PYTHONEXECUTABLE use the package
+        # root. PYTHONEXECUTABLE is the real file python reports.
         self.shell += 'export PYTHONEXECUTABLE='\
-                      '"$release_bindir_abs/tabbypy3"\n'\
-                      'exec "$release_bindir_abs/tabbypy3" '\
+                      '"$release_topdir_abs/libexec/tabbypy3"\n'\
+                      'exec "$release_topdir_abs/libexec/tabbypy3" '\
                       f'"$release_topdir_abs"/libexec/{self.bin} "$@"\n'
 
     def add_exec(self):

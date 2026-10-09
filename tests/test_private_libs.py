@@ -54,7 +54,44 @@ class TestLinuxLoader(unittest.TestCase):
         self.assertIn(linux_loader_exec(program).rstrip("\n"), rendered)
         self.assertNotIn("@LINUX_LOADER_EXEC@", rendered)
         self.assertNotIn("/lib/ld-linux", rendered)
+        self.assertNotIn("bin/tabbypy3", rendered)
         self.assertIn('export PYTHONHOME="$release_topdir_abs"', rendered)
+        # The script lives in libexec/. The package root is the parent
+        # of that directory, the same relation bin/ had. PATH is bin/,
+        # not the script's own directory: libexec/ holds the binaries
+        # without their wrappers.
+        self.assertIn(
+            'release_topdir_abs="$(readlink -f "$release_dir/..")"',
+            rendered)
+        self.assertIn(
+            'export PATH="$release_topdir_abs/bin:$PATH"', rendered)
+        self.assertNotIn('export PATH="$release_dir', rendered)
+        self.assertIn(
+            'export PYTHONEXECUTABLE="$release_topdir_abs/libexec/tabbypy3"',
+            rendered)
+
+    def test_python_wrapper_on_linux_execs_libexec_tabbypy3(self):
+        import pack.components as components
+        with mock.patch.object(components, "IS_DARWIN", False):
+            wrapper = components.ToolWrapper("fasm2frames")
+            wrapper.add_exec_python()
+        self.assertIn(
+            'export PYTHONEXECUTABLE="$release_topdir_abs/libexec/tabbypy3"\n'
+            'exec "$release_topdir_abs/libexec/tabbypy3" '
+            '"$release_topdir_abs"/libexec/fasm2frames "$@"\n',
+            wrapper.shell,
+        )
+        self.assertNotIn("bin/tabbypy3", wrapper.shell)
+        self.assertNotIn("$release_bindir_abs/tabbypy3", wrapper.shell)
+
+    def test_python_wrapper_on_darwin_does_not_use_tabbypy3(self):
+        import pack.components as components
+        with mock.patch.object(components, "IS_DARWIN", True):
+            wrapper = components.ToolWrapper("fasm2frames")
+            wrapper.add_exec_python()
+        self.assertNotIn("tabbypy3", wrapper.shell)
+        self.assertIn(
+            'exec "$release_topdir_abs"/libexec/python3.12', wrapper.shell)
 
     def test_elf_wrapper_on_linux(self):
         import pack.components as components

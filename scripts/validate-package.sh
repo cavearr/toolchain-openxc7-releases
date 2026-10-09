@@ -34,7 +34,8 @@
 # agreement with the bins, the engine opening its chipdb for every built
 # part without --chipdb, --version == the rev recorded in
 # nix/, the PATH layout (apio#1116: no first-level file in lib/, no
-# shared library in bin/, private libraries in pack.PRIVATE_LIB),
+# shared library in bin/, tabbypy3 in libexec/ not bin/ on Linux,
+# private libraries in pack.PRIVATE_LIB),
 # platform extras on darwin (ad-hoc codesign of that directory + zero
 # residual /nix/store references), and the multi-part E2E
 # (e2e/run-parts.sh) against the extracted package, whose --report JSON
@@ -176,7 +177,9 @@ note "package platform: $PLAT"
 # files of each directory (not its subdirectories) and treats a shared
 # name with different bytes as a conflict. lib/ may contain only
 # directories. The shared libraries live in PRIVATE_LIB. bin/ carries
-# our executables and must not carry a shared library.
+# our executables and must not carry a shared library. On Linux
+# tabbypy3 is not one of those executables: it lives in libexec/,
+# which apio does not put on PATH (apio#1116).
 PRIVATE_LIB=$(PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
     python3 -c 'from pack import PRIVATE_LIB; print(PRIVATE_LIB)')
 case "$PRIVATE_LIB" in
@@ -230,11 +233,34 @@ if [ "$PLAT" = "linux-x86-64" ]; then
         fi
     done < <(find "$PKG/bin" -maxdepth 1 -type f -print)
     [ "$bad" = 0 ] || fail "a Linux wrapper does not use libexec + $PRIVATE_LIB (apio#1116)"
-    grep -q "/libexec/ld-linux-x86-64.so.2" "$PKG/bin/tabbypy3" \
+    # tabbypy3 is not a PATH name. apio scans bin/ (apio#1116).
+    [ ! -e "$PKG/bin/tabbypy3" ] \
+        || fail "bin/ contains tabbypy3 (apio#1116)"
+    [ -f "$PKG/libexec/tabbypy3" ] \
+        || fail "tabbypy3 is not in libexec/ (apio#1116)"
+    grep -q "/libexec/ld-linux-x86-64.so.2" "$PKG/libexec/tabbypy3" \
         || fail "tabbypy3 does not exec the libexec loader (apio#1116)"
-    grep -q -- "--library-path \"\$release_topdir_abs\"/$PRIVATE_LIB " "$PKG/bin/tabbypy3" \
+    grep -q -- "--library-path \"\$release_topdir_abs\"/$PRIVATE_LIB " "$PKG/libexec/tabbypy3" \
         || fail "tabbypy3 library-path is not $PRIVATE_LIB (apio#1116)"
-    ok "Linux loader is libexec/ld-linux; --library-path is $PRIVATE_LIB (apio#1116)"
+    grep -q 'PYTHONEXECUTABLE="$release_topdir_abs/libexec/tabbypy3"' \
+        "$PKG/libexec/tabbypy3" \
+        || fail "tabbypy3 PYTHONEXECUTABLE is not libexec/tabbypy3 (apio#1116)"
+    grep -q 'PATH="$release_topdir_abs/bin:$PATH"' "$PKG/libexec/tabbypy3" \
+        || fail "tabbypy3 PATH is not bin/ (apio#1116)"
+    # A python wrapper in bin/ execs that file. $release_bindir_abs
+    # would be bin/tabbypy3, the name this guard rejects.
+    pybad=0
+    while IFS= read -r w; do
+        [ -n "$w" ] || continue
+        if grep -q 'tabbypy3' "$w"; then
+            if ! grep -q '/libexec/tabbypy3' "$w"; then
+                echo "wrapper does not exec libexec/tabbypy3: ${w#"$PKG"/}" >&2
+                pybad=1
+            fi
+        fi
+    done < <(find "$PKG/bin" -maxdepth 1 -type f -print)
+    [ "$pybad" = 0 ] || fail "a Linux wrapper does not exec libexec/tabbypy3 (apio#1116)"
+    ok "Linux loader is libexec/ld-linux; tabbypy3 is libexec/ not bin/ (apio#1116)"
 fi
 
 # A native package must match the host (windows validates under wine anywhere

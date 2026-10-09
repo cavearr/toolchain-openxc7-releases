@@ -234,7 +234,7 @@ def copy_with_deps(binary: str):
 # -----------------------------------------------------------
 # -- Copy all the python dependencies
 # --
-# -- store/tabbypy3 --> dist/bin
+# -- store/tabbypy3 --> dist/libexec
 # -- nix-python/bin/python3.12 --> dist/libexec
 # -- nix-python/lib/python3.12/* --> dist/lib/python3.12/
 # -----------------------------------------------------------
@@ -243,17 +243,23 @@ def copy_python():
     # --- Copy the wrapper (tabbypy3)
     # -- Linux only: tabbypy3 hardcodes the ld-linux-x86-64 loader. On
     # -- macOS the python wrapper runs the bundled python3.12.
+    # -- libexec/, not bin/. apio scans the first-level files of bin/
+    # -- (apio#1116) and this name collides with oss-cad-suite. The
+    # -- python wrappers call it by an absolute path.
     if not IS_DARWIN:
         src = Path.cwd() / "store" / "tabbypy3"
-        dst = Path.cwd() / DIST / BIN / "tabbypy3"
-        # -- Always rewrite: the loader line is filled from PRIVATE_LIB,
-        # -- and a tabbypy3 left over from an older dist/ would still
-        # -- point at lib/.
+        dst = Path.cwd() / DIST / LIBEXEC / "tabbypy3"
+        # -- Always rewrite: the loader line is filled from PRIVATE_LIB.
+        # -- The packer reuses dist/, so a tabbypy3 left in bin/ would
+        # -- still be the name apio scans.
+        stale = Path.cwd() / DIST / BIN / "tabbypy3"
+        if stale.is_file() or stale.is_symlink():
+            stale.unlink()
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text(render_tabbypy3(src.read_text(encoding="utf-8")),
                        encoding="utf-8")
         dst.chmod(dst.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-        print(f"➡️  Dep: ✅bin/tabbypy3")
+        print(f"➡️  Dep: ✅libexec/tabbypy3")
 
     # -- Copy the python executable
     src = Path(str(shutil.which("python3.12")))
