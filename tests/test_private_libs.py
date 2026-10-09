@@ -33,14 +33,16 @@ class TestLinuxLoader(unittest.TestCase):
             '"$release_topdir_abs"/libexec/nextpnr-xilinx')
         self.assertEqual(
             line,
-            'exec "$release_topdir_abs"/lib/openxc7/ld-linux-x86-64.so.2 '
+            'exec "$release_topdir_abs"/libexec/ld-linux-x86-64.so.2 '
             "--inhibit-cache "
             '--inhibit-rpath "" '
             '--library-path "$release_topdir_abs"/lib/openxc7 '
             '"$release_topdir_abs"/libexec/nextpnr-xilinx "$@"\n',
         )
-        # The old first-level path must not survive as a prefix match:
-        # "/lib/ld-linux" is not a substring of "/lib/openxc7/ld-linux".
+        # nextpnr reads /proc/self/exe, which is the loader, and looks
+        # for ../share/nextpnr. The loader is a sibling of the binaries.
+        self.assertIn("/libexec/ld-linux-x86-64.so.2", line)
+        self.assertNotIn("/lib/openxc7/ld-linux", line)
         self.assertNotIn("/lib/ld-linux", line)
         self.assertNotIn(
             '--library-path "$release_topdir_abs"/lib ', line)

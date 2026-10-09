@@ -207,14 +207,19 @@ if [ "$PLAT" != "windows-amd64" ]; then
 fi
 
 if [ "$PLAT" = "linux-x86-64" ]; then
-    [ -e "$PKG/$PRIVATE_LIB/ld-linux-x86-64.so.2" ] \
-        || fail "Linux loader is not in $PRIVATE_LIB (apio#1116)"
+    # The loader is exec'd, so /proc/self/exe is the loader. nextpnr
+    # finds share/ as ../share/nextpnr from that directory, which is
+    # true for libexec/ and not for a loader nested under lib/.
+    [ -e "$PKG/libexec/ld-linux-x86-64.so.2" ] \
+        || fail "Linux loader is not in libexec/ (apio#1116)"
+    [ ! -e "$PKG/$PRIVATE_LIB/ld-linux-x86-64.so.2" ] \
+        || fail "Linux loader is in $PRIVATE_LIB; nextpnr would miss share/ (apio#1116)"
     bad=0
     while IFS= read -r w; do
         [ -n "$w" ] || continue
         if grep -q 'ld-linux' "$w"; then
-            if ! grep -q "/$PRIVATE_LIB/ld-linux-x86-64.so.2" "$w"; then
-                echo "loader not in $PRIVATE_LIB: ${w#"$PKG"/}" >&2
+            if ! grep -q "/libexec/ld-linux-x86-64.so.2" "$w"; then
+                echo "loader not in libexec: ${w#"$PKG"/}" >&2
                 bad=1
             fi
             # The trailing space is the gap before the program path.
@@ -224,10 +229,12 @@ if [ "$PLAT" = "linux-x86-64" ]; then
             fi
         fi
     done < <(find "$PKG/bin" -maxdepth 1 -type f -print)
-    [ "$bad" = 0 ] || fail "a Linux wrapper does not use $PRIVATE_LIB (apio#1116)"
-    grep -q "/$PRIVATE_LIB/ld-linux-x86-64.so.2" "$PKG/bin/tabbypy3" \
-        || fail "tabbypy3 does not use $PRIVATE_LIB (apio#1116)"
-    ok "Linux loader and --library-path use $PRIVATE_LIB (apio#1116)"
+    [ "$bad" = 0 ] || fail "a Linux wrapper does not use libexec + $PRIVATE_LIB (apio#1116)"
+    grep -q "/libexec/ld-linux-x86-64.so.2" "$PKG/bin/tabbypy3" \
+        || fail "tabbypy3 does not exec the libexec loader (apio#1116)"
+    grep -q -- "--library-path \"\$release_topdir_abs\"/$PRIVATE_LIB " "$PKG/bin/tabbypy3" \
+        || fail "tabbypy3 library-path is not $PRIVATE_LIB (apio#1116)"
+    ok "Linux loader is libexec/ld-linux; --library-path is $PRIVATE_LIB (apio#1116)"
 fi
 
 # A native package must match the host (windows validates under wine anywhere

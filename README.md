@@ -52,9 +52,12 @@ On Linux and macOS the shared libraries the tools load live in
 only directories (`lib/python3.12/` and `lib/openxc7/`), which is what
 keeps those names out of a PATH scan that looks at `lib/`
 ([apio#1116](https://github.com/FPGAwars/apio/issues/1116)). The Linux
-wrappers run the bundled loader with `--library-path` pointed there; on
-macOS each Mach-O carries an `LC_RPATH` to that directory, at its own
-depth, and is ad-hoc signed after the relocation.
+wrappers exec `libexec/ld-linux-x86-64.so.2` with `--library-path`
+pointed at `lib/openxc7/`. The loader sits next to the binaries because
+it is the file the kernel executes: nextpnr reads `/proc/self/exe` and
+looks for `../share/nextpnr`. On macOS each Mach-O carries an
+`LC_RPATH` to `lib/openxc7/`, at its own depth, and is ad-hoc signed
+after the relocation.
 
 The linux package is about 135 MB, most of it the ten chipdb files.
 

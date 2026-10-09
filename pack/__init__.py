@@ -20,8 +20,10 @@ DIST = "dist"
 BIN = "bin"
 LIBEXEC = "libexec"
 LIB = "lib"
-# -- Private shared libraries (the ELF/Mach-O closure, the Linux loader,
-# -- libpython, and the dlopen'd libffi / libantlr4 / libuuid).
+# -- Private shared libraries (the ELF/Mach-O closure, libpython, and the
+# -- dlopen'd libffi / libantlr4 / libuuid). The Linux loader is the
+# -- exception: it is exec'd from libexec/, because /proc/self/exe is the
+# -- loader and nextpnr finds share/ from that directory.
 # --
 # -- A subdirectory of LIB, not LIB itself. apio puts %p/lib on PATH and
 # -- `apio api scan-path` globs only the first-level *files* of each PATH

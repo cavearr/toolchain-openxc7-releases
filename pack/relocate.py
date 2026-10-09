@@ -27,23 +27,54 @@ if IS_DARWIN:
     import macpack  # noqa: F401  (darwin relocation backend, used by the shim)
 
 
+LINUX_LOADER = f"{LIBEXEC}/ld-linux-x86-64.so.2"
+
+
 def linux_loader_exec(program: str) -> str:
     """Shell text that execs *program* through the bundled Linux loader.
 
-    *program* is one shell word, quotes included when it has any. The
-    loader and its ``--library-path`` are both ``PRIVATE_LIB``: apio globs
-    the first-level files of ``lib/`` (apio#1116), so the closure cannot
-    live there. ``--library-path`` is the process search path, including
-    the later dlopen of libffi from ``_ctypes`` and of libantlr4.
+    *program* is one shell word, quotes included when it has any.
+    ``--library-path`` is ``PRIVATE_LIB``: that is the process search
+    path, including the later dlopen of libffi from ``_ctypes`` and of
+    libantlr4. The loader itself is ``libexec/ld-linux-x86-64.so.2``.
+    It is the file the kernel executes, so ``/proc/self/exe`` points at
+    it, and nextpnr resolves ``share/`` as ``../share/nextpnr`` from that
+    directory (``common/kernel/command.cc``). ``libexec/`` is where the
+    binaries already live, so the relative path is the same one an
+    unwrapped binary would use. A loader under ``lib/openxc7/`` would
+    look for ``lib/share/``. ``libexec/`` is not a directory apio puts
+    on PATH (apio#1116).
     """
     lib = PRIVATE_LIB
     return (
-        f'exec "$release_topdir_abs"/{lib}/ld-linux-x86-64.so.2 '
+        f'exec "$release_topdir_abs"/{LINUX_LOADER} '
         f"--inhibit-cache "
         f'--inhibit-rpath "" '
         f'--library-path "$release_topdir_abs"/{lib} '
         f'{program} "$@"\n'
     )
+
+
+def place_linux_loader():
+    """Move the bundled loader next to the binaries.
+
+    The closure copier drops it in ``PRIVATE_LIB`` with every other
+    ``DT_NEEDED``. It has to be exec'd from ``libexec/`` (see
+    ``linux_loader_exec``). One copy: a second one in ``PRIVATE_LIB``
+    would be the file a wrapper must not exec.
+    """
+    if IS_DARWIN:
+        return
+    src = Path.cwd() / DIST / PRIVATE_LIB / "ld-linux-x86-64.so.2"
+    dst = Path.cwd() / DIST / LINUX_LOADER
+    if not src.is_file():
+        raise SystemExit(
+            f"❌ Linux loader was not copied to {PRIVATE_LIB}")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if dst.exists():
+        dst.unlink()
+    shutil.move(src, dst)
+    print(f"➡️  Dep: ✅{LINUX_LOADER}")
 
 
 def render_tabbypy3(template: str) -> str:

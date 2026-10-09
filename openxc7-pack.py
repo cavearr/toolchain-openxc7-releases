@@ -28,6 +28,7 @@ from pack.assemble import (
 from pack.chipdb import build_chipdb, skip_chipdb
 from pack.components import install_components
 from pack.platform import IS_DARWIN
+from pack.relocate import place_linux_loader
 
 if IS_DARWIN:
     # -- The macOS (Mach-O) packaging backend, only importable on Darwin
@@ -68,12 +69,16 @@ distribution_init()
 # -- Get the required binaries, libraries and data
 install_components()
 
+# -- The closure lands in PRIVATE_LIB. The loader is then moved to
+# -- libexec/: /proc/self/exe is the loader, and nextpnr finds share/
+# -- from there. --library-path stays on PRIVATE_LIB.
+place_linux_loader()
+
 # -- On macOS: collect the dylib closure into the private library
 # -- directory (pack.PRIVATE_LIB), relocate the install names to
 # -- @rpath/@loader_path and then sign (ad-hoc) -- in that order: signing
 # -- must come after the relocation. On Linux nothing is rewritten: the
-# -- wrappers exec the bundled loader with --library-path of that same
-# -- directory.
+# -- wrappers exec the libexec loader with --library-path of PRIVATE_LIB.
 if IS_DARWIN:
     macpack.relocate_dist(Path.cwd() / DIST)
 
