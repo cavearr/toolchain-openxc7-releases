@@ -20,6 +20,9 @@
 # PERFCLK0..3 rows with all their bits (db#30): the MMCM to BUFR/BUFIO
 # path. Also DSP48E1 AREG_1/BREG_1 (db#31), a virtex7 refresh (db#27,
 # db#28) and the xc7z007s parts (db#29).
+# master of 2026-10-10 (75825f2e) replaces virtex7/timings, which was a
+# symlink, with the timings prjxray's 007-timing fuzzer wrote (db#32).
+# No other family changes.
 let
   source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
 in
