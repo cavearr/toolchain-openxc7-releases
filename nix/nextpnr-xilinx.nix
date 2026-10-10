@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-07";
+  version = "1.0.0-unstable-2026-10-10";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -37,7 +37,13 @@ stdenv.mkDerivation rec {
   # LVDS_25 pairs, LVCMOS33 drive and IDDR Q3/Q4 init as Vivado writes them
   # (#71), and named errors where it crashed or aborted (#53, #54, #55,
   # #57). #65 changes the chipdb generator (the RAMB timing variants per
-  # write mode); the constids do not change. ZERO local patches.
+  # write mode); the constids do not change.
+  # Since 26f5e17a (8006fbc6, merged 2026-10-10): a width-9 RAMB36E1 port
+  # presents its parity on DIPxDIP1 as well (#63), routing does not go
+  # through an unbound BUFGCTRL (#81), the chipdb generator reads virtex7
+  # timing from the database instead of copying artix7 (#73), and the
+  # stretch demo vc707-ocaml is in the tree (#35). #82 is CI only.
+  # The constids do not change. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
