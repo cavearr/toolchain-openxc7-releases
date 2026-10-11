@@ -156,10 +156,11 @@ class ComposedBodyTests(unittest.TestCase):
         self.assertIn("Requires yosys: YosysHQ oss-cad-suite [`2026-03-24`]", body)
         self.assertIn("releases/tag/2026-03-24", body)
 
-    def test_the_manual_synthesis_line_is_apios(self):
+    def test_the_manual_synthesis_line_has_no_buf_map(self):
         _, body, _ = compose()
         self.assertIn(
-            "synth_xilinx -arch xc7 -top top; simplemap t:$buf; write_json top.json", body)
+            "synth_xilinx -arch xc7 -top top; write_json top.json", body)
+        self.assertNotIn("simplemap t:$buf", body)
 
     def test_it_lists_the_six_assets(self):
         _, body, _ = compose()
