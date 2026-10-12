@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-10";
+  version = "1.0.0-unstable-2026-10-12";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -43,7 +43,14 @@ stdenv.mkDerivation rec {
   # through an unbound BUFGCTRL (#81), the chipdb generator reads virtex7
   # timing from the database instead of copying artix7 (#73), and the
   # stretch demo vc707-ocaml is in the tree (#35). #82 is CI only.
-  # The constids do not change. ZERO local patches.
+  # Since 8006fbc6 (f9e07df8, merged 2026-10-12): --device accepts the
+  # speed grades the database names, including 1IL and 1Q, and aliases
+  # xc7z035 to xc7z045 and xc7s75 to xc7s100 (#96). A GT tile does not
+  # emit IBUFDS_GTE2.IN_USE (#97). A clock left at the default is warned
+  # about, and a clock derived through IBUFDS_GTE2 is recognised (#98).
+  # A GT LOC that contradicts its pads is an error (#99). The FASM file
+  # is written atomically (#100). None of these changes the chipdb
+  # generator or the constids. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
