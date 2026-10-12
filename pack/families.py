@@ -32,6 +32,9 @@ _DEVICE = re.compile(
 DIE_ALIASES = {
     "xc7a35t": "xc7a50t",
     "xc7s75": "xc7s100",
+    # xc7z007s is the xc7z010 die (prjxray-db zynq7/mapping/devices.yaml),
+    # the same alias the engine applies. It has no chipdb of its own.
+    "xc7z007s": "xc7z010",
     "xc7z035": "xc7z045",
 }
 

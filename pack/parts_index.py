@@ -67,14 +67,15 @@ PER_DIE_SCHEMAS = (7, SCHEMA)
 CHIPDB_SUBDIR = "share/nextpnr/himbaechel/xilinx"
 
 # The device pattern of the engine, verbatim from XilinxImpl::init_database
-# (himbaechel/uarch/xilinx/xilinx.cc, openXC7/nextpnr c68c1358), as the
-# regular expression std::regex_match takes. A part it rejects --
-# ``xc7s50csga324-1IL``: the speed grade is one digit and an optional L --
-# cannot be built whatever the chipdb holds, so it is not ``generated``.
+# (himbaechel/uarch/xilinx/xilinx.cc, openXC7/nextpnr f9e07df8), as the
+# regular expression std::regex_match takes. Speed grades are the ones
+# prjxray-db part directories use: 1, 2, 3, 2L, 1IL, 1Q. A part the
+# pattern rejects (``xc7s50csga324-4``, ``xc7s50csga324-1L``) cannot be
+# built whatever the chipdb holds, so it is not ``generated``.
 # Moving the engine revision means re-reading this line.
 ENGINE_DEVICE_PATTERN = (
     r"(xc7z007s|xc7z012s|xc7z014s|xc7[azks]\d+t?|xc7vx\d+t?)"
-    r"([a-z0-9]*)(?:-([0-9]L?))?")
+    r"([a-z0-9]*)(?:-(1IL|1Q|2L|[123]))?")
 ENGINE_DEVICE_RE = re.compile(ENGINE_DEVICE_PATTERN)
 
 

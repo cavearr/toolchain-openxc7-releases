@@ -76,8 +76,12 @@ class TestDieOf(unittest.TestCase):
                 self.assertEqual(die_of(part), "xc7a50t")
         self.assertEqual(die_of("xc7s75fgga484"), "xc7s100")
         self.assertEqual(die_of("xc7z035ffg676"), "xc7z045")
+        # xc7z007s routes on the xc7z010 chipdb (devices.yaml).
+        self.assertEqual(device_of("xc7z007sclg400"), "xc7z007s")
+        self.assertEqual(die_of("xc7z007sclg400"), "xc7z010")
         self.assertEqual(DIE_ALIASES, {"xc7a35t": "xc7a50t",
                                        "xc7s75": "xc7s100",
+                                       "xc7z007s": "xc7z010",
                                        "xc7z035": "xc7z045"})
 
     def test_devices_with_and_without_the_t(self):

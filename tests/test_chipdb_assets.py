@@ -194,11 +194,10 @@ class ChipdbAssetsTests(unittest.TestCase):
         self.assertEqual(len(validate_document(info, "2026-08-27")), 6)
 
     def test_a_part_the_engine_rejects_is_not_generated(self):
-        """The manifest base part is built, but the engine's --device
-        pattern takes one digit and an optional L as speed grade: the -1IL
-        and -1Q parts of xc7s50 are supported, not built."""
+        """The manifest base part is built. Grades the engine accepts
+        (1, 1IL, 1Q, 2L) are generated; a grade it rejects (4) is not."""
         base = "xc7s50csga324"
-        for speed in ("1", "1IL", "1Q", "2L"):
+        for speed in ("1", "1IL", "1Q", "2L", "4"):
             self.add_database_part("spartan7", f"{base}-{speed}")
         (self.repo / "chipdb-parts.json").write_text(
             json.dumps({"spartan7": [base]}), encoding="utf-8")
@@ -212,11 +211,13 @@ class ChipdbAssetsTests(unittest.TestCase):
 
         built = {part: entry["generated"]
                  for part, entry in info["parts"].items()}
-        self.assertEqual(built, {f"{base}-1": True, f"{base}-1IL": False,
-                                 f"{base}-1Q": False, f"{base}-2L": True})
-        self.assertEqual(info["generated-count"], 2)
+        self.assertEqual(built, {f"{base}-1": True, f"{base}-1IL": True,
+                                 f"{base}-1Q": True, f"{base}-2L": True,
+                                 f"{base}-4": False})
+        self.assertEqual(info["generated-count"], 4)
         self.assertEqual(sorted(validate_document(info, "2026-08-27")),
-                         [f"{base}-1", f"{base}-2L"])
+                         [f"{base}-1", f"{base}-1IL", f"{base}-1Q",
+                          f"{base}-2L"])
 
     def test_generated_part_must_exist_in_database(self):
         part = "xc7a35tcpg236"

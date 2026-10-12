@@ -30,10 +30,19 @@
       # xc7a50t one). The rule is pack/families.py's die_of -- the device
       # prefix of the part name, through the aliases of prjxray-db's
       # mapping/devices.yaml -- and this is its only other copy.
-      dieAliases = { xc7a35t = "xc7a50t"; xc7s75 = "xc7s100"; xc7z035 = "xc7z045"; };
+      # xc7z007s is spelled out first: in xc7z007sclg225 the s is the
+      # device's, and its fabric is xc7z010 (devices.yaml). Same device
+      # rule as pack/families.py.
+      dieAliases = {
+        xc7a35t = "xc7a50t";
+        xc7s75 = "xc7s100";
+        xc7z007s = "xc7z010";
+        xc7z035 = "xc7z045";
+      };
       dieOf = part:
-        let device = builtins.head
-          (builtins.match "(xc7(a|k|v|vx)[0-9]+t|xc7[sz][0-9]+).*" part);
+        let device = builtins.head (builtins.match
+          "(xc7z007s|xc7z012s|xc7z014s|xc7(a|k|v|vx)[0-9]+t|xc7[sz][0-9]+).*"
+          part);
         in dieAliases.${device} or device;
       manifest = builtins.fromJSON (builtins.readFile ./chipdb-parts.json);
       manifestDies = nixpkgs.lib.unique (builtins.concatMap

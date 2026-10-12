@@ -27,9 +27,15 @@
     "xc7s25csga324",
     "xc7s50csga324",
     "xc7s50fgga484",
-    "xc7s50ftgb196"
+    "xc7s50ftgb196",
+    "xc7s75fgga484",
+    "xc7s75fgga676",
+    "xc7s100fgga484",
+    "xc7s100fgga676"
   ],
   "zynq7": [
+    "xc7z007sclg225",
+    "xc7z007sclg400",
     "xc7z010clg225",
     "xc7z010clg400",
     "xc7z020clg400",

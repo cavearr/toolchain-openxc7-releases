@@ -410,16 +410,16 @@ class PartsIndexTests(unittest.TestCase):
     def test_rejects_a_generated_part_the_engine_rejects(self):
         """generated=true means the engine opens it from --device alone."""
         index_path, chipdb, info = self.make_index()
-        info["parts"]["xc7s50csga324-1IL"] = {
+        info["parts"]["xc7s50csga324-4"] = {
             "family": "spartan7", "base-part": "xc7s50csga324",
-            "speed": "1IL", "generated": True}
+            "speed": "4", "generated": True}
         info["part-count"] += 1
         info["generated-count"] += 1
         info["base-part-count"] += 1
         self.rewrite(index_path, info)
-        with self.assertRaisesRegex(ValueError, "Invalid device xc7s50csga324-1IL"):
+        with self.assertRaisesRegex(ValueError, "Invalid device xc7s50csga324-4"):
             validate_package_info(index_path, chipdb)
-        info["parts"]["xc7s50csga324-1IL"]["generated"] = False
+        info["parts"]["xc7s50csga324-4"]["generated"] = False
         info["generated-count"] -= 1
         self.assertEqual(sorted(validate_document(info)), [PART, SLOW])
 
@@ -430,7 +430,14 @@ class PartsIndexTests(unittest.TestCase):
             with self.subTest(part=part):
                 self.assertTrue(engine_accepts(part))
         for part in ("xc7s50csga324-1IL", "xc7s50csga324-1Q",
-                     "xc7a35tcpg236-1LV", "xc7q50tcsg324-1"):
+                     "xc7s100fgga484-1IL", "xc7z035ffg676-3"):
+            with self.subTest(part=part):
+                self.assertTrue(engine_accepts(part))
+        # Grades prjxray-db does not name, and a family the pattern
+        # does not know, stay rejected.
+        for part in ("xc7s50csga324-1L", "xc7s50csga324-4",
+                     "xc7s50csga324-3L", "xc7a35tcpg236-1LV",
+                     "xc7q50tcsg324-1"):
             with self.subTest(part=part):
                 self.assertFalse(engine_accepts(part))
 
