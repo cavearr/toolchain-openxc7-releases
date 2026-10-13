@@ -1,0 +1,34 @@
+{
+  "description": "An MMCM in a top clock row two regions from the BUFG tile reaches its BUFGs on dedicated clock routing",
+  "exercises": [
+    "CLK_HROW_TOP CK_BUFG_CASCO <- CK_BUFG_CASCIN pass-through pips",
+    "route_clocks reaching a BUFG from an MMCM that is not adjacent to it",
+    "the chipdb generator's pip filters"
+  ],
+  "tags": [
+    "clocking",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "clk_cascade",
+  "parts": [
+    "xc7a35tcsg324"
+  ],
+  "xdc_extra": [
+    "set_property LOC MMCME2_ADV_X0Y2 [get_cells mmcm_i]"
+  ],
+  "expect": {
+    "primitives": {
+      "MMCME2_ADV": 1
+    },
+    "log_absent": [
+      "routing clock 'o[01]'\\s+Info:\\s+failed to find a route using dedicated resources"
+    ],
+    "artifacts": [
+      "bitstream"
+    ]
+  },
+  "why": "Until openXC7/nextpnr#104 the chipdb generator dropped the CK_BUFG_CASCO <- CK_BUFG_CASCIN pips of every CLK_HROW_TOP tile (gen/filters.py), the only dedicated way to a BUFG from a clock row that is not next to the BUFG tile. An MMCM in the top row of an xc7a35t (X0Y2) had no dedicated path to its BUFGs: route_clocks said so for both outputs and router2 took the fabric, about 4 ns of delay the timing analysis does not see. Vivado uses those pips. Release 2026-10-14 still routes so; this test fails if the warning on the MMCM outputs comes back. The pattern names the two MMCM outputs (o0, o1): the pad that clocks the MMCM has no dedicated path to it from this part's pads and warns either way."
+}
