@@ -1,0 +1,17 @@
+{
+  "description": "Counter blinky on xc7z100ffg900 clocked from AB27, a bank 12 clock pad that enters the top clock row from the left",
+  "exercises": [
+    "a clock entering CLK_HROW_TOP_R on a CK_IN_L lane above 3 (zynq7)",
+    "that every CLK_HROW_TOP_R feature the route uses is in prjxray-db, so fasm2frames assembles it"
+  ],
+  "why": "zynq7 segbits_clk_hrow_top_r.db lacked CK_IN_L4..13_ACTIVE (and the BUFH rows) until prjxray-db 86dd993 (db#35). nextpnr takes this clock in on CK_IN_L8, and with the older database fasm2frames stops on CLK_HROW_TOP_R.CLK_HROW_CK_IN_L8_ACTIVE: release 2026-10-13 failed so. The generated constraints put the clock on a bank 13 pad on every z100 package, so nothing else in the suite or the E2E reaches these rows.",
+  "tags": ["zynq7", "clocking"],
+  "sources": ["design.v"],
+  "constraints": "constraints.xdc",
+  "top": "z100_bank12_clock",
+  "parts": ["xc7z100ffg900"],
+  "expect": {
+    "primitives": { "FDRE": ">=24" },
+    "artifacts": ["bitstream"]
+  }
+}
