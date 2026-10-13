@@ -23,6 +23,14 @@
 # master of 2026-10-10 (75825f2e) replaces virtex7/timings, which was a
 # symlink, with the timings prjxray's 007-timing fuzzer wrote (db#32).
 # No other family changes.
+# master of 2026-10-13 (86dd993) adds the zynq7 CLK_HROW_TOP_R rows that
+# artix7 has and zynq7 lacked: the 240 BUFH rows and CK_IN_L4..13_ACTIVE,
+# BUFRCLK_L0..3_ACTIVE, each checked against a Vivado bitstream (db#35).
+# Without CK_IN_L<n>_ACTIVE, an xc7z100 clock from a bank 12 clock pad,
+# or a many-output MMCM next to the BUFG row, fails in fasm2frames. The
+# chipdb of each zynq7 die changes (240 BUFH pips become usable); the
+# CLK_HROW mask bits it also adds, here and in spartan7, are not read by
+# the chipdb.
 let
   source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
 in

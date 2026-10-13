@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-12";
+  version = "1.0.0-unstable-2026-10-13";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -50,7 +50,13 @@ stdenv.mkDerivation rec {
   # about, and a clock derived through IBUFDS_GTE2 is recognised (#98).
   # A GT LOC that contradicts its pads is an error (#99). The FASM file
   # is written atomically (#100). None of these changes the chipdb
-  # generator or the constids. ZERO local patches.
+  # generator or the constids.
+  # Since f9e07df8 (d56c470f, merged 2026-10-13): a DSP48E1 whose D port
+  # is unused sets ZADREG and ZDREG, and MASK is written at its all-ones
+  # default when the netlist omits it, as Vivado does (#101). When both
+  # halves of an HP input tile are pure inputs, each half writes its own
+  # .IN (#102). Both change the FASM writer only, not the chipdb generator
+  # or the constids. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
