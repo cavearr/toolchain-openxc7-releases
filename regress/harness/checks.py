@@ -46,6 +46,44 @@ def _log_absent(patterns, spec, result, metrics) -> list[str]:
             if re.search(pattern, result.log, re.IGNORECASE)]
 
 
+def _fasm_lines(result) -> list[str] | None:
+    path = result.artifacts.get("fasm")
+    if path is None or not path.exists():
+        return None
+    # read_text folds CRLF, so a pattern ending in `$` holds on Windows too
+    return path.read_text(encoding="utf-8", errors="replace").splitlines()
+
+
+@check("fasm_contains")
+def _fasm_contains(patterns, spec, result, metrics) -> list[str]:
+    """Features the FASM must carry: each pattern must match some line.
+
+    For a fix that changes a bit without stopping the flow -- the design
+    assembles either way, with a feature wrong or missing -- the FASM line
+    is the only thing that tells the two apart. Case-sensitive, as the
+    feature names are."""
+    lines = _fasm_lines(result)
+    if lines is None:
+        return ["no FASM was written, so its features could not be checked"]
+    return [f"FASM has no line matching {pattern!r}" for pattern in patterns
+            if not any(re.search(pattern, line) for line in lines)]
+
+
+@check("fasm_absent")
+def _fasm_absent(patterns, spec, result, metrics) -> list[str]:
+    """Features the FASM must not carry: no line may match a pattern."""
+    lines = _fasm_lines(result)
+    if lines is None:
+        return ["no FASM was written, so its features could not be checked"]
+    findings = []
+    for pattern in patterns:
+        hit = next((line for line in lines if re.search(pattern, line)), None)
+        if hit is not None:
+            findings.append(f"FASM has a line matching {pattern!r}, "
+                            f"which it should not: {hit}")
+    return findings
+
+
 def _matches(actual: int, requirement) -> bool:
     if isinstance(requirement, int):
         return actual == requirement

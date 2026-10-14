@@ -21,7 +21,7 @@ DEFAULT_PART = "xc7a35tcpg236"
 FLOW_STAGES = ("synth", "pnr", "fasm", "bitstream")
 EXPECT_KEYS = {
     "status", "log_contains", "log_absent", "primitives", "modules",
-    "artifacts", "metrics_present",
+    "artifacts", "metrics_present", "fasm_contains", "fasm_absent",
 }
 TOP_LEVEL_KEYS = {
     "description", "exercises", "why", "tier", "tags", "sources", "top",

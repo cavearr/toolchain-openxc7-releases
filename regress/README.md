@@ -83,6 +83,7 @@ database · the whole flow runs · metrics are tracked against the baseline.
 |---|---|---|
 | `status` | `"fail"` | Negative tests: the flow *must* fail |
 | `log_contains` / `log_absent` | `["ignoring virtual clock"]` | Regex over the whole flow log (case-insensitive — a bare `ERROR` matches Python's `ImportError` in the benign Windows fasm-parser fallback; use `\bERROR:` for tool errors) |
+| `fasm_contains` / `fasm_absent` | `["DSP48\\.DSP_0\\.SEL_PATTERN_C$"]` | Regex per line of the FASM the engine wrote (case-sensitive, as feature names are): some line must match / no line may match. For a fix that changes a bit without stopping the flow, where the design assembles either way. A flow that wrote no FASM is a finding |
 | `primitives` | `{"DSP48E1": ">=1"}` | What synthesis inferred, counted on the netlist |
 | `modules` | `">=3"` | Modules surviving synthesis, i.e. hierarchy is intact |
 | `artifacts` | `["bitstream"]` | Produced and non-empty |
