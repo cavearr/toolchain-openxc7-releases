@@ -1,0 +1,32 @@
+{
+  "description": "An OSERDESE2 with T1 tied low drives its pad: no ZINV_T1",
+  "exercises": [
+    "an OSERDESE2 whose tristate input T1 is tied to 0, TQ driving an IOBUF",
+    "the OLOGIC ZINV_T1 feature in the FASM writer"
+  ],
+  "why": "The packer turns the GND tie on T1 into the VCC net with IS_T1_INVERTED, and the site inverter must then stay active. Release 2026-10-14 also wrote ZINV_T1 from the rule for the TQ to pad path, which leaves the pad tri-stated for good: the output never drives, and the bitstream assembles all the same. openXC7/nextpnr#77 keeps ZINV_T1 off a tied-low T1. Vivado writes no ZINV_T1 for this design.",
+  "tags": [
+    "primitive",
+    "io",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a35tcsg324"
+  ],
+  "constraints": "constraints.xdc",
+  "expect": {
+    "primitives": {
+      "OSERDESE2": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_absent": [
+      "OLOGIC_Y[01]\\.ZINV_T1$"
+    ]
+  }
+}
