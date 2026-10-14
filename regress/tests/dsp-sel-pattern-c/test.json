@@ -1,0 +1,34 @@
+{
+  "description": "A DSP48E1 with SEL_PATTERN \"C\" writes SEL_PATTERN_C into the bitstream",
+  "exercises": [
+    "the DSP48E1 SEL_PATTERN_C feature in the FASM writer",
+    "the DSP_0 SEL_PATTERN_C row of the prjxray database"
+  ],
+  "why": "A DSP48E1 that compares against its C input (SEL_PATTERN \"C\") needs the SEL_PATTERN_C bit; without it the pattern detector compares against the PATTERN attribute instead. Release 2026-10-14 writes no SEL_PATTERN_C (openXC7/nextpnr#95 adds it, prjxray-db#33 gives it a row), and the design assembles all the same with the wrong comparison. Vivado sets the bit for this very design on DSP48_X0Y20.",
+  "tags": [
+    "primitive",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a35tcsg324"
+  ],
+  "constraints": "constraints.xdc",
+  "xdc_extra": [
+    "set_property LOC DSP48_X0Y20 [get_cells u]"
+  ],
+  "expect": {
+    "primitives": {
+      "DSP48E1": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "DSP48\\.DSP_0\\.SEL_PATTERN_C$"
+    ]
+  }
+}
