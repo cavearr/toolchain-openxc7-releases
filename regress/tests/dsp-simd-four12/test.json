@@ -1,0 +1,34 @@
+{
+  "description": "A DSP48E1 with USE_SIMD \"FOUR12\" writes both SIMD features",
+  "exercises": [
+    "the DSP48E1 USE_SIMD_FOUR12 and USE_SIMD_FOUR12_TWO24 features in the FASM writer"
+  ],
+  "why": "FOUR12 splits the post-adder into four 12-bit lanes. Vivado sets two bits for it, USE_SIMD_FOUR12 and USE_SIMD_FOUR12_TWO24 (the second alone is TWO24). Release 2026-10-14 writes only the first, a combination Vivado writes for no SIMD mode, and the bitstream assembles without complaint. openXC7/nextpnr#105 writes both.",
+  "tags": [
+    "primitive",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a35tcsg324"
+  ],
+  "constraints": "constraints.xdc",
+  "xdc_extra": [
+    "set_property LOC DSP48_X0Y20 [get_cells u]"
+  ],
+  "expect": {
+    "primitives": {
+      "DSP48E1": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "DSP48\\.DSP_0\\.USE_SIMD_FOUR12$",
+      "DSP48\\.DSP_0\\.USE_SIMD_FOUR12_TWO24$"
+    ]
+  }
+}
