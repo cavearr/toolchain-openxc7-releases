@@ -1,0 +1,36 @@
+{
+  "description": "Two RIOB18 tiles of an xc7z030 HP bank: an input on IOB_Y0 with an output on IOB_Y1, and an output at 16 mA",
+  "exercises": [
+    "an LVCMOS18 output at the default drive on an HP bank (the drive row of each strength)",
+    "an input on IOB_Y0 of an HP tile (zynq7 has only the long input names)",
+    "an input on IOB_Y0 with IOB_Y1 in use (no pulldown on a used half)",
+    "an LVCMOS18 output at DRIVE 16 on an HP bank"
+  ],
+  "why": "Each LVCMOS12/15/18 drive strength on an HP (RIOB18) bank is a code of its own. Release 2026-10-14 writes the 12 mA code for every strength under a grouped name, and stops fasm2frames on the first tile here: LVCMOS18.DRIVE.I12_I8 is in no RIOB18 database, IOB_Y0.LVCMOS12_LVCMOS15.IN is not in zynq7's, and the input gives the used IOB_Y1 a PULLTYPE.PULLDOWN that clears its PULLTYPE.NONE. The second tile, an output at DRIVE 16, assembles with the 12 mA code. openXC7/nextpnr#106 with the rows of prjxray-db#36 writes what Vivado writes for both tiles.",
+  "tags": [
+    "zynq7",
+    "io"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "z030_hp_pair",
+  "parts": [
+    "xc7z030fbg676"
+  ],
+  "constraints": "constraints.xdc",
+  "synth": {
+    "opts": "-nosrl"
+  },
+  "expect": {
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "IOB_Y0\\.LVCMOS18\\.DRIVE\\.I16$"
+    ],
+    "fasm_absent": [
+      "DRIVE\\.I12_I16_I2_I4_I6_I8$"
+    ]
+  }
+}
