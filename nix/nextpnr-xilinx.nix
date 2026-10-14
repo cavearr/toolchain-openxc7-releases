@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-13";
+  version = "1.0.0-unstable-2026-10-14";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -56,7 +56,24 @@ stdenv.mkDerivation rec {
   # default when the netlist omits it, as Vivado does (#101). When both
   # halves of an HP input tile are pure inputs, each half writes its own
   # .IN (#102). Both change the FASM writer only, not the chipdb generator
-  # or the constids. ZERO local patches.
+  # or the constids.
+  # Since d56c470f (4e89c503, merged 2026-10-14): the clocking cells' LOCs
+  # are applied before the clock tree is preplaced, and the preplacement
+  # walks clock routing only (#103). The chipdb generator keeps the
+  # CK_BUFG_CASCO <- CK_BUFG_CASCIN pips of CLK_HROW_TOP, the way a clock
+  # reaches the BUFG tile from a clock row that is not next to it: 32 more
+  # pips in every die, where route_clocks used to give up and router2 took
+  # the fabric (#104). An OSERDESE2 with T1 tied low no longer writes
+  # ZINV_T1, which kept its pad tri-stated (#77). A DSP48E1 with
+  # SEL_PATTERN "C" writes SEL_PATTERN_C (#95), and one with USE_SIMD
+  # "FOUR12" writes USE_SIMD_FOUR12_TWO24 next to USE_SIMD_FOUR12 (#105),
+  # as Vivado does. On an HP (RIOB18) bank, an LVCMOS output writes the
+  # drive code of its own strength instead of the 12 mA one for all, an
+  # input on IOB_Y0 writes only the long feature names, and an input no
+  # longer describes a used IOB_Y1 as an unused pad with a pulldown
+  # (#106). #104 is the one that changes the chipdb generator (gen/); #103
+  # changes the packer; #77, #95, #105 and #106 change the FASM writer
+  # only. The constids do not change. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it

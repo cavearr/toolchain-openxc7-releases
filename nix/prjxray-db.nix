@@ -31,6 +31,14 @@
 # chipdb of each zynq7 die changes (240 BUFH pips become usable); the
 # CLK_HROW mask bits it also adds, here and in spartan7, are not read by
 # the chipdb.
+# master of 2026-10-14 (b12466df) adds the DSP48E1 SEL_PATTERN_C bit of
+# both DSPs of a tile in every family (db#33) and, for zynq7 and kintex7,
+# the RIOB18 drive code of each LVCMOS12/15/18 strength in each half, 32
+# rows read from Vivado bitstreams (db#36); until then only the grouped
+# 12 mA code had a row. db#34 is virtex7 only (its LIOB18 STEPDOWN bit),
+# a family the package does not carry. The chipdb generator reads none of
+# these rows: with the same generator, every chipdb is byte-identical to
+# the one of 86dd993.
 let
   source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
 in
