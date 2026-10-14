@@ -5,7 +5,7 @@
       "brams": 1,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 26,
@@ -20,7 +20,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 7,
@@ -35,7 +35,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 128,
@@ -44,13 +44,28 @@
       "pnr_seconds": 8.6
     }
   },
+  "clk-cascade": {
+    "xc7a35tcsg324": {
+      "bit_bytes": 2192116,
+      "brams": 0,
+      "dsps": 0,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
+        "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
+      },
+      "ffs": 44,
+      "fmax_mhz": 402.7386169433594,
+      "luts": 97,
+      "pnr_seconds": 16.63
+    }
+  },
   "congestion-local": {
     "xc7a35tcpg236": {
       "bit_bytes": 2192116,
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 12288,
@@ -65,7 +80,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 12288,
@@ -80,7 +95,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -93,7 +108,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -106,7 +121,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -119,7 +134,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -132,7 +147,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -145,7 +160,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -158,7 +173,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -171,7 +186,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -184,7 +199,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -197,7 +212,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -210,7 +225,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -223,7 +238,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -236,7 +251,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -249,7 +264,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -262,7 +277,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -275,7 +290,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -288,7 +303,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -301,7 +316,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -314,7 +329,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -327,7 +342,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -340,7 +355,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -353,7 +368,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -366,7 +381,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -379,7 +394,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -392,7 +407,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -405,7 +420,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -418,7 +433,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -431,7 +446,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -444,7 +459,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -457,7 +472,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -470,7 +485,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -483,7 +498,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -496,7 +511,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -509,7 +524,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -522,7 +537,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -535,7 +550,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -548,7 +563,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -561,7 +576,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -574,7 +589,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -587,7 +602,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -600,7 +615,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -613,7 +628,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -626,7 +641,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 1,
@@ -641,7 +656,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 25,
@@ -656,7 +671,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 25,
@@ -671,7 +686,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 25,
@@ -680,13 +695,43 @@
       "pnr_seconds": 7.39
     }
   },
+  "dsp-sel-pattern-c": {
+    "xc7a35tcsg324": {
+      "bit_bytes": 2192116,
+      "brams": 0,
+      "dsps": 1,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
+        "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
+      },
+      "ffs": 0,
+      "fmax_mhz": null,
+      "luts": 0,
+      "pnr_seconds": 7.1
+    }
+  },
+  "dsp-simd-four12": {
+    "xc7a35tcsg324": {
+      "bit_bytes": 2192116,
+      "brams": 0,
+      "dsps": 1,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
+        "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
+      },
+      "ffs": 0,
+      "fmax_mhz": null,
+      "luts": 0,
+      "pnr_seconds": 6.99
+    }
+  },
   "dsp48": {
     "xc7a35tcpg236": {
       "bit_bytes": 2192116,
       "brams": 0,
       "dsps": 1,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 36,
@@ -701,7 +746,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 257,
@@ -716,7 +761,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 22,
@@ -731,7 +776,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 28,
@@ -740,13 +785,28 @@
       "pnr_seconds": 8.25
     }
   },
+  "oserdes-t1low": {
+    "xc7a35tcsg324": {
+      "bit_bytes": 2192116,
+      "brams": 0,
+      "dsps": 0,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
+        "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
+      },
+      "ffs": 1,
+      "fmax_mhz": 1043.84130859375,
+      "luts": 1,
+      "pnr_seconds": 6.81
+    }
+  },
   "pll": {
     "xc7a35tcpg236": {
       "bit_bytes": 2192116,
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 22,
@@ -761,7 +821,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 31,
@@ -776,7 +836,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 24,
@@ -791,7 +851,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 0,
@@ -806,7 +866,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 0,
@@ -821,7 +881,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 0,
@@ -836,7 +896,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 24,
@@ -851,7 +911,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 24,
@@ -866,12 +926,27 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 38,
       "fmax_mhz": 457.03839111328125,
       "luts": 26,
+      "pnr_seconds": 8.33
+    }
+  },
+  "z030-hp-pair": {
+    "xc7z030fbg676": {
+      "bit_bytes": 5980020,
+      "brams": 0,
+      "dsps": 0,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
+        "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
+      },
+      "ffs": 65,
+      "fmax_mhz": 819.672119140625,
+      "luts": 2,
       "pnr_seconds": 8.33
     }
   },
@@ -881,7 +956,7 @@
       "brams": 0,
       "dsps": 0,
       "env": {
-        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version d56c470f)",
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 4e89c503)",
         "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)"
       },
       "ffs": 24,
