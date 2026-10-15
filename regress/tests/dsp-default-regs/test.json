@@ -1,0 +1,37 @@
+{
+  "description": "A DSP48E1 with no *REG attribute keeps its pipeline registers on: no ZMREG, ZPREG or ZOPMODEREG",
+  "exercises": [
+    "the defaults of the DSP48E1 register attributes in the FASM writer",
+    "a DSP48E1 instantiated by hand, not inferred by yosys"
+  ],
+  "why": "UG479 gives every *REG attribute of the DSP48E1 the default 1, and Vivado builds a DSP without parameters with all its registers on. Release 2026-10-15 reads ALUMODEREG, CARRYINREG, CARRYINSELREG, INMODEREG, MREG, OPMODEREG and PREG with a default of 0, so a DSP48E1 that does not name them is built with those registers off, which is another latency, and the bitstream assembles all the same. A DSP inferred by yosys is not affected: yosys writes every *REG out. The fix reads the seven attributes with the default 1.",
+  "tags": [
+    "primitive",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a35tcsg324"
+  ],
+  "constraints": "constraints.xdc",
+  "xdc_extra": [
+    "set_property LOC DSP48_X0Y20 [get_cells u]"
+  ],
+  "expect": {
+    "primitives": {
+      "DSP48E1": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "DSP48\\.DSP_0\\.ZADREG\\[0\\]$"
+    ],
+    "fasm_absent": [
+      "DSP48\\.DSP_0\\.Z(ALUMODE|CARRYIN|CARRYINSEL|INMODE|M|OPMODE|P)REG\\[0\\]$"
+    ]
+  }
+}
