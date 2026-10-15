@@ -22,7 +22,7 @@ both. Only a check on the FASM lines tells the two apart.
 Routes, produces a bitstream, and the FASM carries both
 `DSP_R_X9Y50.DSP48.DSP_0.USE_SIMD_FOUR12` and
 `DSP_R_X9Y50.DSP48.DSP_0.USE_SIMD_FOUR12_TWO24`. With nextpnr 4e89c503 and
-yosys 0.69+274, on linux and on windows: 1 DSP48E1, no LUT, no flip-flop
+yosys 0.70+16, on linux and on windows: 1 DSP48E1, no LUT, no flip-flop
 (no fmax in the `--report`), bitstream 2192116 bytes.
 
 ## Reading a failure
