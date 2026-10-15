@@ -196,8 +196,8 @@ def run(spec, pkg, part: str, workdir: Path, repo: Path) -> FlowResult:
             f"chparam -set {name} {value} {spec.top}; "
             for name, value in spec.parameters.items()
         )
-        # synth_xilinx, then write_json. YosysHQ oss-cad-suite 2026-10-10
-        # (yosys 0.69+274) leaves no $buf in the user module.
+        # synth_xilinx, then write_json. YosysHQ oss-cad-suite 2026-10-14
+        # (yosys 0.70+16) leaves no $buf in the user module.
         session.step("yosys", [
             "yosys", "-p",
             f"{chparams}synth_xilinx -arch xc7 -top {spec.top} {spec.synth_opts}; "
