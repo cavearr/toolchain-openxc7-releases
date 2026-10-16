@@ -1,0 +1,33 @@
+{
+  "description": "A GTPE2_COMMON writes ENABLE_DRP when a channel of its quad drives DRPWE, its own DRP tied off",
+  "exercises": [
+    "ENABLE_DRP of the GT COMMON in the FASM writer",
+    "a channel DRP in use next to a COMMON whose DRP is tied off"
+  ],
+  "why": "Vivado sets ENABLE_DRP of a GTPE2_COMMON or GTXE2_COMMON when a channel of the same quad drives DRPWE; the COMMON's own DRP, a channel DRPCLK alone and DRPEN alone leave it clear. Release 2026-10-15 writes it when the COMMON's own DRPCLK is connected: a quad whose channels use the DRP, with the COMMON's DRPCLK tied low, misses the bit, as the openPCIE x4 build of openXC7/nextpnr#88 does against its Vivado golden. The design assembles either way.",
+  "tags": [
+    "primitive",
+    "artix7",
+    "gt"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a100tfgg484"
+  ],
+  "constraints": "constraints.xdc",
+  "expect": {
+    "primitives": {
+      "GTPE2_COMMON": 1,
+      "GTPE2_CHANNEL": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "^GTP_COMMON_X130Y179\\.GTPE2_COMMON\\.ENABLE_DRP$"
+    ]
+  }
+}
