@@ -1,0 +1,36 @@
+{
+  "description": "A GTPE2_COMMON writes the PLL0_CFG and PLL1_CFG it is given, not a fixed 0x1F03DC",
+  "exercises": [
+    "PLL0_CFG and PLL1_CFG of the GTPE2_COMMON in the FASM writer",
+    "a reserved wizard attribute away from its default (the PCIe value 0x1F024C)"
+  ],
+  "why": "PLL0_CFG and PLL1_CFG are reserved values the transceiver wizard sets; a PCIe design asks 0x1F024C and Vivado writes that. Release 2026-10-15 writes a fixed 0x1F03DC whatever the instance asks, and the same for PLL*_INIT_CFG and PLL*_LOCK_CFG (openXC7/nextpnr#84): the openPCIE x4 build of openXC7/nextpnr#88 differs from its Vivado golden by bits 4, 7 and 8 of both. The design assembles either way.",
+  "tags": [
+    "primitive",
+    "artix7",
+    "gt"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a100tfgg484"
+  ],
+  "constraints": "constraints.xdc",
+  "expect": {
+    "primitives": {
+      "GTPE2_COMMON": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "GTPE2_COMMON\\.PLL0_CFG\\[2[06]:0\\] = 2[17]'b0*111110000001001001100$",
+      "GTPE2_COMMON\\.PLL1_CFG\\[2[06]:0\\] = 2[17]'b0*111110000001001001100$"
+    ],
+    "fasm_absent": [
+      "GTPE2_COMMON\\.PLL[01]_CFG\\[\\d+:0\\] = \\d+'b0*111110000001111011100$"
+    ]
+  }
+}
