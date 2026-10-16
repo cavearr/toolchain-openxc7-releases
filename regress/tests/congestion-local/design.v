@@ -13,7 +13,7 @@
 // ring whatever the stride, and a placer may lay any ring out as a snake,
 // making it local again. An affine map with MUL far from 1 has high graph
 // bandwidth: no placement can make ring AND far links short at once. And a
-// purely multiplicative map (i*STRIDE mod N) silently pins block 0 to
+// purely multiplicative map (i*STRIDE mod N) silently maps block 0 to
 // itself (0*S = 0), detaching the rest -- the collapse the FDRE assertion
 // caught on this bench's first run.
 module congestion #(

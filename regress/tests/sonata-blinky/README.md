@@ -6,7 +6,7 @@ A knight-rider blinky for the **lowRISC Sonata ONE** (`xc7a50tcsg324`): the
 25 MHz board oscillator drives a 22-bit prescaler and one lit LED sweeps back
 and forth across `usrLed[7:0]`. 66 LUTs, 31 flip-flops, one BUFG.
 
-Not the counter, though. What this test pins down is the **clock's route from
+Not the counter, though. What this test locks down is the **clock's route from
 the pad to the BUFG**.
 
 `mainClk` is pad **P15**, which on this package is a clock-capable input in the

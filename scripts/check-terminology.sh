@@ -6,12 +6,15 @@
 # them for "a fixed version" confused the apio maintainer badly enough
 # that the project banned them everywhere: code comments, commit
 # messages, workflow names, docs, issue replies, release notes. Say
-# version, tag, revision, or "bump the version".
+# version, tag, revision, or "bump the version". The same goes for
+# fixing a behaviour or a placement ("<root> down", "<root>s down"): say
+# holds, fixes, locks or constrains.
 #
 # Only the unambiguous forms are gated. Bare "pin"/"pins" is legitimate
 # and common here -- package_pins.csv, PACKAGE_PIN, e2e/gen_xdc.py, the
 # DI/WE discussions in the test READMEs -- so it is NOT matched: a check
-# that cried wolf on real pads would be turned off within a week.
+# that cried wolf on real pads would be turned off within a week. The
+# "<root> down" idiom is matched: no pad is ever meant by it.
 #
 #   scripts/check-terminology.sh [repo-root]
 
@@ -25,6 +28,9 @@ cd "$ROOT"
 # would blind the check to whatever else the file grows.
 ROOT=pin
 PATTERN="${ROOT}ned|${ROOT}ning|re${ROOT}|re${ROOT}ned|un${ROOT}ned"
+# The idiom for fixing something, in the singular, the plural and the
+# participle ("${ROOT}ned down" is already caught by the first form).
+PATTERN="$PATTERN|${ROOT}s?[[:space:]]+down|${ROOT}ned[[:space:]]+down|${ROOT}ning[[:space:]]+down"
 
 # -w rather than \b: BSD/macOS regex has no \b in -E, and this must give
 # the same answer on a dev mac and on the CI runner.
@@ -39,8 +45,9 @@ git grep -n -i -w -E "$PATTERN" || STATUS=$?
 case $STATUS in
     0)
         echo
-        echo "❌ terminology: the lines above say pad when they mean version."
-        echo "   Use version / tag / revision / \"bump the version\" (apio#924)."
+        echo "❌ terminology: the lines above say pad when they mean a version or a fixed behaviour."
+        echo "   Use version / tag / revision / \"bump the version\" (apio#924),"
+        echo "   or holds / fixes / locks / constrains."
         exit 1
         ;;
     1) echo "terminology: OK — no pad-vs-version wording in the tree" ;;
