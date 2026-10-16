@@ -1,0 +1,33 @@
+{
+  "description": "An IBUFDS_GTE2 that feeds only GTREFCLK0 of a GTPE2_COMMON writes IBUFDS_GTE2_Y0.IN_USE",
+  "exercises": [
+    "the IN_USE bit of the GT reference clock buffer in the FASM writer",
+    "a reference clock that reaches the transceiver and nothing in the fabric"
+  ],
+  "why": "Vivado sets IBUFDS_GTE2_Y*.IN_USE when the buffer's output goes only to a transceiver reference clock input (GTREFCLK0/1 of the COMMON, or of a GTX channel on its CPLL), and leaves it clear when O or ODIV2 also, or only, reaches a fabric clock buffer. openXC7/nextpnr#97 stopped writing the bit for every buffer, from Vivado builds that all had O on a BUFG, so release 2026-10-15 never writes it: the openPCIE x4 build of openXC7/nextpnr#88 differs from its Vivado golden by this bit. The design assembles either way.",
+  "tags": [
+    "primitive",
+    "artix7",
+    "gt"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a100tfgg484"
+  ],
+  "constraints": "constraints.xdc",
+  "expect": {
+    "primitives": {
+      "IBUFDS_GTE2": 1,
+      "GTPE2_COMMON": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "^GTP_COMMON_X130Y179\\.IBUFDS_GTE2_Y0\\.IN_USE$"
+    ]
+  }
+}
