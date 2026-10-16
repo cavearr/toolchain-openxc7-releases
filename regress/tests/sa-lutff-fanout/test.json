@@ -1,0 +1,28 @@
+{
+  "description": "--placer sa places LUT and flip-flop pairs whose LUT also drives a flip-flop outside the pair",
+  "exercises": [
+    "the simulated-annealing placer (--placer sa), an engine option apio does not use",
+    "the legalisation of relative constraints on the LUT and flip-flop pairs of the xilinx packer"
+  ],
+  "why": "openXC7/nextpnr#92: with --placer sa the legaliser placed such a pair on the 5LUT and the 5FF of a position, where the LUT output and the 5FF output both need the one output mux, and did not check the pair itself; the SA then ended with 'post-placement validity check failed for Bel ... (no cell)'. The fix keeps the legaliser searching when the bels of the chain it places are illegal.",
+  "tags": [
+    "structural",
+    "placer"
+  ],
+  "top": "sa_lutff_fanout",
+  "nextpnr": {
+    "args": [
+      "--placer",
+      "sa"
+    ]
+  },
+  "expect": {
+    "status": "pass",
+    "artifacts": [
+      "bitstream"
+    ],
+    "log_absent": [
+      "post-placement validity check failed"
+    ]
+  }
+}
