@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-14";
+  version = "1.0.0-unstable-2026-10-16";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -73,7 +73,26 @@ stdenv.mkDerivation rec {
   # longer describes a used IOB_Y1 as an unused pad with a pulldown
   # (#106). #104 is the one that changes the chipdb generator (gen/); #103
   # changes the packer; #77, #95, #105 and #106 change the FASM writer
-  # only. The constids do not change. ZERO local patches.
+  # only. The constids do not change.
+  # Since 4e89c503 (62eff1cd, merged 2026-10-16): a DSP48E1 that does not
+  # name ALUMODEREG, CARRYINREG, CARRYINSELREG, INMODEREG, MREG, OPMODEREG
+  # or PREG keeps that register on, the UG479 default Vivado builds; they
+  # were read with a default of 0, and the register was built off (#109).
+  # A GTPE2_CHANNEL with TXPI_SYNFREQ_PPM = 0, its default, is accepted
+  # instead of stopping the FASM writer (#111, fixes #88). An IBUFDS_GTE2
+  # whose output feeds only a transceiver reference clock writes IN_USE,
+  # which no buffer had written since #97 (#113). A GTPE2_COMMON writes the
+  # PLL*_CFG, PLL*_INIT_CFG and PLL*_LOCK_CFG it is given instead of fixed
+  # values (#114, fixes #84). A GT COMMON writes ENABLE_DRP when a channel
+  # of its quad drives DRPWE, not when its own DRPCLK is connected (#115).
+  # With --placer sa, the legaliser of relative constraints no longer
+  # leaves a chain on bels the architecture rejects, which ended large
+  # designs on an illegal logic tile, and the uarch names the cells of an
+  # illegal logic tile (#112, fixes #92). #112 changes the legaliser every
+  # architecture shares (common/place) and the xilinx placer's validity
+  # check, on the path of --placer sa only: the default placer does not
+  # run it. The other five change the FASM writer only. None changes the
+  # chipdb generator or the constids. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it

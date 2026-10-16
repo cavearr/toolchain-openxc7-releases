@@ -23,6 +23,11 @@ stdenv.mkDerivation rec {
   # xc7frames2bit refuses frame addresses the part does not have (#27) and
   # exits 1 when it cannot write the bitstream (#28), and the database grid
   # is read once (#26). The rest is fuzzers and checkdb.
+  # master 2026-10-14 (317fdc13) changes fuzzers only: 041a copies every
+  # CLK_HROW row a family lacks, with its mask bits (#32), and
+  # 100-dsp-mskpat-selpat-c fuzzes SEL_PATTERN (#31). Nothing the packages
+  # ship changes: the linux tools and the Windows tools tree built from it
+  # are byte-identical to those of 54fea88c.
   src = fetchFromGitHub {
     inherit (source) owner repo rev hash;
     fetchSubmodules = source.submodules;

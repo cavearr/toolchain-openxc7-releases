@@ -39,6 +39,20 @@
 # a family the package does not carry. The chipdb generator reads none of
 # these rows: with the same generator, every chipdb is byte-identical to
 # the one of 86dd993.
+# master of 2026-10-16 (6a6debcd) completes parts the database named but
+# could not build, each checked against a Vivado bitstream. The four
+# xc7s25csga225 parts get a real part.yaml and part.json, which were a
+# stub xc7frames2bit could not read (db#38). The 18 xc7z045
+# package_pins.csv get back the high-range bank pads an unanchored filter
+# of the 075-pins fuzzer had dropped: 100 rows in each 676 package and 150
+# in each 900 one, 2100 in all (db#40). The 30 parts of mapping/parts.yaml
+# that had no directory get one (db#39): xc7s25ftgb196, the xc7z030
+# packages fbg484, fbv484, fbv676, ffg676, ffv676, sbg485 and sbv485, and
+# the missing speed grades of xc7s25csga324 and xc7z030fbg676. db#37 is CI
+# only. Three chipdb change, in the package pad tables the generator reads
+# from package_pins.csv: xc7s25 and xc7z030 (the new packages) and xc7z045
+# (the restored pads); the other eight are byte-identical to those of
+# b12466df.
 let
   source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
 in
