@@ -1,0 +1,17 @@
+{
+  "description": "An ODELAYE2 on a high-range bank fails as one: no ODELAY there",
+  "exercises": [
+    "an ODELAYE2 whose DATAOUT drives an OBUF on a high-range bank",
+    "pack_iologic() reaching get_odelay_site() for every output buffer type"
+  ],
+  "why": "Every output buffer on a high-range bank is an IOB33_OUTBUF (an OBUF and an OBUFT alike), and release 2026-10-16 binds an ODELAYE2 through DATAOUT only to an OUTBUF_DCIEN, the high-performance-bank buffer: the flow stops with 'unsupported cell type IOB33_OUTBUF', which reads like a netlist problem. openXC7/nextpnr e229044c lets the packer reach get_odelay_site(), which names the real limitation. The design stays unbuildable; this test holds the message.",
+  "tags": ["io", "negative", "spartan7"],
+  "sources": ["design.v"],
+  "top": "odelay_plain_outbuf",
+  "parts": ["xc7s50csga324"],
+  "expect": {
+    "status": "fail",
+    "log_contains": ["is located on a high range bank\\. High range banks do not have ODELAY"],
+    "log_absent": ["unsupported cell type IOB33_OUTBUF"]
+  }
+}

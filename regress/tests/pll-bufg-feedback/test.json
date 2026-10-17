@@ -1,0 +1,24 @@
+{
+  "description": "A PLL whose feedback goes through a BUFG gets its output clocks derived",
+  "exercises": [
+    "a PLLE2_ADV with CLKFBOUT -> BUFG -> CLKFBIN, as the clocking wizard builds it",
+    "the derived VCO and output constraints of generate_constraints()",
+    "the output domain timed at its own frequency, not at the 12 MHz default"
+  ],
+  "why": "generate_constraints() derived a PLL's VCO and output clocks only when CLKFBIN was driven by the PLL itself. Vivado's clocking wizard puts a BUFG in the loop, so release 2026-10-16 skips such a PLL: the log stops at the input frequency, the output domain is timed at the 12 MHz default, and the design builds all the same. openXC7/nextpnr 39a39917 follows the clock buffers back to the PLL's own port.",
+  "tags": ["clocking", "timing", "spartan7"],
+  "sources": ["design.v"],
+  "top": "pll_bufg_feedback",
+  "parts": ["xc7s50csga324"],
+  "xdc_extra": ["create_clock -period 10.000 -name clk [get_ports clk]"],
+  "expect": {
+    "primitives": { "PLLE2_ADV": 1 },
+    "log_contains": [
+      "Derived VCO frequency 1000\\.0 MHz for PLL 'pll_i'",
+      "Derived frequency constraint of 83\\.3 MHz for net clk_pll\\b",
+      "Max frequency for clock 'clk_pll': [0-9.]+ MHz \\(PASS at 83\\.33 MHz\\)"
+    ],
+    "log_absent": ["Clock net 'clk_pll' has no timing constraint"],
+    "artifacts": ["bitstream"]
+  }
+}
