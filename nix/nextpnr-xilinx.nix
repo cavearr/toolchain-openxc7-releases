@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-16";
+  version = "1.0.0-unstable-2026-10-18";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -92,7 +92,22 @@ stdenv.mkDerivation rec {
   # architecture shares (common/place) and the xilinx placer's validity
   # check, on the path of --placer sa only: the default placer does not
   # run it. The other five change the FASM writer only. None changes the
-  # chipdb generator or the constids. ZERO local patches.
+  # chipdb generator or the constids.
+  # Since 62eff1cd (5d8e3e43, merged 2026-10-18): a PLL or MMCM whose
+  # CLKFBOUT comes back to CLKFBIN through a clock buffer, as Vivado's
+  # clocking wizard builds it (a BUFG), has its VCO and output clocks
+  # derived; only a direct feedback was followed, so such a PLL was
+  # skipped and every domain it clocks was timed at the default 12 MHz,
+  # where a design that misses its real frequency reports PASS (#116,
+  # 39a39917). An ODELAYE2 whose DATAOUT drives a plain output buffer, the
+  # type the packer gives every high-range output, stops on the real
+  # reason, that a high-range bank has no ODELAY, instead of "unsupported
+  # cell type IOB33_OUTBUF" (#116, e229044c). The two change the packer
+  # only: pack_clocking.cc (the constraint derivation) and pack_io.cc (the
+  # user of the ODELAYE2's DATAOUT). #108 adds an example (vc707-cdc6000)
+  # and #117 is CI only (the demos LVS and its fasm2netlist submodule):
+  # nothing of either enters the package. None changes the chipdb
+  # generator or the constids. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
