@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-18";
+  version = "1.0.0-unstable-2026-10-19";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -107,6 +107,14 @@ stdenv.mkDerivation rec {
   # user of the ODELAYE2's DATAOUT). #108 adds an example (vc707-cdc6000)
   # and #117 is CI only (the demos LVS and its fasm2netlist submodule):
   # nothing of either enters the package. None changes the chipdb
+  # generator or the constids.
+  # Since 5d8e3e43 (e7a6fb0e, merged 2026-10-19): port B of an 18Kb TDP
+  # block in x18 puts each byte enable on its pair of site pins, as Vivado
+  # does (WEBWE[0] on WEBWE0 and WEBWE1, WEBWE[1] on WEBWE2 and WEBWE3).
+  # The pins got we0, we1, we0, we1, so a 16-bit RAM with two write ports
+  # and a byte enable, which yosys infers as a RAMB18E1 TDP x18, wrote a
+  # byte of port B with the enable of the other byte (#119). It changes
+  # pack.cc only (the byte enable rewrite of pack_bram()), not the chipdb
   # generator or the constids. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
