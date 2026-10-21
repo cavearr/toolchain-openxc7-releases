@@ -22,7 +22,7 @@ bits 4, 7 and 8 of both. The bitstream assembles either way.
 
 Routes and produces a bitstream whose FASM carries
 `PLL0_CFG[26:0] = 27'b000000111110000001001001100` and the same for
-`PLL1_CFG`. With nextpnr 46c25a91 plus the fix and yosys 0.70+16, on
+`PLL1_CFG`. With nextpnr e7a6fb0e and yosys 0.70+186, on
 linux: fmax 599.2 MHz, 17 LUTs, 9 FFs, bitstream 3825893 bytes. With release
 `2026-10-15` the test fails on both checks.
 

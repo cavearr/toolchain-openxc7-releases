@@ -34,7 +34,7 @@ The flow completes, the log has no dedicated-routing warning for `o0` or
 `o1`, and the bitstream is produced. Both outputs go up through
 `CK_BUFG_CASCO0`/`CASCO10 <- CASCIN` of `CLK_HROW_TOP_R_X60Y78`, and the two
 BUFGs are placed on `BUFGCTRL_X0Y0` and `X0Y5` "based on dedicated routing".
-With nextpnr 4e89c503 and yosys 0.70+16, on linux and on windows: fmax
+With nextpnr e7a6fb0e and yosys 0.70+186, on linux and on windows: fmax
 402.7 MHz, 97 LUTs, 44 FFs, bitstream 2192116 bytes.
 
 The pad that clocks the MMCM (D2) has no dedicated path to it and still

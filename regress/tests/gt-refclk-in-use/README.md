@@ -25,7 +25,7 @@ the FASM lines sees it.
 
 Routes and produces a bitstream; the FASM carries the `IN_USE` line of the
 `Y0` buffer and the `GTREFCLK0_USED` line of the COMMON. With nextpnr
-46c25a91 plus the fix and yosys 0.70+16, on linux: fmax 599.2 MHz, 17 LUTs,
+e7a6fb0e and yosys 0.70+186, on linux: fmax 599.2 MHz, 17 LUTs,
 9 FFs, bitstream 3825893 bytes. With release `2026-10-15` the test fails on
 `fasm_contains`.
 

@@ -22,8 +22,8 @@ and site. Only a check on the FASM line tells the two apart.
 ## Expected result
 
 Routes, produces a bitstream, and the FASM carries
-`DSP_R_X9Y50.DSP48.DSP_0.SEL_PATTERN_C`. With nextpnr 4e89c503 and yosys
-0.70+16, on linux and on windows: 1 DSP48E1, no LUT, no flip-flop (the
+`DSP_R_X9Y50.DSP48.DSP_0.SEL_PATTERN_C`. With nextpnr e7a6fb0e and yosys
+0.70+186, on linux and on windows: 1 DSP48E1, no LUT, no flip-flop (the
 registers are the DSP's own, so the `--report` has no fmax), bitstream
 2192116 bytes.
 

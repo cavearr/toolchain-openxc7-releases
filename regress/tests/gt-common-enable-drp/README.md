@@ -26,7 +26,7 @@ openXC7/nextpnr#111 require.
 ## Expected result
 
 Routes and produces a bitstream; the FASM carries `ENABLE_DRP` on the COMMON.
-With nextpnr 46c25a91 plus the fix and yosys 0.70+16, on linux: fmax
+With nextpnr e7a6fb0e and yosys 0.70+186, on linux: fmax
 541.7 MHz, 29 LUTs, 13 FFs, bitstream 3825893 bytes. With release
 `2026-10-15` the test fails on `fasm_contains`.
 
