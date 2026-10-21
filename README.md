@@ -253,7 +253,7 @@ CHIPDB=package-win/share/nextpnr/himbaechel/xilinx
 mkdir -p $CHIPDB
 cp /path/to/chipdb-bins/*.bin /path/to/chipdb-bins/chipdb-id.txt $CHIPDB/
 cp /path/to/XILINX-PARTS-INVENTORY.json $CHIPDB/
-CHIPDB_SOURCE=restored-from-cache CHIPDB_ID="$(cat $CHIPDB/chipdb-id.txt)" \
+CHIPDB_SOURCE=generated CHIPDB_ID="$(cat $CHIPDB/chipdb-id.txt)" \
   bash scripts/build-info.sh windows-amd64 YYYY-MM-DD \
   openxc7-toolchain-windows-amd64-YYYYMMDD.tgz package-win/BUILD-INFO.json
 tar czhf openxc7-toolchain-windows-amd64-YYYYMMDD.tgz --mode=u+w -C package-win .
@@ -340,7 +340,7 @@ revision the file names.
 
 | Component | Entry in `nix/revisions.json` | What follows |
 |---|---|---|
-| nextpnr-xilinx | `nextpnr` (and `version` in `nix/nextpnr-xilinx.nix`) | The chipdb identity changes (a new cache key: the chipdb job regenerates). A/B the regression suite's canonical FASM against the previous engine, then record the new baselines. |
+| nextpnr-xilinx | `nextpnr` (and `version` in `nix/nextpnr-xilinx.nix`) | The chipdb identity changes; every die is regenerated. A/B the regression suite's canonical FASM against the previous engine, then record the new baselines. |
 | prjxray-db | `prjxray-db` | The chipdb identity changes; every die is regenerated. Run the full chain on any part whose data changed. |
 | prjxray | `prjxray` | The file is part of the chipdb identity, so the bins are regenerated (byte-identical); L1 and L2 must stay unchanged. |
 | fasm | `fasm` | As prjxray. |
@@ -420,8 +420,7 @@ hours in which the tag resolves to nothing.
 
 1. If the release is stable, mark it as a pre-release first (a stable tag
    makes the run fail on purpose). If it is a pre-release, leave it.
-2. Dispatch `build-pre-release.yaml` with that date (`regenerate_chipdb`
-   to generate every die from scratch).
+2. Dispatch `build-pre-release.yaml` with that date.
 3. When the run is green, re-promote with `make-pre-release-stable.yaml` if
    it was stable.
 

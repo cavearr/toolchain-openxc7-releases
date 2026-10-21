@@ -15,12 +15,8 @@
 #             tag a commit whose diff touches .github/workflows, and may
 #             tag this one.
 #   chipdb, linux, darwin, windows
-#             build THAT commit (input `ref`). The chipdb cache is keyed by
-#             the identity files, nix/revisions.json among them, and this
-#             run's cache scope is the branch it runs on (main for the
-#             schedule): a night whose revisions are main's restores
-#             main's bins, a new revision generates once and the next
-#             nights restore it.
+#             build THAT commit (input `ref`). The chipdb job generates
+#             every die from those revisions.
 #             L1 and the e2e gate as on the main line. L2 runs in report
 #             mode (`l2_mode: report`): drift against the main line's
 #             baselines is the information, not a failure; a broken flow,
@@ -46,11 +42,6 @@ on:
       date:
         description: "Date YYYY-MM-DD of the tag upstream-<date> (default: today, UTC)"
         required: false
-      regenerate_chipdb:
-        description: "Ignore the chipdb cache and generate every die from scratch"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: write
@@ -168,7 +159,6 @@ jobs:
     uses: ./.github/workflows/chipdb.yml
     with:
       date: ${{ needs.resolve.outputs.date }}
-      regenerate: ${{ github.event.inputs.regenerate_chipdb == 'true' }}
       ref: ${{ needs.resolve.outputs.ref }}
 
   linux:
@@ -177,7 +167,7 @@ jobs:
     with:
       date: ${{ needs.resolve.outputs.date }}
       yosys_release_tag: ${{ needs.resolve.outputs.yosys_release_tag }}
-      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_source: generated
       chipdb_id: ${{ needs.chipdb.outputs.identity }}
       parts_index: ${{ needs.chipdb.outputs.parts_index }}
       ref: ${{ needs.resolve.outputs.ref }}
@@ -190,7 +180,7 @@ jobs:
     with:
       date: ${{ needs.resolve.outputs.date }}
       yosys_release_tag: ${{ needs.resolve.outputs.yosys_release_tag }}
-      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_source: generated
       chipdb_id: ${{ needs.chipdb.outputs.identity }}
       parts_index: ${{ needs.chipdb.outputs.parts_index }}
       ref: ${{ needs.resolve.outputs.ref }}
@@ -203,7 +193,7 @@ jobs:
     with:
       date: ${{ needs.resolve.outputs.date }}
       yosys_release_tag: ${{ needs.resolve.outputs.yosys_release_tag }}
-      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_source: generated
       chipdb_id: ${{ needs.chipdb.outputs.identity }}
       parts_index: ${{ needs.chipdb.outputs.parts_index }}
       ref: ${{ needs.resolve.outputs.ref }}

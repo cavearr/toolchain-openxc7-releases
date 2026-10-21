@@ -1,4 +1,4 @@
-# Generate (or restore) the chipdb and write XILINX-PARTS-INVENTORY.json.
+# Generate the chipdb and write XILINX-PARTS-INVENTORY.json.
 #
 # One chipdb file per die, chipdb-<die>.bin: the himbaechel xilinx uarch
 # reads the same file for every part (package, speed grade) of a die. Each
@@ -15,10 +15,11 @@
 # `parts-index` (~50 kB) is the document each package embeds and the
 # release publishes under the same name.
 #
-# Owns one revision-keyed cache: the bins (a hit makes generation a few
-# minutes; a miss regenerates every die of chipdb-parts.json). The .bin
-# travel with their identity stamp (chipdb-id.txt): a seed from another
-# toolchain revision is rejected instead of silently reused.
+# Every run generates every die of chipdb-parts.json from the revisions it
+# builds: there is no cache, so the generator that made the published bins
+# ran in the same run. The .bin travel with their identity stamp
+# (chipdb-id.txt): a seed from another toolchain revision is rejected
+# instead of silently reused.
 name: chipdb
 
 on:
@@ -28,11 +29,6 @@ on:
         description: "Asset date YYYY-MM-DD (the release tag the assets are named after)"
         required: true
         type: string
-      regenerate:
-        description: "Ignore the cache and generate every die from scratch (exercises the generation path even when nothing changed)"
-        required: false
-        default: false
-        type: boolean
       ref:
         description: "Commit to build (default: the commit the run was started on). The upstream nightly passes the commit that records the upstream revisions in nix/revisions.json"
         required: false
@@ -42,9 +38,6 @@ on:
       identity:
         description: "chipdb identity stamp (chipdb-id.txt) of the produced bins"
         value: ${{ jobs.chipdb.outputs.identity }}
-      mode:
-        description: "How the bins were obtained in this run: generated | restored-from-cache (recorded in every package's BUILD-INFO)"
-        value: ${{ jobs.chipdb.outputs.mode }}
       parts_index:
         description: "Filename of the XILINX-PARTS-INVENTORY document in the parts-index artifact"
         value: ${{ jobs.chipdb.outputs.parts_index }}
@@ -55,7 +48,6 @@ jobs:
     runs-on: ubuntu-22.04            # ecosystem runner version (apio hit issues on 24.04; see apio build-linux-x86-64.yaml)
     outputs:
       identity: ${{ steps.stamp.outputs.identity }}
-      mode: ${{ steps.gen.outputs.mode }}
       parts_index: ${{ steps.index.outputs.index }}
     steps:
       - uses: actions/checkout@v7
@@ -74,55 +66,17 @@ jobs:
           echo "dateid=${DATE//-/}" >> "$GITHUB_OUTPUT"
           echo "Asset date: $DATE"
 
-      # The .bin are byte-identical per (nextpnr, prjxray-db, chipdb
-      # derivation, manifest, patches) -> that tuple IS the cache key; the
-      # two revisions are in nix/revisions.json. It is
-      # the set the packer hashes for the identity stamp (chipdb_identity()
-      # in pack/chipdb.py; tests/test_chipdb_cache_key.py keeps the two
-      # lists together), plus prjxray.nix, which only makes the key more
-      # conservative. hashFiles hashes the set of files the patterns match
-      # together, so the patch pattern matching nothing today (there is no
-      # nix/patches) leaves the key unchanged; the empty string is only
-      # returned when NO pattern matches. The v2 prefix starts the per-die
-      # caches clean: the v1 entries hold one bin per base part.
-      # `regenerate` skips the restore: the run must then produce every die
-      # from scratch, which is how the generation path itself gets tested
-      # without waiting for a toolchain revision change.
-      - name: Restore the chipdb cache (keyed by revisions + manifest)
-        if: ${{ !inputs.regenerate }}
-        uses: actions/cache@v6
-        with:
-          path: chipdb-cache
-          key: chipdb-v2-${{ hashFiles('nix/revisions.json', 'nix/nextpnr-xilinx.nix', 'nix/prjxray-db.nix', 'nix/nextpnr-xilinx-chipdb.nix', 'nix/prjxray.nix', 'chipdb-parts.json', 'nix/patches/*.patch') }}
-
       # Three dies at a time under the packer's default memory budget
       # (OPENXC7_CHIPDB_MEM_GB, 14 GB for this 16 GB runner): a die starts
       # only when its measured peak fits next to the ones running, so
       # xc7z100 and xc7z045 never run together. Measured on the build
       # server: 9 min for the 10 dies with 10 jobs, ~14 min one at a time.
-      - name: Generate the chipdb (or seed it from the cache)
-        id: gen
+      - name: Generate the chipdb
         env:
           OPENXC7_CHIPDB_JOBS: 3
         run: |
           rm -rf dist   # stale-dist guard (see pack/chipdb.py)
-          if [ "${{ inputs.regenerate }}" = "true" ]; then
-            rm -rf chipdb-cache
-            echo "chipdb: regenerate requested, ignoring the cache"
-          fi
-          if [ -n "$(ls -A chipdb-cache 2>/dev/null || true)" ]; then
-            export OPENXC7_CHIPDB_SEED="$PWD/chipdb-cache"
-            echo "chipdb: seeding from cache ($(ls chipdb-cache/*.bin | wc -l) bins)"
-            echo "mode=restored-from-cache" >> "$GITHUB_OUTPUT"
-          else
-            echo "chipdb: generating every manifest die from scratch (slow)"
-            echo "mode=generated" >> "$GITHUB_OUTPUT"
-          fi
           nix develop .#pack --command bash -c 'python3.12 openxc7-pack.py --chipdb-only'
-          # refresh the cache content from what was produced (bins + stamp)
-          mkdir -p chipdb-cache
-          cp dist/share/nextpnr/himbaechel/xilinx/*.bin dist/share/nextpnr/himbaechel/xilinx/chipdb-id.txt chipdb-cache/
-          ls -la chipdb-cache
 
       # The file list comes from the manifest through the packer's own rule
       # (pack.families.chipdb_dies): one chipdb-<die>.bin per die, and
@@ -148,7 +102,7 @@ jobs:
           echo "chipdb identity: $ID"
           {
             echo "### chipdb"
-            echo "mode: **${{ steps.gen.outputs.mode }}** · identity: \`$ID\` · $(ls dist/share/nextpnr/himbaechel/xilinx/*.bin | wc -l) files, one per die"
+            echo "identity: \`$ID\` · $(ls dist/share/nextpnr/himbaechel/xilinx/*.bin | wc -l) files, one per die, generated in this run"
             echo ""
             python3 - dist/share/nextpnr/himbaechel/xilinx <<'PYEOF'
           import hashlib, sys

@@ -49,8 +49,9 @@ fi
 #   CHIPDB_ID      the chipdb-id.txt stamp (hash of everything that
 #                  determines the bins' content)  (unknown if unset)
 # use-cached-chipdb is the boolean view of CHIPDB_SOURCE (name chosen by the
-# apio maintainer): true only when the bins were restored from the
-# revision-keyed CI cache instead of generated.
+# apio maintainer): true only when the bins were restored from a cache
+# instead of generated. The CI has no chipdb cache: its packages say
+# generated.
 CHIPDB_SOURCE="${CHIPDB_SOURCE:-unknown}"
 CHIPDB_ID="${CHIPDB_ID:-unknown}"
 case "$CHIPDB_SOURCE" in

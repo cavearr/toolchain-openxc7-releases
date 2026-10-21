@@ -41,11 +41,6 @@ on:
       date:
         description: "Release date YYYY-MM-DD (default: today, UTC). To rebuild an existing tag: mark it pre-release first, never delete it — see README, Rebuilding today's tag"
         required: false
-      regenerate_chipdb:
-        description: "Ignore the chipdb cache and generate every part from scratch (tests the generation path)"
-        required: false
-        default: false
-        type: boolean
 
 # THE one place that names the yosys: the YosysHQ/oss-cad-suite-build release
 # every job installs and validates against. apio's `oss-cad-suite` package
@@ -119,15 +114,15 @@ jobs:
           release-tag: ${{ steps.d.outputs.date }}
           just-check: "true"
 
-  # The chipdb is generated ONCE (platform-independent bins, revision-keyed
-  # cache). The same job writes the XILINX-PARTS-INVENTORY document every
-  # package embeds. The bins travel inside the packages.
+  # The chipdb is generated ONCE per run (platform-independent bins, no
+  # cache: every package records chipdb_source generated). The same job
+  # writes the XILINX-PARTS-INVENTORY document every package embeds. The
+  # bins travel inside the packages.
   chipdb:
     needs: prepare
     uses: ./.github/workflows/chipdb.yml
     with:
       date: ${{ needs.prepare.outputs.date }}
-      regenerate: ${{ github.event.inputs.regenerate_chipdb == 'true' }}
 
   linux:
     needs: [prepare, chipdb]
@@ -135,7 +130,7 @@ jobs:
     with:
       date: ${{ needs.prepare.outputs.date }}
       yosys_release_tag: ${{ needs.prepare.outputs.yosys_release_tag }}
-      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_source: generated
       chipdb_id: ${{ needs.chipdb.outputs.identity }}
       parts_index: ${{ needs.chipdb.outputs.parts_index }}
 
@@ -145,7 +140,7 @@ jobs:
     with:
       date: ${{ needs.prepare.outputs.date }}
       yosys_release_tag: ${{ needs.prepare.outputs.yosys_release_tag }}
-      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_source: generated
       chipdb_id: ${{ needs.chipdb.outputs.identity }}
       parts_index: ${{ needs.chipdb.outputs.parts_index }}
 
@@ -155,7 +150,7 @@ jobs:
     with:
       date: ${{ needs.prepare.outputs.date }}
       yosys_release_tag: ${{ needs.prepare.outputs.yosys_release_tag }}
-      chipdb_source: ${{ needs.chipdb.outputs.mode }}
+      chipdb_source: generated
       chipdb_id: ${{ needs.chipdb.outputs.identity }}
       parts_index: ${{ needs.chipdb.outputs.parts_index }}
 
