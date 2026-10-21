@@ -49,7 +49,7 @@ on:
 # yosys). Nothing else states it: build-info.sh derives the package's
 # "yosys-release-tag" (apio#927) from the installed suite.
 env:
-  YOSYS_RELEASE_TAG: "2026-10-14"
+  YOSYS_RELEASE_TAG: "2026-10-21"
 
 permissions:
   contents: write
