@@ -1,0 +1,29 @@
+{
+  "description": "The ODIV2 output of an IBUFDS_GTE2 reaches the fabric through MGTCLKOUT and drives a BUFGCE",
+  "exercises": [
+    "the list of fabric clock buffers an IBUFDS_GTE2 output may drive",
+    "the ODIV2 output of the IBUFDS_GTE2 site"
+  ],
+  "why": "The packer's list of the fabric clock buffers an IBUFDS_GTE2 output may drive held BUFG, BUFH, BUFHCE and BUFR only, so a reference clock divided by two could not reach a BUFGCE: the flow stopped with \"output ODIV2 can only drive a BUFG/BUFH/BUFHCE/BUFR, not BUFGCE\". The site type of the buffer also had no ODIV2 output, so the pin had no wire to leave through.",
+  "tags": [
+    "clocking",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a200tfbg484"
+  ],
+  "constraints": "constraints.xdc",
+  "expect": {
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "IBUFDS_GTPE2_0_MGTCLKOUT\\.IBUFDS_GTPE2_0_ODIV2$",
+      "BUFGCTRL\\.BUFGCTRL_X0Y[0-9]+\\.IN_USE$"
+    ]
+  }
+}

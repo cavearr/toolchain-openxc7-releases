@@ -1,0 +1,28 @@
+{
+  "description": "A DSP48E1 with AUTORESET_PATDET = \"RESET_NOT_MATCH\" writes AUTORESET_PATDET_RESET as well",
+  "exercises": [
+    "the AUTORESET_PATDET features of a DSP48E1 in the FASM writer",
+    "a DSP48E1 instantiated by hand, not inferred by yosys"
+  ],
+  "why": "prjxray's 100-dsp-mskpat fuzzer tags AUTORESET_PATDET_RESET for RESET_MATCH and for RESET_NOT_MATCH, and AUTORESET_PATDET_RESET_NOT_MATCH for the second one only; Vivado writes both features for RESET_NOT_MATCH. The engine wrote only the second one, so a DSP that resets on the inverted pattern came out of the writer with half of its configuration missing, and the bitstream assembled all the same.",
+  "tags": [
+    "primitive",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "expect": {
+    "primitives": {
+      "DSP48E1": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "AUTORESET_PATDET_RESET$",
+      "AUTORESET_PATDET_RESET_NOT_MATCH$"
+    ]
+  }
+}

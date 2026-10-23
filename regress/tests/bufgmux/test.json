@@ -1,0 +1,32 @@
+{
+  "description": "BUFGMUX, BUFGMUX_1, BUFGMUX_CTRL and an asynchronous BUFGMUX are packed as BUFGCTRL sites",
+  "exercises": [
+    "the packing of the BUFGMUX family into the BUFGCTRL site",
+    "the polarity of the IS_IGNORE*_INVERTED bits of a BUFGCTRL"
+  ],
+  "why": "BUFGMUX, BUFGMUX_1 and BUFGMUX_CTRL had no packing branch and stopped the placer with \"no BELs remaining to implement cell type 'BUFGMUX'\". Vivado builds them as a BUFGCTRL: BUFGMUX and BUFGMUX_1 switch on the clock enables (CE0 = S through the site inverter, S0 = S1 = 1), BUFGMUX_CTRL on the selects (S1 = S, S0 = S inverted, CE0 = CE1 = 1), and IGNORE0/IGNORE1 are low, or high with CLK_SEL_TYPE \"ASYNC\". The site bits are written with the polarity of the pin, so IS_IGNORE*_INVERTED says that the signal is not inverted.",
+  "tags": [
+    "clocking",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "parts": [
+    "xc7a200tfbg484"
+  ],
+  "constraints": "constraints.xdc",
+  "expect": {
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "BUFGCTRL\\.BUFGCTRL_X0Y[0-9]+\\.IN_USE$",
+      "BUFGCTRL\\.BUFGCTRL_X0Y[0-9]+\\.INIT_OUT$",
+      "BUFGCTRL\\.BUFGCTRL_X0Y[0-9]+\\.ZINV_CE0$",
+      "BUFGCTRL\\.BUFGCTRL_X0Y[0-9]+\\.IS_IGNORE0_INVERTED$",
+      "BUFGCTRL\\.BUFGCTRL_X0Y[0-9]+\\.IS_IGNORE1_INVERTED$"
+    ]
+  }
+}

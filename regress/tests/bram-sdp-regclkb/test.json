@@ -1,0 +1,37 @@
+{
+  "description": "A RAMB36E1 in simple dual port with both output registers on leaves ZINV_REGCLKB clear",
+  "exercises": [
+    "the clock of the output register of a block RAM in simple dual port",
+    "a RAMB36E1 instantiated by hand, not inferred by yosys"
+  ],
+  "why": "Vivado clocks the output registers of a block RAM from REGCLKARDRCLK and leaves REGCLKB without a net in simple dual port, so ZINV_REGCLKB stays clear on both halves of the block. The engine applied the narrow-port rule (DOB_REG set, so the register clock follows CLKBWRCLK) and set that bit: a wrong bit in a bitstream that assembles all the same. Release 2026-10-22 carries it.",
+  "tags": [
+    "primitive",
+    "artix7"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "top": "top",
+  "expect": {
+    "primitives": {
+      "RAMB36E1": 1
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "RAMB18_Y0\\.DOA_REG$",
+      "RAMB18_Y0\\.DOB_REG$",
+      "RAMB18_Y1\\.DOA_REG$",
+      "RAMB18_Y1\\.DOB_REG$",
+      "RAMB18_Y0\\.ZINV_REGCLKARDRCLK$",
+      "RAMB18_Y1\\.ZINV_REGCLKARDRCLK$",
+      "RAMB18_Y0\\.SDP_READ_WIDTH_36$",
+      "RAMB18_Y1\\.SDP_WRITE_WIDTH_36$"
+    ],
+    "fasm_absent": [
+      "ZINV_REGCLKB"
+    ]
+  }
+}
