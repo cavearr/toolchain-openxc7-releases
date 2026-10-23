@@ -14,6 +14,36 @@
       "pnr_seconds": 4.29
     }
   },
+  "bram-sdp-regclkb": {
+    "xc7a35tcpg236": {
+      "bit_bytes": 2192116,
+      "brams": 1,
+      "dsps": 0,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 96809c1a)",
+        "yosys": "Yosys 0.70+186 (git sha1 3718f7f13, Release, Clang /usr/local/osxcross/target/bin/aarch64-apple-darwin25.5-clang++ 21.1.8)"
+      },
+      "ffs": 9,
+      "fmax_mhz": 574.0527954101562,
+      "luts": 46,
+      "pnr_seconds": 3.76
+    }
+  },
+  "bufgmux": {
+    "xc7a200tfbg484": {
+      "bit_bytes": 9730757,
+      "brams": 0,
+      "dsps": 0,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 96809c1a)",
+        "yosys": "Yosys 0.70+186 (git sha1 3718f7f13, Release, Clang /usr/local/osxcross/target/bin/aarch64-apple-darwin25.5-clang++ 21.1.8)"
+      },
+      "ffs": 96,
+      "fmax_mhz": 398.2477111816406,
+      "luts": 192,
+      "pnr_seconds": 8.22
+    }
+  },
   "carry-const-di": {
     "xc7a35tcpg236": {
       "bit_bytes": 2192116,
@@ -942,6 +972,21 @@
       "pnr_seconds": 2.11
     }
   },
+  "dsp-autoreset-patdet": {
+    "xc7a35tcpg236": {
+      "bit_bytes": 2192116,
+      "brams": 0,
+      "dsps": 1,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 96809c1a)",
+        "yosys": "Yosys 0.70+186 (git sha1 3718f7f13, Release, Clang /usr/local/osxcross/target/bin/aarch64-apple-darwin25.5-clang++ 21.1.8)"
+      },
+      "ffs": 96,
+      "fmax_mhz": 290.7822265625,
+      "luts": 214,
+      "pnr_seconds": 4.4
+    }
+  },
   "dsp-default-regs": {
     "xc7a35tcsg324": {
       "bit_bytes": 2192116,
@@ -1090,6 +1135,21 @@
       "fmax_mhz": 555.8643798828125,
       "luts": 48,
       "pnr_seconds": 2.96
+    }
+  },
+  "odiv2-bufgce": {
+    "xc7a200tfbg484": {
+      "bit_bytes": 9730757,
+      "brams": 0,
+      "dsps": 0,
+      "env": {
+        "nextpnr": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 96809c1a)",
+        "yosys": "Yosys 0.70+186 (git sha1 3718f7f13, Release, Clang /usr/local/osxcross/target/bin/aarch64-apple-darwin25.5-clang++ 21.1.8)"
+      },
+      "ffs": 26,
+      "fmax_mhz": 372.5782470703125,
+      "luts": 56,
+      "pnr_seconds": 9.79
     }
   },
   "oserdes-t1low": {
