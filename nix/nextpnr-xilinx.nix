@@ -10,14 +10,14 @@ let
   # binary, the chipdb generator and the Windows cross see one tree.
   upstream = fetchFromGitHub {
     inherit (source) owner repo rev hash;
-    # himbaechel/uarch/xilinx/meta (openXC7/nextpnr-xilinx-meta a4af910c)
+    # himbaechel/uarch/xilinx/meta (openXC7/nextpnr-xilinx-meta 8a3f5a09)
     # is what the chipdb generator reads the site and wire metadata from.
     fetchSubmodules = source.submodules;
   };
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-19";
+  version = "1.0.0-unstable-2026-10-22";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -115,7 +115,27 @@ stdenv.mkDerivation rec {
   # and a byte enable, which yosys infers as a RAMB18E1 TDP x18, wrote a
   # byte of port B with the enable of the other byte (#119). It changes
   # pack.cc only (the byte enable rewrite of pack_bram()), not the chipdb
-  # generator or the constids. ZERO local patches.
+  # generator or the constids.
+  # Since e7a6fb0e (96809c1a, merged 2026-10-22): a block RAM in simple
+  # dual port leaves REGCLKB without a net, as Vivado does, so the output
+  # register clock of port B is not inverted (#124): the narrow-port rule
+  # set ZINV_REGCLKB on both halves of a RAMB36E1 in SDP, where Vivado
+  # leaves the bit clear. The output registers of a block RAM are clocked
+  # from the data clocks through their own site pins, REGCLKARDRCLK and
+  # REGCLKB (#130): nothing reached them, so the register never loaded and
+  # the output kept its initial value, with a clean exit. A DSP48E1 whose
+  # AUTORESET_PATDET is "RESET_NOT_MATCH" writes AUTORESET_PATDET_RESET
+  # as well as AUTORESET_PATDET_RESET_NOT_MATCH, the two features
+  # prjxray's fuzzer tags it with (#129). BUFGMUX, BUFGMUX_1 and
+  # BUFGMUX_CTRL are packed as a BUFGCTRL, as Vivado builds them, and the
+  # IS_IGNORE*_INVERTED bits of a BUFGCTRL carry the polarity of the pin
+  # (#132): the three names had no packing branch and stopped the placer
+  # with "no BELs remaining to implement cell type 'BUFGMUX'". The
+  # IBUFDS_GTE2 output ODIV2 can drive the fabric clock buffers of the
+  # list, and the site type of the buffer names that output (#134, #131):
+  # the meta submodule moves to 8a3f5a09, so the chipdb of the artix7
+  # dies changes with it. #122, #123 and #128 are a warning's order, a
+  # named error and the placer's beta setting. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it

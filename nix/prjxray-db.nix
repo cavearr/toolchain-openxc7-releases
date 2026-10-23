@@ -53,6 +53,14 @@
 # from package_pins.csv: xc7s25 and xc7z030 (the new packages) and xc7z045
 # (the restored pads); the other eight are byte-identical to those of
 # b12466df.
+# master of 2026-10-22 (a8fd3f46) gives the GTP_COMMON tile of artix7 and
+# the GTX_COMMON tile of kintex7 the ODIV2 output of their IBUFDS_GTE2 as
+# a pip of its own, with the bit that selects it (db#41): MGTCLKOUT was
+# the O output of the buffer, and the bit says whether it carries O or
+# ODIV2, the reference clock divided by two. Vivado writes that bit, and
+# without the row the bitstream assembler had no way to write it. The
+# chipdb generator reads none of these rows: with the same generator, every
+# chipdb is byte-identical to the one of 6a6debcd.
 let
   source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
 in
