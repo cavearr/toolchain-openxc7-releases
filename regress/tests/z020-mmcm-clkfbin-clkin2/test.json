@@ -1,0 +1,21 @@
+{
+  "description": "MMCME2_ADV on xc7z020clg400 with CLKIN2 tied low and feedback through a BUFG (openXC7/nextpnr#18)",
+  "exercises": [
+    "that every MMCM CLKFBIN and CLKIN2 pip feature the clock route uses is in prjxray-db zynq7, so fasm2frames assembles it",
+    "that the CLKFBIN feedback pip and the CLKIN2 input pip coexist: the design keeps writing both lines"
+  ],
+  "why": "zynq7's segbits_cmt_top_l_lower_b.db and segbits_cmt_top_r_lower_b.db carried bit 28_1015, a CLKIN2 mux bit, inside the six MMCM CLKFBIN pip rows (negated in five, asserted in CLK_FREQ_BB2); artix7 and spartan7 do not. In the measured failure, tied CLKIN2 selects CLK_IN2_INT, which sets 28_1015, while BUFG feedback selects CLK_IN3_HCLK and demands it cleared, so fasm2frames stops with FasmInconsistentBits at word 31, bit 23. The companion prjxray-db change drops the term: Vivado goldens decide CLK_IN3_HCLK on the left and right sides, while the other five rows change by equality with artix7 and spartan7 (openXC7/nextpnr#18). This guard requires both FASM lines and the bitstream, so it fails with the earlier database and assembles with the fixed one.",
+  "tags": ["zynq7", "clocking"],
+  "sources": ["design.v"],
+  "constraints": "constraints.xdc",
+  "top": "z020_mmcm_clkfbin_clkin2",
+  "parts": ["xc7z020clg400"],
+  "expect": {
+    "primitives": { "MMCME2_ADV": ">=1", "FDRE": ">=28" },
+    "artifacts": ["bitstream"],
+    "fasm_contains": [
+      "CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.CMT_LR_LOWER_B_MMCM_CLKFBIN\\.CMT_[LR]_LOWER_B_CLK_IN3_",
+      "CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.CMT_LR_LOWER_B_MMCM_CLKIN2\\.CMT_[LR]_LOWER_B_CLK_IN2_"
+    ]
+  }
+}
