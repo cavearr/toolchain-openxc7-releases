@@ -61,6 +61,15 @@
 # without the row the bitstream assembler had no way to write it. The
 # chipdb generator reads none of these rows: with the same generator, every
 # chipdb is byte-identical to the one of 6a6debcd.
+# master of 2026-10-26 (a8b09269) drops the term 28_1015 from the six
+# CLKFBIN rows of the zynq7 CMT lower_b tiles, on both sides and in
+# origin_info (db#42, fixes openXC7/nextpnr#18). It is a bit of the
+# CLKIN2 pips: on an MMCME2_ADV with CLKIN2 tied, the shape of Vivado's
+# clocking wizard, the CLKFBIN pip asked for it clear and the CLKIN2 pip
+# set, and fasm2frames stopped with FasmInconsistentBits. The rows are now
+# those of artix7 and spartan7. The chipdb generator reads none of these
+# rows: with the same generator, every chipdb is byte-identical to the one
+# of a8fd3f46.
 let
   source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
 in

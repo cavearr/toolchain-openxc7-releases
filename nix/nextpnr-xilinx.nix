@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-22";
+  version = "1.0.0-unstable-2026-10-27";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -135,7 +135,15 @@ stdenv.mkDerivation rec {
   # list, and the site type of the buffer names that output (#134, #131):
   # the meta submodule moves to 8a3f5a09, so the chipdb of the artix7
   # dies changes with it. #122, #123 and #128 are a warning's order, a
-  # named error and the placer's beta setting. ZERO local patches.
+  # named error and the placer's beta setting.
+  # Since 96809c1a (ab72e722, merged 2026-10-27): in an HP-bank IOB pair
+  # whose IOB_Y0 pad is bidirectional and whose IOB_Y1 pad also receives,
+  # IOB_Y0 writes its own LVCMOS12_LVCMOS15_LVCMOS18.IN, and the bank glue
+  # IBUF_HP_BANK_GLUE is written on LIOB18 only (#34): RIOB18 has no such
+  # feature, so on an RIOB18 bank such a pair stopped fasm2frames. It
+  # changes the FASM writer only (fasm.cc), not the chipdb generator or
+  # the constids. #135 and #136 are CI only (regression.yml, the runners'
+  # Ubuntu release) and a paragraph of docs. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
