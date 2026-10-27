@@ -3,15 +3,15 @@
     "owner": "openXC7",
     "repo": "nextpnr",
     "submodules": true,
-    "rev": "96809c1ac49841b2def520aa3a44307cdbe15c5f",
-    "hash": "sha256-F5QJriqg4CZ6o62WvuzQTXCNsSK+5QgFgvrlros4ZdU="
+    "rev": "cf5f7a210fa2deac8b6967c43acf426298c8e1a6",
+    "hash": "sha256-yCcg1RTgyMgWxCk0v/1bgGpJPv6U2Dr6SplU4xtd8iY="
   },
   "prjxray-db": {
     "owner": "openXC7",
     "repo": "prjxray-db",
     "submodules": false,
-    "rev": "a8fd3f462b6af16775babe5f938d257fc7e2a097",
-    "hash": "sha256-5LzzZqd6FBX0R3W8kuo2ApcOOjkujZRxzrwdb3r1mNk="
+    "rev": "a8b09269beb6e3d3c07e2a0901f845420df1c802",
+    "hash": "sha256-QuJspKSHoIDJt1mTBpLRBWNLBJ+PEiZZSZMpkRsBvkg="
   },
   "prjxray": {
     "owner": "openXC7",
