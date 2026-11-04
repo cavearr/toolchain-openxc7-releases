@@ -28,6 +28,15 @@ stdenv.mkDerivation rec {
   # 100-dsp-mskpat-selpat-c fuzzes SEL_PATTERN (#31). Nothing the packages
   # ship changes: the linux tools and the Windows tools tree built from it
   # are byte-identical to those of 54fea88c.
+  # master 2026-11-03 (a5589d51): xc7frames2bit refuses a frames file it
+  # cannot take whole, instead of writing a bitstream from what it read: an
+  # empty file (what a failed fasm2frames run leaves behind, which gave the
+  # blank bitstream of an empty design), a file whose last line has no
+  # newline (cut inside a line), a frame line with the wrong number of words
+  # (it was skipped) and a read error; xc7patch reads frames the same way.
+  # fasm2frames --sparse with no frame to set writes "# no frames" instead
+  # of an empty file (#33). #34 is CI, docs and a doctest of xjson.py. The
+  # bitstream of a frames file read whole does not change.
   src = fetchFromGitHub {
     inherit (source) owner repo rev hash;
     fetchSubmodules = source.submodules;

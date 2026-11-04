@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-10-27";
+  version = "1.0.0-unstable-2026-11-03";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -143,7 +143,38 @@ stdenv.mkDerivation rec {
   # feature, so on an RIOB18 bank such a pair stopped fasm2frames. It
   # changes the FASM writer only (fasm.cc), not the chipdb generator or
   # the constids. #135 and #136 are CI only (regression.yml, the runners'
-  # Ubuntu release) and a paragraph of docs. ZERO local patches.
+  # Ubuntu release) and a paragraph of docs.
+  # Since ab72e722 (ce3f7c18, merged 2026-11-03): an inverter that drives
+  # the clock of a LUT-RAM, an SRL or a block RAM (WCLK, CLKARDCLK,
+  # CLKBWRCLK) is folded into that port's IS_<port>_INVERTED; one left
+  # without loads is removed instead of being placed as a LUT1 with the
+  # clock routed to it, and a clock constraint on the inverted net goes to
+  # the source net with its edges exchanged (#158, from
+  # YosysHQ/nextpnr#1879, which also takes the write clock of a flip-flop's
+  # cluster only from a LUT used as SRL or LUT-RAM). The FASM writer leaves
+  # the width field of a block RAM port the design does not use clear, as
+  # Vivado does, instead of copying another port's width; writes the
+  # ZIS_*_INVERTED bits of a DSP48E1 as one vector; and writes the receiver
+  # of a differential input on an LIOB18 bank (#133). #133 also models the
+  # global clock insertion delay and places block RAMs by read-mux group,
+  # both only on a die with measured clock delays (the xc7vx485t, which is
+  # not in the manifest) unless forced, and adds -o timing-opt, off unless
+  # given. Timing: the Fmax between the two edges of one clock keeps its
+  # clock skew (#149); set_multicycle_path -setup N moves the capture edge
+  # N-1 periods later instead of earlier (#145), the Fmax of such an
+  # endpoint uses its N-cycle budget (#150), and a non-numeric
+  # NEXTPNR_MCP_SETUP is an error (#154); LUT-RAM cells keep their macro's
+  # multicycle tags, and only the macro that made a LUT-RAM's address cell
+  # folds its SPO output into it (#152); and the XDC reader takes the
+  # get_cells forms of set_multicycle_path -to, with -filter narrowing the
+  # named cells and NAME == as an exact name, and skips get_pins, get_nets,
+  # -start and an N beyond an int with a warning (#153). hold-fix erases the
+  # net alias of a buffer it discards, which made the next buffer of that
+  # net trip an assertion (#143). A clock buffer whose output drives nothing
+  # no longer keeps a bound wire router1 reports as a stub (#142), and
+  # router1 names the net, wire and pip of each stub it finds (#139). #160
+  # removes an empty stray file from the tree; #144 and #155 are CI only.
+  # None changes the chipdb generator or the constids. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
