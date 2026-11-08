@@ -41,7 +41,7 @@ bank: the generated constraints pick high-range pads.
 Routes and produces a bitstream; the FASM carries
 `RIOB18_X79Y65.IOB_Y0.LVCMOS18.DRIVE.I16`, `RIOB18_X79Y67.IOB_Y1.LVCMOS18.DRIVE.I12`
 for the default drive, the long input names on `RIOB18_X79Y67.IOB_Y0`, and
-no grouped drive row and no `PULLTYPE.PULLDOWN`. With nextpnr ce3f7c18 and
+no grouped drive row and no `PULLTYPE.PULLDOWN`. With nextpnr a9cfec76 and
 yosys 0.70+329, on linux and on windows: fmax 819.7 MHz, 2 LUTs, 65 FFs,
 bitstream 5980020 bytes.
 

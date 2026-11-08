@@ -27,7 +27,7 @@ hit this; `--placer sa` is a documented option of the engine all the same.
 ## Expected result
 
 Places with the annealer, routes, and produces a bitstream. With nextpnr
-ce3f7c18 and yosys 0.70+329, on linux: 37 LUTs, 40 flip-flops
+a9cfec76 and yosys 0.70+329, on linux: 37 LUTs, 40 flip-flops
 (16 pairs, 16 enabled copies, an 8-bit counter), bitstream 2192116 bytes.
 With release `2026-10-15`, and with 46c25a91 without the fix, the
 place-and-route step fails with the validity-check error.
