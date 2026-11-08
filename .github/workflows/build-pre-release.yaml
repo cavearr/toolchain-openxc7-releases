@@ -7,7 +7,7 @@
 #
 #   chipdb.yml           ubuntu-22.04   bins + XILINX-PARTS-INVENTORY
 #   linux-package.yml    ubuntu-22.04   native   (seeds the bins into the package)
-#   darwin-package.yml   macos-14        native   (seeds the bins into the package)
+#   darwin-package.yml   macos-15        native   (seeds the bins into the package)
 #   windows-package.yml  ubuntu-22.04   cross    (copies the bins into the package; wine)
 #
 # There is ONE chipdb source: the bins that job generates. Each package

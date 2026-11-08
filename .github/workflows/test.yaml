@@ -5,7 +5,7 @@
 # cross Linux<->macOS in nixpkgs; windows is a mingw cross FROM linux):
 #
 #   linux    x86_64-linux    ubuntu-22.04  nextpnr-xilinx / prjxray / fasm
-#   macos    aarch64-darwin  macos-14      nextpnr-xilinx / prjxray / fasm
+#   macos    aarch64-darwin  macos-15      nextpnr-xilinx / prjxray / fasm
 #   windows  mingw cross     ubuntu-22.04  nextpnr-xilinx.exe (himbaechel,
 #                                          no embedded python) / prjxray
 #                                          .exe tools (passthru outputs of
@@ -60,7 +60,7 @@ jobs:
 
   macos:
     name: macos (aarch64-darwin)
-    runs-on: macos-14            # Apple Silicon runner => aarch64-darwin
+    runs-on: macos-15            # Apple Silicon runner => aarch64-darwin
     # HARD gate since 2026-08-06: the F0-era "exploratory, continue-on-error"
     # relaxation let the very first public run show GREEN while nextpnr
     # failed to compile (impure Python.h). macOS is a first-class platform;

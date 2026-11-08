@@ -1,4 +1,4 @@
-# Build + validate the darwin-arm64 package on its native runner (macos-14,
+# Build + validate the darwin-arm64 package on its native runner (macos-15,
 # Apple Silicon). nixpkgs does not cross Linux<->macOS, so this is always a
 # native build.
 #
@@ -61,7 +61,7 @@ on:
 jobs:
   build:
     name: build + validate darwin-arm64 (native)
-    runs-on: macos-14              # Apple Silicon => darwin-arm64
+    runs-on: macos-15              # Apple Silicon => darwin-arm64
     outputs:
       tarball: ${{ steps.pack.outputs.tarball }}
     steps:
