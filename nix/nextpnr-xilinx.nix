@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-11-03";
+  version = "1.0.0-unstable-2026-11-08";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -174,7 +174,24 @@ stdenv.mkDerivation rec {
   # no longer keeps a bound wire router1 reports as a stub (#142), and
   # router1 names the net, wire and pip of each stub it finds (#139). #160
   # removes an empty stray file from the tree; #144 and #155 are CI only.
-  # None changes the chipdb generator or the constids. ZERO local patches.
+  # None changes the chipdb generator or the constids.
+  # Since ce3f7c18 (a9cfec76, merged 2026-11-08): router2 takes four
+  # YosysHQ commits, so a check of the routed design and a timing analysis
+  # replace its final router1 call, and it keeps an arc whose locked binding
+  # runs back to the source, so a hold-fix detour cannot abort the next
+  # route (#161). When --tmg-ripup is on, the repair route hold-fix runs
+  # turns timing ripup off (#168). The PSEUDO_GND and PSEUDO_VCC bels are
+  # hidden from the report (#170). The DI2 input of a LUT gets setup and
+  # hold, and LUT-RAM and SRL outputs get clock-to-out arcs, so those paths
+  # are timed (#157). --report keys a clock whose net has an internal name
+  # by the top-level port it comes from (#169). The XDC reader splits the
+  # selectors of get_ports, get_cells and get_nets into Tcl words, so
+  # spaces inside braces work (#165). An instantiated SRLC16E packs like
+  # an SRL16E (#166), and the Q31 of an SRLC32E reaches the fabric through
+  # DOUTMUX when Q is also in use (#167). #170 and #157 change the chipdb
+  # generator (the flags of those two bels; DI2 and the X_LUT_AS_DRAM and
+  # X_LUT_AS_SRL timing variants); the constids do not change. #171 is
+  # docs and #172 CI only. ZERO local patches.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
