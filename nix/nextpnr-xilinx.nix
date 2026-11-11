@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-11-08";
+  version = "1.0.0-unstable-2026-11-11";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -192,6 +192,13 @@ stdenv.mkDerivation rec {
   # generator (the flags of those two bels; DI2 and the X_LUT_AS_DRAM and
   # X_LUT_AS_SRL timing variants); the constids do not change. #171 is
   # docs and #172 CI only. ZERO local patches.
+  # Since a9cfec76 (0ff19db5, merged 2026-11-11): an inverted clock is
+  # timed on the falling edge, so the fmax between the two edges of one
+  # clock stays within half a period (#174). An inverter on the C input of
+  # a slice flip-flop, or on the CLK input of an SRL, folds into the cell
+  # the way Vivado does, and the design keeps an fmax (#177). #176 and
+  # #178 are CI only. None of them changes the chipdb generator or the
+  # constids.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
