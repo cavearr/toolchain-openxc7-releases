@@ -32,7 +32,7 @@ see `srl-cascade/README.md` for that story.)
 At least one SRLC32E, zero flip-flops from the register itself, a routed
 bitstream, and trivial utilisation. The whole register lives inside the
 SRL, so there are no FF-to-FF timing paths: the fmax is the path from the
-SRL's clock-to-out back into its own DI1. With nextpnr a9cfec76 and yosys
+SRL's clock-to-out back into its own DI1. With nextpnr 0ff19db5 and yosys
 0.70+329, on linux and on windows: 509.7 MHz. Before nextpnr #157 that path
 had no timing check and this test had no fmax.
 

@@ -39,7 +39,7 @@ Zynq E2E produced byte-identical frames.
 
 Routes, assembles and produces a bitstream: `MMCME2_ADV >= 1`, `FDRE >= 28`,
 the two `fasm_contains` expressions, and the `bitstream` artifact. With
-nextpnr `a9cfec76` and yosys 0.70+329 on linux, the measured result is
+nextpnr `0ff19db5` and yosys 0.70+329 on linux, the measured result is
 fmax 391.5 MHz, 56 LUTs, 28 FFs and a 4045668-byte bitstream. The harness
 reports NEW until the database bump records the baseline. With the earlier
 database, the flow stops in `fasm2frames` and produces no bitstream.

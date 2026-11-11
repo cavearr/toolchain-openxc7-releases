@@ -26,7 +26,7 @@ cascade features; the inter-slice hop routes through the fabric.
 ## Expected result
 
 Routes; exactly 8 SRLC32E; the packer log reports one Q31 link moved to
-Q[31]; fmax 482.9 MHz with nextpnr a9cfec76 and yosys 0.70+329, on linux
+Q[31]; fmax 482.9 MHz with nextpnr 0ff19db5 and yosys 0.70+329, on linux
 and on windows (an SRL clock-to-out into DI1, timed since nextpnr #157;
 before that there was no fmax); fasm accepted end-to-end.
 
