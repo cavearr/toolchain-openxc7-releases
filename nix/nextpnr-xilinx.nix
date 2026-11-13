@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-11-11";
+  version = "1.0.0-unstable-2026-11-12";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -199,6 +199,11 @@ stdenv.mkDerivation rec {
   # the way Vivado does, and the design keeps an fmax (#177). #176 and
   # #178 are CI only. None of them changes the chipdb generator or the
   # constids.
+  # Since 0ff19db5 (f784eab9, merged 2026-11-12): --report counts what each
+  # part offers, each LUT once and the IO of the package, and a design that
+  # does not fit the part stops after packing and again after -o holdbufs
+  # and after -o hold-fix (#180). The chipdb generator and the constids do
+  # not change.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
