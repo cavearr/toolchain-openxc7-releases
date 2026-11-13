@@ -629,16 +629,27 @@ def install_components():
     process_binaries("fasm2frames")
     run_phase3_prjxray()
 
-    # -------- xc7pll (PLL parameter calculator; pure-stdlib python, so a
-    # -------- plain `#!/usr/bin/env python3` shebang works everywhere and
-    # -------- no relocation or wrapper is needed)
+    # -------- xc7pll (PLL parameter calculator; pure-stdlib python).
+    # -------- The script lives in libexec/ and bin/xc7pll execs the
+    # -------- package interpreter, the same way fasm2frames does. An
+    # -------- `#!/usr/bin/env python3` shebang in bin/ asks the PATH for
+    # -------- an interpreter, and on macOS that opens an installer when
+    # -------- the system python3 has no developer tools. OPENXC7_PYTHON
+    # -------- is not consulted here: linux and macOS ship one interpreter,
+    # -------- and fasm2frames does not consult it either.
     print()
     print(f"{ansi.GREEN}────────────────────────────────────────")
     print("  xc7pll")
     print(f"{ansi.GREEN}────────────────────────────────────────")
     print(ansi.DEFAULT, end='', flush=True)
-    dst = Path(DIST) / BIN / "xc7pll"
+    libexec = Path(DIST) / LIBEXEC
+    libexec.mkdir(parents=True, exist_ok=True)
+    dst = libexec / "xc7pll"
     shutil.copy("xc7pll", dst)
+    write_access(dst)
     dst.chmod(dst.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-    print("  xc7pll -> bin/xc7pll")
+    wrapper = ToolWrapper("xc7pll")
+    wrapper.add_exec_python()
+    wrapper.write_bin()
+    print("  xc7pll -> libexec/xc7pll; bin/xc7pll runs the package Python")
     print()

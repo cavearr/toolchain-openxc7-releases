@@ -15,9 +15,13 @@
 # from chipdb/ when the package's index names the files (every package up
 # to the 2026-10-01 release); when it names none, the engine opens its own
 # from share/nextpnr/himbaechel/xilinx/ and gets no --chipdb.
-# With `wine`, nextpnr-xilinx.exe / xc7frames2bit.exe run under wine64
-# (fasm2frames runs with the host python, as apio does on Windows via
-# oss-cad-suite).
+# With `wine`, nextpnr-xilinx.exe / xc7frames2bit.exe run under wine64.
+# fasm2frames runs through bin/fasm2frames.cmd, the way apio launches it.
+# E2E_SUITE is the root of the Windows oss-cad-suite whose yosys release
+# is YOSYS_RELEASE_TAG. WINEPATH is that suite's bin and lib, then the
+# package bin and lib: the PATH apio builds, where python3.exe is in lib.
+# stdout is a pipe. mingw Python under wine dies when stdout is a file.
+# Real Windows does not, and apio redirects to a file there.
 #
 # Leaves <workdir>/blinky-<part>.fasm.canon (comments stripped, sorted) for
 # cross-platform comparison, and requires the router to finish and the
@@ -113,6 +117,15 @@ else
 fi
 
 fail=0
+if [ "$MODE" = wine ]; then
+  if [ -z "${E2E_SUITE:-}" ] || [ ! -x "${E2E_SUITE}/lib/python3.exe" ]; then
+    echo "E2E: E2E_SUITE must be the Windows oss-cad-suite root (lib/python3.exe)" >&2
+    exit 1
+  fi
+  # Apio's PATH: suite bin, suite lib (python3.exe), package bin, package lib.
+  WINEPATH="$(winepath -w "$E2E_SUITE/bin");$(winepath -w "$E2E_SUITE/lib");$(winepath -w "$PKG/bin");$(winepath -w "$PKG/lib")"
+  export WINEPATH
+fi
 for part in $PARTS; do
   echo
   echo "===== $part ====="
@@ -169,32 +182,28 @@ PYEOF
   grep -v '^\s*#' "blinky-$part.fasm" | sed '/^\s*$/d' | tr -d '\r' | LC_ALL=C sort > "blinky-$part.fasm.canon"
 
   if [ "$MODE" = wine ]; then
-    # apio on real Windows runs fasm2frames with oss-cad-suite's WINDOWS
-    # python and a shell redirect; emulate exactly with the mingw python
-    # under wine when E2E_WINPY is set (fallback: host python)
-    if [ -n "${E2E_WINPY:-}" ]; then
-      # NB: under wine every std handle must be a pipe, not a file, or the
-      # mingw python dies at init_sys_streams (real Windows is fine with
-      # file redirects — this is a wine-only quirk)
-      ( PYTHONPATH="$PKG/lib/python3.12/site-packages" \
-        wine64 "$E2E_WINPY/bin/python3.exe" "$PKG/libexec/fasm2frames" \
-          --part "$device" --db-root "$DB/$family" "blinky-$part.fasm" \
+    # apio runs bin/fasm2frames.cmd. The .cmd selects python3 from the
+    # suite lib directory, which this WINEPATH lists first among the
+    # places a Python can be. The launcher sets PYTHONPATH itself.
+    # A unix PYTHONPATH or OPENXC7_PYTHON would pick a different
+    # interpreter, so both are unset for this call.
+    # stdout is a pipe: mingw python under wine dies at init_sys_streams
+    # when stdout is a file. Real Windows accepts apio's file redirect.
+    dbwin=$(winepath -w "$DB/$family")
+    ( env -u PYTHONPATH -u PYTHONHOME -u OPENXC7_PYTHON \
+        WINEPATH="$WINEPATH" \
+        wine64 cmd /c fasm2frames.cmd \
+          --part "$device" --db-root "$dbwin" "blinky-$part.fasm" \
           </dev/null 2> >(cat > "blinky-$part.f2f.err") | cat > "blinky-$part.frames" ) \
-        || { echo "FAIL $part: fasm2frames (windows python)"; tail -3 "blinky-$part.f2f.err"; fail=1; continue; }
-      test -s "blinky-$part.frames" || { echo "FAIL $part: empty frames (windows python)"; tail -3 "blinky-$part.f2f.err"; fail=1; continue; }
-      # Same gate as the native path: a warning is a feature the bitstream
-      # does not carry. WINEDEBUG is off, so this file is fasm2frames alone.
-      if [ -s "blinky-$part.f2f.err" ]; then
-        echo "FAIL $part: fasm2frames said something"
-        cat "blinky-$part.f2f.err"
-        fail=1
-        continue
-      fi
-    else
-      PYTHONPATH="$PKG/lib/python3.12/site-packages" \
-        python3 "$PKG/libexec/fasm2frames" \
-          --part "$device" --db-root "$DB/$family" "blinky-$part.fasm" \
-          > "blinky-$part.frames" || { echo "FAIL $part: fasm2frames"; fail=1; continue; }
+        || { echo "FAIL $part: fasm2frames (launcher)"; tail -5 "blinky-$part.f2f.err"; fail=1; continue; }
+    test -s "blinky-$part.frames" || { echo "FAIL $part: empty frames (launcher)"; tail -5 "blinky-$part.f2f.err"; fail=1; continue; }
+    # Same gate as the native path: a warning is a feature the bitstream
+    # does not carry. WINEDEBUG is off, so this file is the launcher alone.
+    if [ -s "blinky-$part.f2f.err" ]; then
+      echo "FAIL $part: fasm2frames said something"
+      cat "blinky-$part.f2f.err"
+      fail=1
+      continue
     fi
   else
     run_tool fasm2frames \

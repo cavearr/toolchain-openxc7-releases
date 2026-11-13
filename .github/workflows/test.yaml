@@ -8,10 +8,13 @@
 #   macos    aarch64-darwin  macos-15      nextpnr-xilinx / prjxray / fasm
 #   windows  mingw cross     ubuntu-22.04  nextpnr-xilinx.exe (himbaechel,
 #                                          no embedded python) / prjxray
-#                                          .exe tools (passthru outputs of
-#                                          the tools tree — the chipdb is
-#                                          generated once by chipdb.yml and
-#                                          injected into the package by CI)
+#                                          .exe tools, then the tools tree
+#                                          (the .cmd launchers). The chipdb
+#                                          is generated once by chipdb.yml
+#                                          and injected into the package by CI
+#   windows-native           windows-2022  the tools tree plus the Windows
+#                                          oss-cad-suite, PATH as apio sets
+#                                          it, launchers only
 #
 # Plus `static`: everything that needs no toolchain at all (unit tests, shell
 # syntax, the workflow graph, the terminology rule). It runs in a minute next
@@ -106,6 +109,243 @@ jobs:
 
       - name: Build prjxray tools .exe (mingw)
         run: nix build -L .#packages.x86_64-linux.openxc7-windows-amd64-tools.prjxray
+
+      # The native Windows job below runs the launchers. It needs this tree
+      # and does not need a chipdb: fasm2frames reads the prjxray database
+      # that the tools tree already carries.
+      - name: Build the Windows tools tree
+        run: nix build -L .#packages.x86_64-linux.openxc7-windows-amd64-tools --out-link result-win-tools
+
+      - name: Stage the tools tree
+        run: |
+          mkdir -p windows-tools
+          cp -aL result-win-tools/. windows-tools/
+          test -f windows-tools/bin/fasm2frames.cmd
+          test -f windows-tools/bin/bit2fasm.cmd
+          test -f windows-tools/bin/xc7pll.cmd
+          test -f windows-tools/libexec/openxc7-python.cmd
+          test -f windows-tools/share/nextpnr/external/prjxray-db/artix7/xc7a35tcpg236-1/part.yaml
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-tools
+          path: windows-tools
+          if-no-files-found: error
+
+  windows-native:
+    name: windows (native launcher)
+    needs: windows
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download the Windows tools tree
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-tools
+          path: windows-tools
+
+      - name: Read the yosys release tag
+        id: yosys
+        shell: pwsh
+        run: |
+          $text = Get-Content -Raw .github/workflows/build-pre-release.yaml
+          if ($text -notmatch 'YOSYS_RELEASE_TAG: "(\d{4}-\d{2}-\d{2})"') {
+            throw "YOSYS_RELEASE_TAG missing from build-pre-release.yaml"
+          }
+          "tag=$($Matches[1])" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding ascii
+          "digits=$($Matches[1] -replace '-','')" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding ascii
+          Write-Host "yosys release $($Matches[1])"
+
+      - name: Download the Windows oss-cad-suite
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.yosys.outputs.tag }}"
+          $digits = "${{ steps.yosys.outputs.digits }}"
+          $url = "https://github.com/YosysHQ/oss-cad-suite-build/releases/download/$tag/oss-cad-suite-windows-x64-$digits.tgz"
+          Write-Host "GET $url"
+          curl.exe -fL --retry 5 -o suite.tgz $url
+          New-Item -ItemType Directory -Force suite-win | Out-Null
+          tar -xzf suite.tgz -C suite-win --strip-components=1
+          if (-not (Test-Path suite-win\lib\python3.exe)) { throw "suite python3.exe missing" }
+          & .\suite-win\lib\python3.exe -c "import sys; print(sys.version)"
+
+      - name: Record runner Pythons, then keep only the suite and the package
+        shell: pwsh
+        run: |
+          function Show-Where([string]$title) {
+            Write-Host "=== $title ==="
+            foreach ($name in @("python", "python3", "py")) {
+              Write-Host "-- where $name --"
+              cmd /c "where $name 2>&1 & exit /b 0"
+            }
+          }
+          Show-Where "runner before cleanup"
+          cmd /c "where py 2>nul" | Out-File -Encoding ascii runner-py.txt
+          Write-Host "saved py locations:"
+          Get-Content runner-py.txt
+          $removed = New-Object System.Collections.Generic.List[string]
+          $keep = @()
+          foreach ($entry in ($env:PATH -split ';')) {
+            if (-not $entry) { continue }
+            $low = $entry.ToLowerInvariant()
+            $drop = $low.Contains('\python') -or $low.Contains('windowsapps') -or $low.Contains('\pyenv') -or $low.Contains('\py\')
+            if ($drop) { $removed.Add($entry) } else { $keep += $entry }
+          }
+          $env:PATH = ($keep -join ';')
+          Write-Host "removed from PATH:"
+          $removed | ForEach-Object { Write-Host "  $_" }
+          Show-Where "runner after cleanup"
+          $root = (Resolve-Path .).Path
+          $suite = Join-Path $root "suite-win"
+          $pkg = Join-Path $root "windows-tools"
+          $env:PATH = @(
+            (Join-Path $suite "bin"),
+            (Join-Path $suite "lib"),
+            (Join-Path $pkg "bin"),
+            (Join-Path $pkg "lib"),
+            "$env:SystemRoot\system32",
+            $env:SystemRoot
+          ) -join ';'
+          foreach ($var in @("PYTHONPATH", "PYTHONHOME", "OPENXC7_PYTHON", "OPENXC7_SELECTOR_TRACE")) {
+            Remove-Item "Env:$var" -ErrorAction SilentlyContinue
+          }
+          Show-Where "apio PATH"
+          $found = @(cmd /c "where python3 2>nul")
+          if ($found.Count -ne 1) { throw "expected one python3, got: $($found -join ' | ')" }
+          if ($found[0] -notlike "*\suite-win\lib\python3.exe") { throw "python3 is not the suite: $($found[0])" }
+          cmd /c "where python >nul 2>&1"
+          if ($LASTEXITCODE -eq 0) { throw "python.exe is on the apio PATH" }
+          cmd /c "where py >nul 2>&1"
+          if ($LASTEXITCODE -eq 0) { throw "py is on the apio PATH" }
+
+      - name: Run the launchers the way apio does
+        shell: pwsh
+        run: |
+          $root = (Resolve-Path .).Path
+          $suite = Join-Path $root "suite-win"
+          $pkg = Join-Path $root "windows-tools"
+          $env:PATH = @(
+            (Join-Path $suite "bin"),
+            (Join-Path $suite "lib"),
+            (Join-Path $pkg "bin"),
+            (Join-Path $pkg "lib"),
+            "$env:SystemRoot\system32",
+            $env:SystemRoot
+          ) -join ';'
+          foreach ($var in @("PYTHONPATH", "PYTHONHOME", "OPENXC7_PYTHON")) {
+            Remove-Item "Env:$var" -ErrorAction SilentlyContinue
+          }
+          Write-Host "=== where at launch ==="
+          cmd /c "where python3 & where python & where py & exit /b 0"
+          $db = Join-Path $pkg "share\nextpnr\external\prjxray-db\artix7"
+          $part = "xc7a35tcpg236-1"
+          Copy-Item e2e\win-launcher.features hardware.fasm
+          cmd /c "fasm2frames.cmd --part $part --db-root `"$db`" hardware.fasm > hardware.frames"
+          if ($LASTEXITCODE -ne 0) { throw "fasm2frames.cmd exited $LASTEXITCODE" }
+          if (-not (Test-Path hardware.frames) -or (Get-Item hardware.frames).Length -le 0) {
+            throw "hardware.frames is empty"
+          }
+          Write-Host "frames $((Get-Item hardware.frames).Length) bytes"
+          & "$pkg\bin\xc7frames2bit.exe" --part_file "$db\$part\part.yaml" --part_name $part --frm_file hardware.frames --output_file hardware.bit
+          if ($LASTEXITCODE -ne 0) { throw "xc7frames2bit.exe exited $LASTEXITCODE" }
+          if ((Get-Item hardware.bit).Length -le 0) { throw "hardware.bit is empty" }
+          Write-Host "bit $((Get-Item hardware.bit).Length) bytes"
+          cmd /c "bit2fasm.cmd --part $part --db-root `"$db`" hardware.bit > hardware.round.fasm"
+          if ($LASTEXITCODE -ne 0) { throw "bit2fasm.cmd exited $LASTEXITCODE" }
+          if ((Get-Item hardware.round.fasm).Length -le 0) { throw "bit2fasm produced nothing" }
+          cmd /c "xc7pll.cmd -i 100 -o 65 --report > xc7pll.out"
+          if ($LASTEXITCODE -ne 0) { throw "xc7pll.cmd exited $LASTEXITCODE" }
+          $pll = Get-Content -Raw xc7pll.out
+          if ($pll -notmatch "CLKFBOUT_MULT") { throw "xc7pll report missing CLKFBOUT_MULT" }
+          Write-Host "xc7pll ok"
+
+      - name: Selector cases the runner can stage
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $root = (Resolve-Path .).Path
+          $pkg = Join-Path $root "windows-tools"
+          $suite = Join-Path $root "suite-win"
+          $db = Join-Path $pkg "share\nextpnr\external\prjxray-db\artix7"
+          $part = "xc7a35tcpg236-1"
+          $sys = "$env:SystemRoot\system32;$env:SystemRoot"
+          function Invoke-Frames([string]$label) {
+            if (Test-Path hardware.frames) { Remove-Item hardware.frames }
+            if (Test-Path trace.txt) { Remove-Item trace.txt }
+            $env:OPENXC7_SELECTOR_TRACE = Join-Path $root "trace.txt"
+            cmd /c "fasm2frames.cmd --part $part --db-root `"$db`" hardware.fasm > hardware.frames 2> selector.err"
+            $code = $LASTEXITCODE
+            $trace = ""
+            if (Test-Path trace.txt) { $trace = (Get-Content -Raw trace.txt).Trim() }
+            $err = ""
+            if (Test-Path selector.err) { $err = Get-Content -Raw selector.err }
+            Write-Host "CASE $label rc=$code trace=$trace frames=$((Get-Item hardware.frames -ErrorAction SilentlyContinue).Length)"
+            if ($err) { Write-Host $err }
+            return @{ code = $code; trace = $trace; err = $err; frames = (Get-Item hardware.frames -ErrorAction SilentlyContinue).Length }
+          }
+          Copy-Item e2e\win-launcher.features hardware.fasm -Force
+          # (d) explicit interpreter wins over whatever else is on PATH
+          $env:PATH = $sys
+          $env:OPENXC7_PYTHON = Join-Path $suite "lib\python3.exe"
+          $d = Invoke-Frames "explicit"
+          if ($d.code -ne 0) { throw "explicit python failed" }
+          if ($d.trace -ne $env:OPENXC7_PYTHON) { throw "explicit trace was $($d.trace)" }
+          # (e) a set but missing interpreter stops, and does not search PATH
+          $env:OPENXC7_PYTHON = "C:\no\such\openxc7-python.exe"
+          $env:PATH = "$(Join-Path $suite 'lib');$sys"
+          $e = Invoke-Frames "missing-explicit"
+          if ($e.code -eq 0) { throw "missing OPENXC7_PYTHON succeeded" }
+          if ($e.err -notmatch "OPENXC7_PYTHON") { throw "missing OPENXC7_PYTHON had no clear error" }
+          if ($e.err -match "Microsoft Store") { throw "missing OPENXC7_PYTHON printed the Store message" }
+          Remove-Item Env:OPENXC7_PYTHON
+          # (f) nothing on PATH
+          $env:PATH = $sys
+          $f = Invoke-Frames "none"
+          if ($f.code -eq 0) { throw "no python succeeded" }
+          if ($f.err -notmatch "no usable Python") { throw "empty PATH had no clear error" }
+          if ($f.err -match "Microsoft Store") { throw "empty PATH printed the Store message" }
+          # (b) only python.exe, a hard link into a copy of the suite layout
+          $only = Join-Path $root "only-python"
+          New-Item -ItemType Directory -Force $only | Out-Null
+          cmd /c "mklink /H `"$only\python.exe`" `"$suite\lib\python3.exe`""
+          if ($LASTEXITCODE -ne 0) { throw "hardlink python.exe failed" }
+          cmd /c "mklink /J `"$only\python3.11`" `"$suite\lib\python3.11`""
+          if ($LASTEXITCODE -ne 0) { throw "junction python3.11 failed" }
+          Get-ChildItem "$suite\lib\*.dll" | ForEach-Object {
+            cmd /c "mklink /H `"$only\$($_.Name)`" `"$($_.FullName)`""
+            if ($LASTEXITCODE -ne 0) { throw "hardlink $($_.Name) failed" }
+          }
+          $env:PATH = "$only;$sys"
+          $b = Invoke-Frames "python-exe"
+          if ($b.code -ne 0) { throw "python.exe case failed" }
+          if ($b.trace -ne "python") { throw "python.exe trace was $($b.trace)" }
+          # (g) a python3.exe that exits 9009 is skipped, then python.exe runs
+          $fakeDir = Join-Path $root "fake-python3"
+          New-Item -ItemType Directory -Force $fakeDir | Out-Null
+          Add-Type -TypeDefinition "public class OpenXc7FakePython { public static int Main() { return 9009; } }" -OutputAssembly "$fakeDir\python3.exe" -OutputType ConsoleApplication
+          & "$fakeDir\python3.exe"
+          if ($LASTEXITCODE -ne 9009) { throw "fake python3.exe exited $LASTEXITCODE" }
+          $env:PATH = "$fakeDir;$only;$sys"
+          $g = Invoke-Frames "store-stub"
+          if ($g.code -ne 0) { throw "store-stub case failed" }
+          if ($g.trace -ne "python") { throw "store-stub trace was $($g.trace)" }
+          if ($g.err -match "Microsoft Store") { throw "store-stub case printed the Store message" }
+          # (c) the runner py launcher, recorded before PATH was reduced
+          $pyPath = ""
+          if (Test-Path runner-py.txt) {
+            $pyPath = (Get-Content runner-py.txt | Where-Object { $_ -match '\.exe$' } | Select-Object -First 1)
+          }
+          if (-not $pyPath) {
+            Write-Host "CASE py skipped: where py found nothing before cleanup"
+          } else {
+            $pyDir = Split-Path $pyPath
+            $env:PATH = "$pyDir;$sys"
+            $c = Invoke-Frames "py-launcher"
+            if ($c.code -ne 0) { throw "py launcher failed: $($c.err)" }
+            if ($c.trace -ne "py -3") { throw "py trace was $($c.trace)" }
+          }
+          Write-Host "selector cases done"
 
   static:
     name: static (no toolchain)
