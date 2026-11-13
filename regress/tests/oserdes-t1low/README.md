@@ -22,7 +22,7 @@ assembles all the same. openXC7/nextpnr#77 keeps `ZINV_T1` off a tied-low
 ## Expected result
 
 Routes and produces a bitstream; no `ZINV_T1` line in the FASM (the
-OSERDESE2 lands on `LIOI3_TBYTESRC_X0Y43.OLOGIC_Y1`). With nextpnr 0ff19db5
+OSERDESE2 lands on `LIOI3_TBYTESRC_X0Y43.OLOGIC_Y1`). With nextpnr f784eab9
 and yosys 0.70+329, on linux and on windows: fmax 1043.8 MHz, 1 LUT, 1 FF,
 bitstream 2192116 bytes.
 

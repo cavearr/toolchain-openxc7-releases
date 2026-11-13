@@ -34,7 +34,7 @@ stays fixed. `srl-cascade-deep` covers the >128-bit continuation.
 ## Expected result
 
 Routes; exactly 4 SRLC32E, no FDRE for the register body; fmax 482.9 MHz
-with nextpnr 0ff19db5 and yosys 0.70+329, on linux and on windows (the
+with nextpnr f784eab9 and yosys 0.70+329, on linux and on windows (the
 whole register lives in SRLs, so it is an SRL clock-to-out into DI1, timed
 since nextpnr #157; before that there was no fmax, same as `srl`); fasm
 accepted end-to-end (`fasm2frames` proves the cascade features are real
