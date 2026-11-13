@@ -305,18 +305,22 @@ jobs:
           if ($f.code -eq 0) { throw "no python succeeded" }
           if ($f.err -notmatch "no usable Python") { throw "empty PATH had no clear error" }
           if ($f.err -match "Microsoft Store") { throw "empty PATH printed the Store message" }
-          # (b) only python.exe, a hard link into a copy of the suite layout
+          # (b) only python.exe. This MinGW build finds its prefix as an ancestor
+          # that contains lib/python3.11/os.py, so the exe lives in a lib
+          # directory next to that tree. A python.exe beside a sibling
+          # python3.11 keeps the compiled prefix and the probe fails.
           $only = Join-Path $root "only-python"
-          New-Item -ItemType Directory -Force $only | Out-Null
-          cmd /c "mklink /H `"$only\python.exe`" `"$suite\lib\python3.exe`""
+          $lib = Join-Path $only "lib"
+          New-Item -ItemType Directory -Force $lib | Out-Null
+          cmd /c "mklink /H `"$lib\python.exe`" `"$suite\lib\python3.exe`""
           if ($LASTEXITCODE -ne 0) { throw "hardlink python.exe failed" }
-          cmd /c "mklink /J `"$only\python3.11`" `"$suite\lib\python3.11`""
+          cmd /c "mklink /J `"$lib\python3.11`" `"$suite\lib\python3.11`""
           if ($LASTEXITCODE -ne 0) { throw "junction python3.11 failed" }
           Get-ChildItem "$suite\lib\*.dll" | ForEach-Object {
-            cmd /c "mklink /H `"$only\$($_.Name)`" `"$($_.FullName)`""
+            cmd /c "mklink /H `"$lib\$($_.Name)`" `"$($_.FullName)`""
             if ($LASTEXITCODE -ne 0) { throw "hardlink $($_.Name) failed" }
           }
-          $env:PATH = "$only;$sys"
+          $env:PATH = "$lib;$sys"
           $b = Invoke-Frames "python-exe"
           if ($b.code -ne 0) { throw "python.exe case failed" }
           if ($b.trace -ne "python") { throw "python.exe trace was $($b.trace)" }
@@ -326,7 +330,7 @@ jobs:
           Add-Type -TypeDefinition "public class OpenXc7FakePython { public static int Main() { return 9009; } }" -OutputAssembly "$fakeDir\python3.exe" -OutputType ConsoleApplication
           & "$fakeDir\python3.exe"
           if ($LASTEXITCODE -ne 9009) { throw "fake python3.exe exited $LASTEXITCODE" }
-          $env:PATH = "$fakeDir;$only;$sys"
+          $env:PATH = "$fakeDir;$lib;$sys"
           $g = Invoke-Frames "store-stub"
           if ($g.code -ne 0) { throw "store-stub case failed" }
           if ($g.trace -ne "python") { throw "store-stub trace was $($g.trace)" }

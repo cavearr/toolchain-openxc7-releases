@@ -20,8 +20,9 @@
 # E2E_SUITE is the root of the Windows oss-cad-suite whose yosys release
 # is YOSYS_RELEASE_TAG. WINEPATH is that suite's bin and lib, then the
 # package bin and lib: the PATH apio builds, where python3.exe is in lib.
-# stdout is a pipe. mingw Python under wine dies when stdout is a file.
-# Real Windows does not, and apio redirects to a file there.
+# Both stdout and stderr are pipes. mingw Python under wine dies in
+# init_sys_streams when either stream is a file. Real Windows does not,
+# and apio redirects to a file there.
 #
 # Leaves <workdir>/blinky-<part>.fasm.canon (comments stripped, sorted) for
 # cross-platform comparison, and requires the router to finish and the
@@ -187,8 +188,9 @@ PYEOF
     # places a Python can be. The launcher sets PYTHONPATH itself.
     # A unix PYTHONPATH or OPENXC7_PYTHON would pick a different
     # interpreter, so both are unset for this call.
-    # stdout is a pipe: mingw python under wine dies at init_sys_streams
-    # when stdout is a file. Real Windows accepts apio's file redirect.
+    # Both streams are pipes: mingw python under wine dies at
+    # init_sys_streams when either stream is a file. Real Windows
+    # accepts apio's file redirect.
     dbwin=$(winepath -w "$DB/$family")
     ( env -u PYTHONPATH -u PYTHONHOME -u OPENXC7_PYTHON \
         WINEPATH="$WINEPATH" \
