@@ -43,9 +43,9 @@ One tarball per platform, `openxc7-toolchain-<platform>-<YYYYMMDD>.tgz`:
 
 | Platform | Built on | Notes |
 |---|---|---|
-| `linux-x86-64` | Linux, natively | Carries its own Python for `fasm2frames` |
-| `darwin-arm64` | macOS on Apple Silicon, natively | Carries its own Python for `fasm2frames`; Mach-O libraries relocated and ad-hoc signed (`macpack.py`) |
-| `windows-amd64` | cross-compiled from Linux (mingw) | Validated under wine; `fasm2frames` runs with the oss-cad-suite Python |
+| `linux-x86-64` | Linux, natively | Carries its own Python for `fasm2frames`, `bit2fasm` and `xc7pll` |
+| `darwin-arm64` | macOS on Apple Silicon, natively | Carries its own Python for `fasm2frames`, `bit2fasm` and `xc7pll`; Mach-O libraries relocated and ad-hoc signed (`macpack.py`) |
+| `windows-amd64` | cross-compiled from Linux (mingw) | No Python in the package. `bin/*.cmd` try `OPENXC7_PYTHON`, then `python3`, `python` and `py -3`. With apio, `python3` is oss-cad-suite's (`{oss-cad-suite}\lib` is on `PATH`) |
 
 On Linux and macOS the shared libraries the tools load live in
 `lib/openxc7/`, not at the first level of `lib/`. `lib/` itself holds

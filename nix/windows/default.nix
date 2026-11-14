@@ -10,8 +10,13 @@
 # (the name apio runs; the engine is named in XILINX-PARTS-INVENTORY.json).
 # Metrics come from --report, so the binary is built without an embedded
 # Python interpreter: no cross CPython, no libpython, no stdlib next to the
-# exe. fasm2frames still runs under the Windows python apio already has
-# (oss-cad-suite), from libexec/, the same as before.
+# exe. fasm2frames, bit2fasm and xc7pll are Python scripts in libexec/.
+# The package does not ship an interpreter. bin/*.cmd call
+# libexec/openxc7-python.cmd, which runs the first interpreter that
+# actually starts: OPENXC7_PYTHON if it is set, then python3, python,
+# and py -3. With apio, python3 is oss-cad-suite's: apio puts
+# {oss-cad-suite}\lib on PATH, and python3.exe lives there. A user
+# without apio sets OPENXC7_PYTHON or adds that lib directory to PATH.
 #
 # The result ($out) is a chipdb-less tools tree. CI injects the verified bins
 # from the chipdb job before producing the dated package tarball. This reuses
@@ -195,14 +200,20 @@ let
 
   # pure-python tool env (fasm pulls textx -> arpeggio; + prjxray's python deps).
   # withPackages keeps the *.dist-info metadata (textX needs version("textx")).
-  # This is the TOOLS python (3.12) that fasm2frames imports. It is not an
-  # interpreter embedded in nextpnr.
+  # This is the TOOLS python (3.12) that assembles the pure-Python
+  # packages fasm2frames imports. It is not an interpreter embedded in
+  # nextpnr, and it is not the interpreter that runs the tools: that is
+  # chosen at launch. The directory stays lib/python3.12 because the
+  # packages are pure Python and PYTHONPATH points at it. Renaming it
+  # to the suite's 3.11 would not change what gets imported.
   pyEnv = python.withPackages (ps: [
     fasm ps.simplejson ps.intervaltree ps.sortedcontainers ps.pyyaml
   ]);
 
+  # The three launchers share one selector. They set PYTHONPATH and the
+  # script path, then call it. They do not name an interpreter.
   cmdLauncher = name: ''
-    printf '@echo off\r\nset "PKG=%%~dp0.."\r\nset "PYTHONPATH=%%PKG%%\\lib\\python3.12\\site-packages;%%PYTHONPATH%%"\r\npython "%%PKG%%\\libexec\\${name}" %%*\r\n' > $out/bin/${name}.cmd
+    printf '@echo off\r\nset "PKG=%%~dp0.."\r\nset "PYTHONPATH=%%PKG%%\\lib\\python3.12\\site-packages;%%PYTHONPATH%%"\r\nset "OPENXC7_SCRIPT=%%PKG%%\\libexec\\${name}"\r\ncall "%%PKG%%\\libexec\\openxc7-python.cmd" %%*\r\n' > $out/bin/${name}.cmd
   '';
 
 in pkgs.runCommand "openxc7-toolchain-windows-amd64-tools" {
@@ -233,9 +244,8 @@ in pkgs.runCommand "openxc7-toolchain-windows-amd64-tools" {
 
   # -- xc7pll (stdlib python). Shipped in libexec + .cmd launcher like
   # -- fasm2frames/bit2fasm: a bare shebang script in bin/ does not launch
-  # -- from CMD/PowerShell (apio#914) — the launcher runs it under the
-  # -- Windows python already on apio's PATH (oss-cad-suite's, the same
-  # -- one the xilinx build flow uses for fasm2frames).
+  # -- from CMD/PowerShell (apio#914). The launcher uses the shared
+  # -- selector (libexec/openxc7-python.cmd).
   cp ${../../xc7pll} $out/libexec/xc7pll
   chmod u+w $out/libexec/xc7pll
 
@@ -300,7 +310,10 @@ PYEOF
   grep -q "delete=False" $out/libexec/bit2fasm || { echo "upstream bit2fasm fix missing"; exit 1; }
   grep -q "fcntl = None" $out/lib/python3.12/site-packages/prjxray/util.py || { echo "upstream util.py fcntl guard missing"; exit 1; }
 
-  # -- Windows launchers (apio/oss-cad-suite provides the Windows python)
+  # -- Windows launchers. The selector is the only file that names an
+  # -- interpreter. Source is LF; cmd.exe wants CR LF.
+  cp ${./openxc7-python.cmd} $out/libexec/openxc7-python.cmd
+  sed -i 's/$/\r/' $out/libexec/openxc7-python.cmd
   ${cmdLauncher "fasm2frames"}
   ${cmdLauncher "bit2fasm"}
   ${cmdLauncher "xc7pll"}

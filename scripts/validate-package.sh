@@ -406,9 +406,54 @@ ok "engine: every built part opens its chipdb from --device alone"
 # --- bundled tools ----------------------------------------------------------
 if [ "$PLAT" = "windows-amd64" ]; then
     # bare shebang scripts do not launch from CMD/PowerShell (apio#914):
-    # windows ships libexec/ + a .cmd launcher, like fasm2frames
+    # windows ships libexec/ + a .cmd launcher, like fasm2frames.
+    # The three launchers call one selector and do not name an interpreter.
     [ -f "$PKG/bin/xc7pll.cmd" ]   || fail "xc7pll.cmd launcher missing from bin/"
     [ -f "$PKG/libexec/xc7pll" ]   || fail "xc7pll missing from libexec/"
+    [ -f "$PKG/libexec/openxc7-python.cmd" ] \
+        || fail "openxc7-python.cmd selector missing from libexec/"
+    python3 - "$PKG" << 'PY' || fail "Windows launchers do not use the shared selector"
+import sys
+from pathlib import Path
+pkg = Path(sys.argv[1])
+selector = (pkg / "libexec" / "openxc7-python.cmd").read_text(encoding="utf-8")
+selector = selector.replace("\r\n", "\n").splitlines()
+
+def at(exact):
+    for number, line in enumerate(selector):
+        if line.strip() == exact:
+            return number
+    raise SystemExit(f"selector missing line: {exact}")
+
+order = [at(line) for line in (
+    "call :use_explicit",
+    "call :use_python3",
+    "call :use_python",
+    "call :use_py",
+)]
+if order != sorted(order):
+    raise SystemExit(f"selector candidate order is {order}")
+window = "\n".join(selector[order[0]:order[1]])
+if "exit /b 1" not in window or "goto :run" not in window:
+    raise SystemExit("OPENXC7_PYTHON does not stop when it fails")
+body = "\n".join(selector)
+if "import fasm, prjxray" not in body:
+    raise SystemExit("selector does not import the tools while probing")
+for tool in ("fasm2frames", "bit2fasm", "xc7pll"):
+    raw = (pkg / "bin" / f"{tool}.cmd").read_text(encoding="utf-8")
+    raw = raw.replace("\r\n", "\n")
+    if "openxc7-python.cmd" not in raw or "OPENXC7_SCRIPT" not in raw:
+        raise SystemExit(f"{tool}.cmd does not call the selector")
+    # python3.12 is the site-packages directory, not a command.
+    stripped = raw.replace("lib\\python3.12\\site-packages", "SITE")
+    for line in stripped.splitlines():
+        words = line.replace('"', " ").split()
+        for word in words:
+            base = word.lower()
+            if base in {"python", "python.exe", "python3", "python3.exe", "py", "py.exe"}:
+                raise SystemExit(f"{tool}.cmd names an interpreter: {line}")
+PY
+    ok "Windows launchers call the selector and name no interpreter"
     # fasm's antlr-fallback RuntimeWarning must be silenced (apio#913):
     # textX is the intended parser on windows, imported directly
     grep -q "INTENDED parser" "$PKG/lib/python3.12/site-packages/fasm/parser/__init__.py" \
@@ -422,7 +467,26 @@ if [ "$PLAT" = "windows-amd64" ]; then
     PLL_OUT=$(python3 "$PKG/libexec/xc7pll" -i 100 -o 65 --report 2>&1) || fail "xc7pll does not run: $PLL_OUT"
 else
     [ -f "$PKG/bin/xc7pll" ]       || fail "xc7pll missing from bin/"
-    PLL_OUT=$(python3 "$PKG/bin/xc7pll" -i 100 -o 65 --report 2>&1) || fail "xc7pll does not run: $PLL_OUT"
+    [ -f "$PKG/libexec/xc7pll" ]   || fail "xc7pll missing from libexec/"
+    # bin/ scripts must not ask PATH for a Python. libexec shebangs are
+    # unused: the wrapper execs the package interpreter on the script.
+    shebad=0
+    while IFS= read -r w; do
+        [ -n "$w" ] || continue
+        first=$(head -n 1 "$w" || true)
+        case "$first" in
+            "#!"*env*python*)
+                echo "env python shebang in ${w#"$PKG"/}" >&2
+                shebad=1
+                ;;
+        esac
+    done < <(find "$PKG/bin" -maxdepth 1 -type f -print)
+    [ "$shebad" = 0 ] || fail "a bin/ script has an env python shebang"
+    ok "bin/: no env python shebang"
+    # PATH has no python3. The wrapper execs the interpreter in the package.
+    PLL_OUT=$(env -u PYTHONPATH -u PYTHONHOME PATH="/usr/bin:/bin" \
+        "$PKG/bin/xc7pll" -i 100 -o 65 --report 2>&1) \
+        || fail "xc7pll does not run: $PLL_OUT"
 fi
 echo "$PLL_OUT" | grep -q "CLKFBOUT_MULT:    13"         || fail "xc7pll produced unexpected output"
 # module output is the DEFAULT since 1.1.0 (apio#915, parity with ecppll)

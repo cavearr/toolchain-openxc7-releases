@@ -217,6 +217,22 @@ jobs:
             fi
           '
 
+      - name: Download the Windows oss-cad-suite (python3.exe for the launchers)
+        env:
+          YOSYS_RELEASE_TAG: ${{ inputs.yosys_release_tag }}
+        run: |
+          case "$YOSYS_RELEASE_TAG" in
+            [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+            *) echo "::error::YOSYS_RELEASE_TAG must be YYYY-MM-DD"; exit 1 ;;
+          esac
+          DIGITS="${YOSYS_RELEASE_TAG//-/}"
+          URL="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${YOSYS_RELEASE_TAG}/oss-cad-suite-windows-x64-${DIGITS}.tgz"
+          curl -fL --retry 5 -o win-suite.tgz "$URL"
+          mkdir -p win-suite
+          tar -xzf win-suite.tgz -C win-suite --strip-components=1
+          test -x win-suite/lib/python3.exe
+          rm -f win-suite.tgz
+
       - name: E2E — synth (yosys) -> nextpnr.exe -> fasm2frames -> xc7frames2bit.exe
         run: |
           # shellcheck disable=SC2016 # variables expand in the inner Bash
@@ -247,22 +263,16 @@ jobs:
             echo "✅ parity: --report carries fmax and utilization -> apio report works"
             # nextpnr.exe writes CRLF: drop the CR like e2e/run-parts.sh does
             grep -v "^\s*#" ledon.fasm | sed "/^\s*$/d" | tr -d "\r" | LC_ALL=C sort > ledon.fasm.canon
-            # fasm2frames exactly like apio on real Windows: the WINDOWS
-            # python + a shell redirect (catches POSIX-isms like /dev/stdout)
-            WINPY=$(ls -d /nix/store/*-python3-x86_64-w64-mingw32-* 2>/dev/null | grep -v .drv | head -1 || true)
-            if [ -n "$WINPY" ] && [ -x "$WINPY/bin/python3.exe" ]; then
-              # mingw python under wine dies if stdout is a FILE (WinError 6,
-              # init_sys_streams) — it needs a pipe; cat writes the file.
-              PYTHONPATH=../$PKG/lib/python3.12/site-packages \
-                wine64 "$WINPY/bin/python3.exe" ../$PKG/libexec/fasm2frames \
-                --part xc7a35tcpg236-1 --db-root ../$DB ledon.fasm </dev/null | cat > ledon.frames
-              echo "fasm2frames ran under the WINDOWS python"
-            else
-              PYTHONPATH=../$PKG/lib/python3.12/site-packages \
-                python3 ../$PKG/libexec/fasm2frames --part xc7a35tcpg236-1 --db-root ../$DB \
-                ledon.fasm > ledon.frames
-              echo "WARNING: mingw python not found; used host python for fasm2frames"
-            fi
+            # fasm2frames through the launcher. WINEPATH is the PATH apio
+            # builds: suite bin, suite lib (python3.exe), package bin, package lib.
+            # stdout is a pipe: mingw python under wine dies if stdout is a file.
+            SUITE="$PWD/../win-suite"
+            export WINEPATH="$(winepath -w "$SUITE/bin");$(winepath -w "$SUITE/lib");$(winepath -w "$PWD/../$PKG/bin");$(winepath -w "$PWD/../$PKG/lib")"
+            env -u PYTHONPATH -u PYTHONHOME -u OPENXC7_PYTHON \
+              wine64 cmd /c fasm2frames.cmd --part xc7a35tcpg236-1 \
+              --db-root "$(winepath -w "$PWD/../$DB")" ledon.fasm </dev/null \
+              2> >(cat >&2) | cat > ledon.frames
+            echo "fasm2frames ran through fasm2frames.cmd"
             test -s ledon.frames
             wine64 ../$PKG/bin/xc7frames2bit.exe \
               --part_file ../$DB/xc7a35tcpg236-1/part.yaml --part_name xc7a35tcpg236-1 \
@@ -276,20 +286,18 @@ jobs:
           nix shell --inputs-from . nixpkgs#wine64 -c bash -euo pipefail -c '
             export WINEPREFIX="$PWD/.wine" WINEDEBUG=-all
             export PATH="$HOME/.local/oss-cad-suite/bin:$PATH"
-            E2E_WINPY=$(ls -d /nix/store/*-python3-x86_64-w64-mingw32-* 2>/dev/null | grep -v .drv | head -1 || true)
-            [ -n "$E2E_WINPY" ] && [ -x "$E2E_WINPY/bin/python3.exe" ] \
-              || { echo "mingw Python required for the Windows package gate"; exit 1; }
-            export E2E_WINPY
+            export E2E_SUITE="$PWD/win-suite"
+            test -x "$E2E_SUITE/lib/python3.exe"
             bash scripts/validate-package.sh "${{ steps.tar.outputs.name }}" --wine \
               --expect-date "${{ steps.tar.outputs.dateid }}"
           '
 
       # The exe-parity design checks that used to live inline here (virtual
       # clock warns + fmax getter, hierarchical merge_nets, wide-mux clock
-      # table) are the regression tests vclk, hier and widemux — the L2 run
-      # below exercises them and the whole catalogue against the tarball,
-      # with fasm2frames under the WINDOWS python (the real apio path; the
-      # harness finds the mingw interpreter in the store, E2E_WINPY overrides).
+      # table) are the regression tests vclk, hier and widemux. The L2 run
+      # below still calls fasm2frames with the mingw python from the nix
+      # store (E2E_WINPY in regress/harness/pkg.py). The launcher path is
+      # the E2E inside validate-package.sh, which uses E2E_SUITE.
       - name: Fetch the locked third-party trees (regress/lock.json)
         run: bash scripts/fetch-demos.sh
 
