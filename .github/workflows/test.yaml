@@ -345,6 +345,18 @@ jobs:
           if ($g.code -ne 0) { throw "store-stub case failed" }
           if ($g.trace -ne "python") { throw "store-stub trace was $($g.trace)" }
           if ($g.err -match "Microsoft Store") { throw "store-stub case printed the Store message" }
+          # (h) python is a .bat shim, as pyenv-win installs. Real cmd.exe does
+          # not come back from a batch file run without "call", so a selector
+          # without it would end in the probe and write no frames (wine's cmd
+          # does come back, so only this runner can show it).
+          $shimDir = Join-Path $root "shim-python"
+          New-Item -ItemType Directory -Force $shimDir | Out-Null
+          Set-Content -Path "$shimDir\python.bat" -Encoding ascii -Value "@`"$suite\lib\python3.exe`" %*"
+          $env:PATH = "$shimDir;$env:SystemRoot\system32"
+          $h = Invoke-Frames "bat-shim"
+          if ($h.code -ne 0) { throw "bat shim case failed: $($h.err)" }
+          if ($h.trace -ne "python") { throw "bat shim trace was $($h.trace)" }
+          if (-not $h.frames -or $h.frames -le 0) { throw "bat shim case wrote no frames" }
           # (c) the runner py launcher, recorded before PATH was reduced
           $pyPath = ""
           if (Test-Path runner-py.txt) {

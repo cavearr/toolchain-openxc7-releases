@@ -93,7 +93,10 @@ set "OPENXC7_MODE=py"
 exit /b 0
 
 :accept
-%* -c "import sys; import fasm, prjxray; sys.exit(1) if sys.version_info<(3, 8) else None" >nul 2>&1
+rem "call", here and in :run: a candidate can be a .bat or .cmd shim
+rem (pyenv-win installs python.bat). Without call, cmd hands control to
+rem the shim and never comes back, so the selector would end in the probe.
+call %* -c "import sys; import fasm, prjxray; sys.exit(1) if sys.version_info<(3, 8) else None" >nul 2>&1
 exit /b %ERRORLEVEL%
 
 :run
@@ -105,8 +108,8 @@ if defined OPENXC7_SELECTOR_TRACE (
   )
 )
 if "%OPENXC7_MODE%"=="py" (
-  py -3 "%OPENXC7_SCRIPT%" %*
+  call py -3 "%OPENXC7_SCRIPT%" %*
 ) else (
-  "%OPENXC7_PY%" "%OPENXC7_SCRIPT%" %*
+  call "%OPENXC7_PY%" "%OPENXC7_SCRIPT%" %*
 )
 exit /b %ERRORLEVEL%

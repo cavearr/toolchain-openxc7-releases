@@ -51,6 +51,21 @@ class SelectorSourceTest(unittest.TestCase):
         self.assertIn("sys.version_info<(3, 8)", accept)
         self.assertIn(">nul 2>&1", accept)
 
+    def test_candidates_are_called_so_a_bat_shim_returns(self):
+        # cmd.exe does not return from a .bat/.cmd run without "call"
+        # (pyenv-win's python.bat); wine's cmd does, so only this text and
+        # the native CI job can catch a missing "call".
+        lines = [line.strip() for line in _selector_text().splitlines()]
+        accept = lines.index(":accept")
+        run = lines.index(":run")
+        probe = [line for line in lines[accept:run] if "import fasm, prjxray" in line]
+        self.assertEqual(len(probe), 1)
+        self.assertTrue(probe[0].startswith("call %* -c "), probe[0])
+        launches = [line for line in lines[run:] if '"%OPENXC7_SCRIPT%"' in line]
+        self.assertEqual(len(launches), 2)
+        for line in launches:
+            self.assertTrue(line.startswith("call "), line)
+
     def test_success_is_silent_unless_a_trace_file_is_requested(self):
         lines = _selector_text().splitlines()
         start = next(i for i, line in enumerate(lines) if line.strip() == ":run")
