@@ -281,7 +281,10 @@ jobs:
             if (Test-Path hardware.frames) { Remove-Item hardware.frames }
             if (Test-Path trace.txt) { Remove-Item trace.txt }
             $env:OPENXC7_SELECTOR_TRACE = Join-Path $root "trace.txt"
-            cmd /c "fasm2frames.cmd --part $part --db-root `"$db`" hardware.fasm > hardware.frames 2> selector.err"
+            # By full path: each case sets its own PATH, without the package
+            # bin. Unquoted, so cmd /c keeps the quotes of the rest of the line.
+            if ($pkg.Contains(" ")) { throw "package path has a space: $pkg" }
+            cmd /c "$pkg\bin\fasm2frames.cmd --part $part --db-root `"$db`" hardware.fasm > hardware.frames 2> selector.err"
             $code = $LASTEXITCODE
             $trace = ""
             if (Test-Path trace.txt) { $trace = (Get-Content -Raw trace.txt).Trim() }
