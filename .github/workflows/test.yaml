@@ -216,8 +216,10 @@ jobs:
           if ($found[0] -notlike "*\suite-win\lib\python3.exe") { throw "python3 is not the suite: $($found[0])" }
           cmd /c "where python >nul 2>&1"
           if ($LASTEXITCODE -eq 0) { throw "python.exe is on the apio PATH" }
-          cmd /c "where py >nul 2>&1"
-          if ($LASTEXITCODE -eq 0) { throw "py is on the apio PATH" }
+          # py.exe stays: it lives in SystemRoot, which every PATH carries, as
+          # on a user machine with python.org Python. python3 comes first in
+          # the selector; the next step checks that it chose python3.
+          cmd /c "where py 2>&1 & exit /b 0"
 
       - name: Run the launchers the way apio does
         shell: pwsh
@@ -241,12 +243,17 @@ jobs:
           $db = Join-Path $pkg "share\nextpnr\external\prjxray-db\artix7"
           $part = "xc7a35tcpg236-1"
           Copy-Item e2e\win-launcher.features hardware.fasm
+          $env:OPENXC7_SELECTOR_TRACE = Join-Path $root "apio-trace.txt"
           cmd /c "fasm2frames.cmd --part $part --db-root `"$db`" hardware.fasm > hardware.frames"
           if ($LASTEXITCODE -ne 0) { throw "fasm2frames.cmd exited $LASTEXITCODE" }
           if (-not (Test-Path hardware.frames) -or (Get-Item hardware.frames).Length -le 0) {
             throw "hardware.frames is empty"
           }
           Write-Host "frames $((Get-Item hardware.frames).Length) bytes"
+          $chosen = (Get-Content -Raw apio-trace.txt).Trim()
+          Write-Host "selector chose: $chosen"
+          if ($chosen -ne "python3") { throw "the selector chose $chosen, not the suite python3" }
+          Remove-Item Env:OPENXC7_SELECTOR_TRACE
           & "$pkg\bin\xc7frames2bit.exe" --part_file "$db\$part\part.yaml" --part_name $part --frm_file hardware.frames --output_file hardware.bit
           if ($LASTEXITCODE -ne 0) { throw "xc7frames2bit.exe exited $LASTEXITCODE" }
           if ((Get-Item hardware.bit).Length -le 0) { throw "hardware.bit is empty" }
@@ -299,8 +306,8 @@ jobs:
           if ($e.err -notmatch "OPENXC7_PYTHON") { throw "missing OPENXC7_PYTHON had no clear error" }
           if ($e.err -match "Microsoft Store") { throw "missing OPENXC7_PYTHON printed the Store message" }
           Remove-Item Env:OPENXC7_PYTHON
-          # (f) nothing on PATH
-          $env:PATH = $sys
+          # (f) nothing on PATH. Only system32: SystemRoot holds py.exe.
+          $env:PATH = "$env:SystemRoot\system32"
           $f = Invoke-Frames "none"
           if ($f.code -eq 0) { throw "no python succeeded" }
           if ($f.err -notmatch "no usable Python") { throw "empty PATH had no clear error" }
@@ -327,7 +334,10 @@ jobs:
           # (g) a python3.exe that exits 9009 is skipped, then python.exe runs
           $fakeDir = Join-Path $root "fake-python3"
           New-Item -ItemType Directory -Force $fakeDir | Out-Null
-          Add-Type -TypeDefinition "public class OpenXc7FakePython { public static int Main() { return 9009; } }" -OutputAssembly "$fakeDir\python3.exe" -OutputType ConsoleApplication
+          # A real exe, as the Store alias is: the .NET Framework compiler.
+          Set-Content -Path "$fakeDir\fake.cs" -Encoding ascii -Value "public class OpenXc7FakePython { public static int Main() { return 9009; } }"
+          & "$env:SystemRoot\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /out:"$fakeDir\python3.exe" "$fakeDir\fake.cs"
+          if ($LASTEXITCODE -ne 0) { throw "csc failed" }
           & "$fakeDir\python3.exe"
           if ($LASTEXITCODE -ne 9009) { throw "fake python3.exe exited $LASTEXITCODE" }
           $env:PATH = "$fakeDir;$lib;$sys"
