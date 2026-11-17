@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-11-12";
+  version = "1.0.0-unstable-2026-11-17";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -204,6 +204,16 @@ stdenv.mkDerivation rec {
   # does not fit the part stops after packing and again after -o holdbufs
   # and after -o hold-fix (#180). The chipdb generator and the constids do
   # not change.
+  # Since f784eab9 (1ad95a74, merged 2026-11-17): the chipdb generator can
+  # take delays for every speed grade from a timing directory (--timing,
+  # #179); without it, which is how this package builds, the chipdb is the
+  # same. A LUT5/LUT6 pair may read at most 5 distinct nets (#187).
+  # --report counts a placed cell on the bel it occupies: no PSEUDO_GND /
+  # PSEUDO_VCC rows, and an IDDR/ODDR in an HP bank counts in the E2 rows
+  # (#191). A BEL attribute is honoured, also in the form NEXTPNR_BEL uses
+  # (#192). set_property on get_nets / get_pins is skipped with a warning
+  # (#193). The other pin of a differential pair is taken from the
+  # package (#194). #186 is CI only. The constids do not change.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
