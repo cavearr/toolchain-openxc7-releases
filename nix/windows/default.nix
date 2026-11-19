@@ -166,7 +166,7 @@ let
   };
 
   prjxrayWin = cross.stdenv.mkDerivation {
-    pname = "prjxray-win"; version = "9346969e";
+    pname = "prjxray-win"; version = prjxray.version;
     src = prjxraySrc;
     nativeBuildInputs = [ pkgs.cmake pkgs.git pkgs.pkg-config python ];
     buildInputs = [ boostWin cross.eigen cross.windows.mingw_w64_pthreads mcfgthreadsStatic ];
@@ -306,7 +306,7 @@ PYEOF
   # sys.stdout instead of /dev/stdout, bit2fasm closing its temporary file
   # before bitread writes it, and OpenSafeFile working without fcntl) are
   # upstream since openXC7/prjxray#5.
-  grep -q "args.fn_out else sys.stdout" $out/libexec/fasm2frames || { echo "upstream fasm2frames fix missing"; exit 1; }
+  grep -q "args.fn_out else sys.stdout" $out/lib/python3.12/site-packages/prjxray/fasm2frames.py || { echo "upstream fasm2frames fix missing"; exit 1; }
   grep -q "delete=False" $out/libexec/bit2fasm || { echo "upstream bit2fasm fix missing"; exit 1; }
   grep -q "fcntl = None" $out/lib/python3.12/site-packages/prjxray/util.py || { echo "upstream util.py fcntl guard missing"; exit 1; }
 
