@@ -37,6 +37,13 @@ stdenv.mkDerivation rec {
   # fasm2frames --sparse with no frame to set writes "# no frames" instead
   # of an empty file (#33). #34 is CI, docs and a doctest of xjson.py. The
   # bitstream of a frames file read whole does not change.
+  # master 2026-11-19 (db4f31e9): fasm2frames is installed from the prjxray
+  # Python package, with utils/fasm2frames.py kept as a source-tree wrapper
+  # (#36); its frames do not change. Diagnostics name the bitstream IDCODE
+  # and use absl::StatusOr (#40), Spartan 6 bitstream reads keep truncated
+  # type-2 packets intact (#42), and the unused cctz submodule is gone (#43).
+  # #35 adds an ICAP fuzzer, #38 modernises a visitor, and #37, #39 and #41
+  # do not change the shipped tools.
   src = fetchFromGitHub {
     inherit (source) owner repo rev hash;
     fetchSubmodules = source.submodules;

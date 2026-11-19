@@ -3,22 +3,22 @@
     "owner": "openXC7",
     "repo": "nextpnr",
     "submodules": true,
-    "rev": "1ad95a7440798e78776a5f9555769905db21fdea",
-    "hash": "sha256-4Ex+Z2yRcXd2pircdErPBUmiKnRmKF/t3InglFOPfmU="
+    "rev": "42d06c5ff00aa04fd06f414b8e0e1ef3673c3a33",
+    "hash": "sha256-GPLSWYLk5NSQsxOH4j+24fq3Hh/Q24StPNobsAFqhuI="
   },
   "prjxray-db": {
     "owner": "openXC7",
     "repo": "prjxray-db",
     "submodules": false,
-    "rev": "a8b09269beb6e3d3c07e2a0901f845420df1c802",
-    "hash": "sha256-QuJspKSHoIDJt1mTBpLRBWNLBJ+PEiZZSZMpkRsBvkg="
+    "rev": "0c3504f26f5cf77b6a7605c7bc83ebe1ac67b26f",
+    "hash": "sha256-uLIT9tYF27J1woaov7bcERh/on3wmIUSPfoktRe/ISU="
   },
   "prjxray": {
     "owner": "openXC7",
     "repo": "prjxray",
     "submodules": true,
-    "rev": "a5589d5187964aceeccd1650c37a405c5d0128d8",
-    "hash": "sha256-Pc6RsCGxfl848POo50Y5zI5a86FJIwx7viTuAPXSVgI="
+    "rev": "db4f31e99c624e1eee8603701db27040f5273b4d",
+    "hash": "sha256-rc+pf8TWrY2qijhJy6+2821iv2KlqRaVhEERbEtsa74="
   },
   "fasm": {
     "owner": "openxc7",

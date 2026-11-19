@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-11-17";
+  version = "1.0.0-unstable-2026-11-19";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -214,6 +214,17 @@ stdenv.mkDerivation rec {
   # (#192). set_property on get_nets / get_pins is skipped with a warning
   # (#193). The other pin of a differential pair is taken from the
   # package (#194). #186 is CI only. The constids do not change.
+  # Since 1ad95a74 (42d06c5f, merged 2026-11-19): an OUTMUX in an otherwise
+  # empty tile is written (#188), and IBUFDS_DIFF_OUT packs as a pair of
+  # input buffers rather than producing a false build (#204). Six robustness
+  # fixes are inert in the xilinx flow (#195, #196, #197, #199, #200, #201).
+  # HeAP's attempt counter cannot overflow on 64-bit hosts (#205), router2
+  # reports its actual worst slack (#206), and a use-after-free in pack_io
+  # is fixed (#208). Hold-fix handles several ports on one net within a
+  # thread (#209), and create_clock rejects a non-positive period (#210).
+  # #207 is a test gate and #211 leaves identical object code. --report's
+  # PAD row counts user I/O only (#212). The chipdb generator and constids
+  # do not change.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it
