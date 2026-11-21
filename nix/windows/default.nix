@@ -305,10 +305,12 @@ PYEOF
   # The Windows fixes to the python tools (fasm2frames defaulting to
   # sys.stdout instead of /dev/stdout, bit2fasm closing its temporary file
   # before bitread writes it, and OpenSafeFile working without fcntl) are
-  # upstream since openXC7/prjxray#5.
-  grep -q "args.fn_out else sys.stdout" $out/lib/python3.12/site-packages/prjxray/fasm2frames.py || { echo "upstream fasm2frames fix missing"; exit 1; }
-  grep -q "delete=False" $out/libexec/bit2fasm || { echo "upstream bit2fasm fix missing"; exit 1; }
-  grep -q "fcntl = None" $out/lib/python3.12/site-packages/prjxray/util.py || { echo "upstream util.py fcntl guard missing"; exit 1; }
+  # upstream since openXC7/prjxray#5. test.yaml:windows-native runs both
+  # tools on Windows. Here, the tools must run from this tree alone and
+  # without fcntl: each module imports and has a main(), and each libexec
+  # script prints its usage. A grep for a line of their code broke this
+  # build whenever upstream moved the code (prjxray #36, #48).
+  ${python.interpreter} -I -B ${./check-python-tools.py} $out
 
   # -- Windows launchers. The selector is the only file that names an
   # -- interpreter. Source is LF; cmd.exe wants CR LF.
