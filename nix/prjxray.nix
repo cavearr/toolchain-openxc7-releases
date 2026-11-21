@@ -44,13 +44,16 @@ stdenv.mkDerivation rec {
   # type-2 packets intact (#42), and the unused cctz submodule is gone (#43).
   # #35 adds an ICAP fuzzer, #38 modernises a visitor, and #37, #39 and #41
   # do not change the shipped tools.
-  # master 2026-11-21 (1cd6ae3e): bit2fasm is installed from the prjxray
+  # master 2026-11-21 (769d890d): bit2fasm is installed from the prjxray
   # Python package as well, with utils/bit2fasm.py kept as a wrapper (#48).
   # Two memory errors found with AddressSanitizer are fixed in the bitstream
   # writer and reader that xc7frames2bit, xc7patch and bitread use (#51),
   # an unreadable line of a frames file is reported with its file and line
   # instead of aborting (#52), and bitread rejects a malformed -F range
-  # (#56). The node lookup code leaves the package for its fuzzer (#44);
+  # (#56). fasm2frames reports bad input (a syntax error, an unknown tile,
+  # a value too wide, a file that is not UTF-8, a missing database or part)
+  # on one line without a traceback, and leaves no output file behind
+  # (#57). The node lookup code leaves the package for its fuzzer (#44);
   # the tools do not use it. #54 adds a sanitizer CI job, and #45-#47,
   # #49, #50, #53 and #55 change fuzzers, docs and tests. Bitstreams,
   # frames and decoded FASM do not change.
