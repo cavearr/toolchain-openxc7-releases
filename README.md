@@ -300,7 +300,7 @@ scripts/validate-package.sh <tools-only-tree-or-tarball> --chipdb-dir <bins>
 `--chipdb-dir` only fills a `--no-chipdb` tree; a release package already
 carries its chipdb.
 
-**L2, the regression suite** (`regress/`): 23 declarative tests (a folder
+**L2, the regression suite** (`regress/`): 42 declarative tests (a folder
 and a `test.json` each) that run real designs through the whole flow on
 every packaged family — primitives, structural properties, a parametric
 congestion pair, the untouched upstream demo projects — and compare fmax,

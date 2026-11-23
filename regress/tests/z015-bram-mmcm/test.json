@@ -1,0 +1,55 @@
+{
+  "description": "An MMCM and two initialised block RAMs on xc7z015clg485: the die routes and assembles, with its INIT and MMCM lines",
+  "exercises": [
+    "that the xc7z015 chipdb, prjxray-db fabric and part files are in the package: the design routes, assembles and makes a bitstream",
+    "the MMCM counters, lock table, filter and power register of CLKFBOUT_MULT_F 12, CLKOUT0_DIVIDE_F 5 and CLKOUT1_DIVIDE 13",
+    "the INIT lines of both halves of a 1024x32 and a 4096x8 RAMB36E1 with initial contents: their first and last words"
+  ],
+  "why": "The xc7z015 entered the manifest with its first full chain on the build server: chipdb, route, fasm2frames and xc7frames2bit. This test keeps that chain in L2 on the die's own part: without chipdb-xc7z015.bin the engine stops and the test fails. The design is the BRAM and MMCM case of the bring-up: on xc7z015clg485-2, with the same netlist and placement, Vivado 2026.1 wrote the same INIT and MMCM counter bits as nextpnr; the only differences were the counters of the five unused MMCM outputs and four ZINV bits of tied MMCM inputs, the open CMT difference of the Vivado comparison, also present on xc7z020. The FASM lines checked here are those, with the tile names left out.",
+  "tags": [
+    "zynq7",
+    "clocking",
+    "primitive"
+  ],
+  "sources": [
+    "design.v"
+  ],
+  "constraints": "constraints.xdc",
+  "top": "z015_bram_mmcm",
+  "parts": [
+    "xc7z015clg485"
+  ],
+  "expect": {
+    "primitives": {
+      "MMCME2_BASE": ">=1",
+      "RAMB36E1": ">=2"
+    },
+    "artifacts": [
+      "bitstream"
+    ],
+    "fasm_contains": [
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.IN_USE$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.CLKFBOUT_CLKOUT1_HIGH_TIME\\[5:0\\] = 6'b000110$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.CLKFBOUT_CLKOUT1_LOW_TIME\\[5:0\\] = 6'b000110$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.CLKOUT0_CLKOUT1_HIGH_TIME\\[5:0\\] = 6'b000010$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.CLKOUT0_CLKOUT1_LOW_TIME\\[5:0\\] = 6'b000011$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.CLKOUT0_CLKOUT2_EDGE\\[0\\]$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.CLKOUT1_CLKOUT1_HIGH_TIME\\[5:0\\] = 6'b000110$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.CLKOUT1_CLKOUT1_LOW_TIME\\[5:0\\] = 6'b000111$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.CLKOUT1_CLKOUT2_EDGE\\[0\\]$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.DIVCLK_DIVCLK_NO_COUNT\\[0\\]$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.LKTABLE\\[39:0\\] = 40'b1111111111110011100111111010010000000001$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.FILTREG1_RESERVED\\[11:0\\] = 12'b000000001000$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.TABLE\\[9:0\\] = 10'b1101000100$",
+      "^CMT_TOP_[LR]_LOWER_B_X[0-9]+Y[0-9]+\\.MMCME2_ADV\\.POWER_REG_POWER_REG_POWER_REG\\[15:0\\] = 16'b0000000100000000$",
+      "^BRAM_[LR]_X[0-9]+Y[0-9]+\\.RAMB18_Y0\\.INIT_00\\[255:0\\] = 256'b0{209}(?:10110001010101100001000000010110101000111111011)$",
+      "^BRAM_[LR]_X[0-9]+Y[0-9]+\\.RAMB18_Y0\\.INIT_00\\[255:0\\] = 256'b0{245}(?:110001111)0{2}$",
+      "^BRAM_[LR]_X[0-9]+Y[0-9]+\\.RAMB18_Y0\\.INIT_3F\\[255:0\\] = 256'b(?:1001)0{252}$",
+      "^BRAM_[LR]_X[0-9]+Y[0-9]+\\.RAMB18_Y0\\.INIT_3F\\[255:0\\] = 256'b0{1}(?:101011111000011)0{240}$",
+      "^BRAM_[LR]_X[0-9]+Y[0-9]+\\.RAMB18_Y1\\.INIT_00\\[255:0\\] = 256'b0{213}(?:1111101111100000010110101010011111110111111)$",
+      "^BRAM_[LR]_X[0-9]+Y[0-9]+\\.RAMB18_Y1\\.INIT_00\\[255:0\\] = 256'b0{245}(?:11011000011)$",
+      "^BRAM_[LR]_X[0-9]+Y[0-9]+\\.RAMB18_Y1\\.INIT_3F\\[255:0\\] = 256'b(?:1001)0{252}$",
+      "^BRAM_[LR]_X[0-9]+Y[0-9]+\\.RAMB18_Y1\\.INIT_3F\\[255:0\\] = 256'b0{2}(?:1011110110001)0{241}$"
+    ]
+  }
+}
