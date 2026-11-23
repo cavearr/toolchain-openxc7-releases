@@ -59,7 +59,7 @@ looks for `../share/nextpnr`. On macOS each Mach-O carries an
 `LC_RPATH` to `lib/openxc7/`, at its own depth, and is ad-hoc signed
 after the relocation.
 
-The linux package is about 139 MB, most of it the eleven chipdb files.
+The linux package is about 145 MB, most of it the twelve chipdb files.
 
 ### Supported parts
 
@@ -76,6 +76,7 @@ xc7a35t is an xc7a50t die):
 | Spartan-7 | xc7s50 | xc7s50 | `csga324`, `fgga484`, `ftgb196` |
 | Spartan-7 | xc7s100 | xc7s75, xc7s100 | `fgga484`, `fgga676` |
 | Zynq-7000 (PL) | xc7z010 | xc7z007s, xc7z010 | `clg225`, `clg400` |
+| Zynq-7000 (PL) | xc7z015 | xc7z015 | `clg485` |
 | Zynq-7000 (PL) | xc7z020 | xc7z020 | `clg400`, `clg484` |
 | Zynq-7000 (PL) | xc7z030 | xc7z030 | `fbg484`, `fbg676`, `fbv484`, `fbv676`, `ffg676`, `ffv676`, `sbg485`, `sbv485` |
 | Zynq-7000 (PL) | xc7z045 | xc7z035, xc7z045 | `fbg676`, `fbv676`, `ffg676`, `ffg900`, `ffv676`, `ffv900` |
@@ -85,9 +86,9 @@ Zynq support is **PL only**: the toolchain produces the fabric bitstream
 (loaded over JTAG); the ARM PS boots on its own. Kintex-7 is work in
 progress upstream. `chipdb-parts.json` is the single source of truth for
 this list: the packer, the Windows build and the CI assertions all read it.
-The parts inventory of a release counts what that gives today: 236 parts
-(device, package and speed grade) supported by the packaged database, 212
-of them built, over 11 chipdb files.
+The parts inventory of a release counts what that gives today: 239 parts
+(device, package and speed grade) supported by the packaged database, 215
+of them built, over 12 chipdb files.
 
 **Boards.** A board is supported when its part is in the index with
 `"generated": true`. Every Xilinx board apio defines (23 of them) maps to a
