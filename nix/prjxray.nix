@@ -57,6 +57,8 @@ stdenv.mkDerivation rec {
   # the tools do not use it. #54 adds a sanitizer CI job, and #45-#47,
   # #49, #50, #53 and #55 change fuzzers, docs and tests. Bitstreams,
   # frames and decoded FASM do not change.
+  # master 2026-11-22 (930365e9): the fuzzer settings of the xc7z015 (#60).
+  # The tools do not change.
   src = fetchFromGitHub {
     inherit (source) owner repo rev hash;
     fetchSubmodules = source.submodules;

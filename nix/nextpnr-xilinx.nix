@@ -17,7 +17,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "nextpnr-xilinx";
-  version = "1.0.0-unstable-2026-11-19";
+  version = "1.0.0-unstable-2026-11-23";
 
   # The himbaechel xilinx uarch of openXC7/nextpnr (apio#1070): the engine
   # the package moves to from the nextpnr-xilinx fork. The revision in
@@ -225,6 +225,27 @@ stdenv.mkDerivation rec {
   # #207 is a test gate and #211 leaves identical object code. --report's
   # PAD row counts user I/O only (#212). The chipdb generator and constids
   # do not change.
+  # Since 42d06c5f (8d6d112a, merged 2026-11-23): the timing arcs of a
+  # RAMB36E1 name the clock pins the packed cell has, CLKARDCLKL/U and
+  # CLKBWRCLKL/U. They named CLKARDCLK and CLKBWRCLK, which the timing
+  # analysis drops without a warning, so the reads of every 36Kb block RAM
+  # and the setup and hold of its address and data inputs went untimed: a
+  # design with one now reports the lower fmax its read path really has.
+  # The block RAM input hold of artix7, kintex7 and zynq7 comes from
+  # Vivado's library instead of the SDF's device envelope (0.667 ns on the
+  # data inputs), and the generator leaves out the block RAM address
+  # cascade pips, which the router used to chain a high-fanout address net
+  # from one block RAM to the next (#190). A LUT input the router permuted
+  # is re-bound to the route of its physical pin, so it is timed with that
+  # route instead of an estimate; the FASM is the same (#189). Several
+  # IDELAYCTRLs on one REFCLK are merged into the copies the packer makes
+  # for each clock region instead of stopping it (#215; #221 names its
+  # conditions, with the same object code). An MMCM accepts
+  # CLKFBOUT_MULT_F = 64 (#217), and 22 log messages end with a newline
+  # (#214). #213 adds the xc7z015 to nextpnr's own CMake device list; this
+  # package generates its dies from chipdb-parts.json. #190 changes the
+  # chipdb generator: every chipdb is 12288 bytes smaller. The constids do
+  # not change.
   #
   # It installs as bin/nextpnr-xilinx, the name apio runs (the engine is
   # named in XILINX-PARTS-INDEX.json, not by the executable), and it

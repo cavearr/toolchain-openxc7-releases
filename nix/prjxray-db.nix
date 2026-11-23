@@ -70,6 +70,13 @@
 # those of artix7 and spartan7. The chipdb generator reads none of these
 # rows: with the same generator, every chipdb is byte-identical to the one
 # of a8fd3f46.
+# master of 2026-11-22 (76db1a7) adds the xc7z015 (db#45): the fabric of
+# its die (tilegrid, tileconn, node_wires), the parts xc7z015clg485-1, -2
+# and -3 with their rows in mapping/devices.yaml and mapping/parts.yaml,
+# and the tile and site types of its GTP transceivers, which have no bits
+# (a design that uses a GTP or the PCIe block of this die stops in
+# nextpnr). It only adds: with the same generator, the chipdb of every
+# other die is byte-identical to the one of 0c3504f.
 let
   source = (builtins.fromJSON (builtins.readFile ./revisions.json)).prjxray-db;
 in
