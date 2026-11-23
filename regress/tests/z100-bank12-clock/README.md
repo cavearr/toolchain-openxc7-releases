@@ -38,7 +38,7 @@ these rows.
 ## Expected result
 
 Routes and produces a bitstream: `FDRE >= 24` and the `bitstream`
-artifact. With nextpnr 42d06c5f and yosys 0.70+329, on linux and on
+artifact. With nextpnr 8d6d112a and yosys 0.70+329, on linux and on
 windows: fmax 420.7 MHz, 48 LUTs, 24 FFs, bitstream 17416452 bytes.
 
 ## Reading a failure

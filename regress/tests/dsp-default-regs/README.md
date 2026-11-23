@@ -27,7 +27,7 @@ the two apart.
 ## Expected result
 
 Routes, produces a bitstream, and the FASM carries `ZADREG` and `ZDREG` (the
-pre-adder is off, as in Vivado) and none of the seven. With nextpnr 42d06c5f
+pre-adder is off, as in Vivado) and none of the seven. With nextpnr 8d6d112a
 and yosys 0.70+329, on linux: 1 DSP48E1, no LUT, no flip-flop
 (the registers are the DSP's own, so the `--report` has no fmax), bitstream
 2192116 bytes. With release `2026-10-15` the test fails: the FASM carries

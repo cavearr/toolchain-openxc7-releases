@@ -26,8 +26,14 @@ vanish during synthesis and the test would silently stop testing anything.
 ## Expected result
 
 One RAMB18E1 in the netlist, a routed bitstream, and a high reported fmax
-(~475 MHz on the reference part today) — a BRAM with registered outputs is
-not the timing bottleneck in a design this small.
+(~542 MHz on the reference part today, nextpnr 8d6d112a) — a BRAM with
+registered outputs is not the timing bottleneck in a design this small: the
+worst path is the address counter's carry chain, flip-flop to flip-flop,
+and nextpnr's slack histogram counts 52 endpoints, the block RAM's among
+them. With nextpnr 42d06c5f it was ~475 MHz: the router reached the
+address pins of the lower half through the block RAM address cascade pips
+(`BRAM_CASCINBOT_ADDR*`), from the upper half, and that detour was the worst
+path; openXC7/nextpnr#190 leaves those pips out of the chipdb.
 
 Utilisation stays tiny (30 LUTs, 26 flip-flops) because the memory itself
 lives in the block, not in fabric logic. A large jump in LUT count is the
@@ -38,9 +44,11 @@ signal that inference failed and the memory was built out of LUTs instead.
 - **`Hold/min time violation` on `CLKARDCLK`, `Source ….DIADI…`** — the false
   data-in hold this test guarded from yosys 0.69 until the engine took
   openXC7/nextpnr#65 (the RAMB data-in setup/hold follow each port's
-  WRITE_MODE): an engine without that fix. The opposite symptom, an fmax far
-  above the reference (541 MHz measured), is that engine on a chipdb without
-  those timing variants: the block is left untimed.
+  WRITE_MODE): an engine without that fix. The same engine on a chipdb
+  without those timing variants leaves the block untimed: the fmax is then
+  the carry chain's, as it is today, so check that the block RAM's pins are
+  still endpoints (52 in the slack histogram) before reading a good fmax as
+  a healthy one.
 
 - **`RAMB18E1: expected >=1, netlist has 0`** — inference stopped working;
   the memory is now distributed RAM or plain logic. Check the yosys version

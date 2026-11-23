@@ -46,8 +46,8 @@ here are the ones that agreed.
 
 Routes, assembles and writes a bitstream: `MMCME2_BASE >= 1`,
 `RAMB36E1 >= 2`, the 22 `fasm_contains` lines and the `bitstream` artifact.
-With nextpnr 8d6d112a and yosys 0.70+329, on linux: `c0` 524.1 MHz (the
-worst clock), 58 LUTs, 20 flip-flops and 2 block RAMs.
+With nextpnr 8d6d112a and yosys 0.70+329, on linux and on windows: `c0`
+524.1 MHz (the worst clock), 58 LUTs, 20 flip-flops and 2 block RAMs.
 
 ## Reading a failure
 
