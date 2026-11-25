@@ -3,8 +3,8 @@
     "owner": "openXC7",
     "repo": "nextpnr",
     "submodules": true,
-    "rev": "8d6d112a89047d151f29f1af8c808b3b4cce70c8",
-    "hash": "sha256-KUpiyd3Y1FoAta+lxlv4nXqKN23rqYP+x+utCKesiIU="
+    "rev": "45bf6185a56cd632e8261b1d4ade7faff327c1c2",
+    "hash": "sha256-k5+yTX9RNXuFI7PmUFJGWrr0yXX3pyZSMlqzGUaddao="
   },
   "prjxray-db": {
     "owner": "openXC7",
@@ -17,8 +17,8 @@
     "owner": "openXC7",
     "repo": "prjxray",
     "submodules": true,
-    "rev": "930365e9b2b1f3e1b843f688e2598b532551eb3b",
-    "hash": "sha256-yie8G+plKASy1MIk4k6H0j0q7FWV18nZLupQbkqqZWc="
+    "rev": "6dabf706681c604ce7cc4f6f8e99fe8a15c0a91d",
+    "hash": "sha256-GPSTcLsAFfxusePUNuNZ56sPOV44X/1ujyfW1wG4gIs="
   },
   "fasm": {
     "owner": "openxc7",
